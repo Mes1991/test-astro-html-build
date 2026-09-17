@@ -1,0 +1,106 @@
+---
+// Bottom-left floating avatar that cycles through every mood face.
+// On the home page the avatar mood is mouse-driven; on the holding
+// page there's nothing to hover, so we just rotate through the deck
+// on an interval so the avatar still feels alive.
+---
+
+<div
+  id="avatarCycler"
+  aria-hidden="true"
+  class="cs-avatar"
+>
+  <img id="avatarCyclerFace" src="/assets/avatar/default.svg" alt="" />
+</div>
+
+<style>
+  .cs-avatar {
+    position: fixed;
+    left: 24px;
+    bottom: 24px;
+    width: 92px;
+    height: 92px;
+    z-index: 100;
+    pointer-events: none;
+    /* drop-shadow reads better than box-shadow on a transparent SVG */
+    filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.45));
+  }
+  .cs-avatar img {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  @media (max-width: 640px) {
+    .cs-avatar {
+      width: 68px;
+      height: 68px;
+      left: 16px;
+      bottom: 16px;
+    }
+  }
+</style>
+
+<script>
+  import gsap from "gsap";
+
+  const MOODS = [
+    "default.svg",
+    "active.svg",
+    "surprised.svg",
+  ];
+
+  // Preload so the swap is gapless.
+  MOODS.forEach((f) => {
+    const img = new Image();
+    img.src = `/assets/avatar/${f}`;
+  });
+
+  const avatarEl = document.getElementById("avatarCycler");
+  const face = document.getElementById("avatarCyclerFace") as HTMLImageElement | null;
+  if (avatarEl && face) {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // One-shot intro: fade in + scale up. After this fires, mood swaps
+    // are hard cuts — no per-swap animation.
+    if (!reducedMotion) {
+      gsap.set(avatarEl, { opacity: 0, scale: 0.6 });
+      gsap.to(avatarEl, {
+        opacity: 1,
+        scale: 1,
+        duration: 0.45,
+        ease: "back.out(2)",
+      });
+    }
+
+    let i = 0;
+    let timer: number;
+    function next() {
+      if (!face) return;
+      // Pick a different random mood each tick so the avatar never sits on
+      // the same face twice in a row.
+      let j = i;
+      while (j === i) j = Math.floor(Math.random() * MOODS.length);
+      i = j;
+      face.src = `/assets/avatar/${MOODS[i]}`;
+    }
+    function schedule() {
+      // ~750ms between moods, slightly randomised so it doesn't feel
+      // metronomic. Hard-cut means we can run the cycle faster than the
+      // fade version could.
+      const delay = 650 + Math.random() * 300;
+      timer = window.setTimeout(() => {
+        next();
+        schedule();
+      }, delay);
+    }
+    schedule();
+
+    window.addEventListener(
+      "pagehide",
+      () => {
+        clearTimeout(timer);
+      },
+      { once: true },
+    );
+  }
+</script>

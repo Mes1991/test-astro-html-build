@@ -1,0 +1,122 @@
+---
+import type { SeoProps } from '../../lib/seo/types';
+import { siteSeo, localeTag } from '../../lib/seo/defaults';
+import { canonicalUrl, absoluteUrl } from '../../lib/seo/url';
+import { resolveTitle } from '../../lib/seo/title';
+import { DEFAULT_LOCALE } from '../../lib/seo/types';
+import Schema from './Schema.astro';
+import { routeKeyFromPath, alternateUrls } from '../../lib/seo/locale';
+
+type Props = Partial<SeoProps> & { title: string };
+
+const {
+  title,
+  description = siteSeo.defaultDescription,
+  canonical,
+  noindex = false,
+  image,
+  type = 'website',
+  locale = DEFAULT_LOCALE,
+  alternates,
+  publishedTime,
+  modifiedTime,
+  author,
+  keywords,
+  schema,
+} = Astro.props;
+
+const finalTitle = resolveTitle(title);
+const finalCanonical = canonical ?? canonicalUrl(Astro.url);
+const ogSlugFromPath = (() => {
+  const p = Astro.url.pathname.replace(/^\/+|\/+$/g, '');
+  if (p === '') return 'home';
+  if (p === 'es') return 'es/home';
+  return p;
+})();
+
+const finalImage = image ?? {
+  src: `/og/${ogSlugFromPath}.png`,
+  alt: siteSeo.defaultOgImageAlt,
+};
+const finalImageUrl = finalImage.src.startsWith('http')
+  ? finalImage.src
+  : absoluteUrl(finalImage.src);
+
+const robotsContent = noindex ? 'noindex, nofollow' : 'index, follow';
+const ogLocale = localeTag[locale];
+
+const isProd = import.meta.env.PROD;
+const gscToken = import.meta.env.PUBLIC_GSC_VERIFICATION;
+const bingToken = import.meta.env.PUBLIC_BING_VERIFICATION;
+---
+
+<title>{finalTitle}</title>
+<meta name="description" content={description} />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content={siteSeo.themeColor} />
+<meta name="robots" content={robotsContent} />
+{keywords && keywords.length > 0 && (
+  <meta name="keywords" content={keywords.join(', ')} />
+)}
+
+<link rel="canonical" href={finalCanonical} />
+
+{/* hreflang — derived from the URL via routeKeyFromPath when alternates is omitted.
+    Pages with no known route (e.g. case studies) must pass `alternates` explicitly. */}
+{(() => {
+  const rendered =
+    alternates ??
+    (() => {
+      const route = routeKeyFromPath(Astro.url.pathname);
+      return route ? alternateUrls(route) : null;
+    })();
+  if (!rendered) return null;
+  return Object.entries(rendered).map(([code, href]) =>
+    href ? <link rel="alternate" hreflang={code} href={href} /> : null,
+  );
+})()}
+
+{/* Open Graph */}
+<meta property="og:title" content={finalTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:type" content={type} />
+<meta property="og:url" content={finalCanonical} />
+<meta property="og:site_name" content={siteSeo.brand} />
+<meta property="og:locale" content={ogLocale} />
+<meta property="og:image" content={finalImageUrl} />
+<meta property="og:image:alt" content={finalImage.alt} />
+{finalImage.width && <meta property="og:image:width" content={String(finalImage.width)} />}
+{finalImage.height && <meta property="og:image:height" content={String(finalImage.height)} />}
+
+{type === 'article' && publishedTime && (
+  <meta property="article:published_time" content={publishedTime} />
+)}
+{type === 'article' && modifiedTime && (
+  <meta property="article:modified_time" content={modifiedTime} />
+)}
+{type === 'article' && author && (
+  <meta property="article:author" content={author} />
+)}
+
+{/* Twitter */}
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:site" content={siteSeo.twitterHandle} />
+<meta name="twitter:creator" content={siteSeo.twitterHandle} />
+<meta name="twitter:title" content={finalTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={finalImageUrl} />
+<meta name="twitter:image:alt" content={finalImage.alt} />
+
+{/* Verification — prod only */}
+{isProd && gscToken && (
+  <meta name="google-site-verification" content={gscToken} />
+)}
+{isProd && bingToken && (
+  <meta name="msvalidate.01" content={bingToken} />
+)}
+
+{/* Per-page extras */}
+<slot name="head" />
+
+{/* JSON-LD */}
+{schema && <Schema item={schema} />}

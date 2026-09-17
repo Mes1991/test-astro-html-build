@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+/* Self-hosted mono font — demonstrates the @font-face mechanism for the template */
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2")
+    format("woff2-variations");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono/jetbrains-mono-latin-ext-wght-normal.woff2")
+    format("woff2-variations");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@theme {
+  /* Fonts */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Brand colours */
+  --color-brand-primary: #1e293b;
+  --color-brand-primary-deep: #0f172a;
+  --color-brand-surface-dark: #1f2937;
+  --color-brand-accent: #3b82f6;
+  --color-brand-highlight: #f59e0b;
+  --color-brand-cream: #f3f4f6;
+  --color-brand-cream-warm: #e5e7eb;
+  --color-brand-ink: #1f2937;
+  --color-brand-paper: #ffffff;
+  --color-brand-ink-deep: #111827;
+  --color-brand-surface-deep: #0b1220;
+  --color-brand-primary-darker: #172033;
+  --color-brand-primary-bright: #475569;
+  --color-brand-primary-light: #cbd5e1;
+  --color-brand-primary-soft: #e2e8f0;
+  --color-brand-positive: #22c55e;
+
+  /* UI greys (namespaced so they don't collide with Tailwind's default gray) */
+  --color-ui-100: #f1f2f2;
+  --color-ui-300: #d1d3d4;
+  --color-ui-500: #a7a9ac;
+  --color-ui-700: #5a5a5e;
+  --color-ui-900: #393a39;
+
+  /* Display type scale (fluid) */
+  --text-display-2xs: clamp(40px, 5vw, 68px);
+  --text-display-xs: clamp(40px, 5.4vw, 76px);
+  --text-display-sm: clamp(42px, 5.4vw, 72px);
+  --text-display-md: clamp(56px, 8vw, 108px);
+  --text-display-l: clamp(52px, 11.2vw, 178px);
+  --text-display-xl: clamp(62px, 13vw, 210px);
+  --text-intro: clamp(3.5rem, 12vw, 14rem);
+  --text-kinetic: clamp(6rem, 16vh, 14rem);
+  --text-kinetic-sm: clamp(4rem, 10vh, 9rem);
+  --text-micro: clamp(11px, 1.1vw, 14px);
+
+  /* Letter spacing */
+  --tracking-display: -0.02em;
+  --tracking-display-2: -0.03em;
+  --tracking-display-3: -0.035em;
+  --tracking-display-4: -0.04em;
+  --tracking-display-5: -0.045em;
+  --tracking-caps-1: 0.12em;
+  --tracking-caps-2: 0.14em;
+  --tracking-caps-3: 0.16em;
+  --tracking-caps-4: 0.18em;
+  --tracking-caps-5: 0.2em;
+  --tracking-caps-6: 0.24em;
+
+  /* Radius */
+  --radius-btn: 12px;
+  --radius-chip: 14px;
+  --radius-ticket: 18px;
+  --radius-card: 22px;
+  --radius-panel: 24px;
+  --radius-pill: 999px;
+
+  /* Easing */
+  --ease-brand: cubic-bezier(0.86, 0, 0.07, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Breakpoint — 960px (the media-query stop used across the site) */
+  --breakpoint-lgx: 60rem;
+}
+
+html,
+body {
+  background: var(--color-brand-surface-deep);
+  color: var(--color-brand-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  overflow-x: hidden;
+}

@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.astro/
+
+# Test / audit output
+coverage/
+.lighthouseci/
+
+# Env files (never commit real secrets)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+debug.log
+
+# Editor / OS
+.vscode/
+.DS_Store
+
+# Local orchestration / agent tooling (personal machine config, not part of the template)
+.orca/
+.atl/
+
+# Generated per-agent skill adapters (materialized from skills/, not a second source of truth)
+.agents/skills/
+.claude/skills/
+.claude/settings.local.json
+
+# Session-scoped documentation (not canonical product docs)
+docs/sessions/

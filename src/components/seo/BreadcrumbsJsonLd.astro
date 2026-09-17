@@ -1,0 +1,28 @@
+---
+import {
+  buildBreadcrumbList,
+  breadcrumbsFromPath,
+} from '../../lib/seo/schemas/breadcrumb';
+import type { BreadcrumbInput, LocaleCode } from '../../lib/seo/types';
+import { DEFAULT_LOCALE } from '../../lib/seo/types';
+import Schema from './Schema.astro';
+
+interface Props {
+  /** Optional explicit crumbs. If omitted, derived from Astro.url.pathname. */
+  crumbs?: BreadcrumbInput[];
+  /** Override the last crumb's name (e.g. case-study real title vs slug). */
+  lastName?: string;
+  /** Page locale; drives Home label translation and locale prefix handling. */
+  locale?: LocaleCode;
+}
+
+const { crumbs, lastName, locale = DEFAULT_LOCALE } = Astro.props;
+const derived = crumbs ?? breadcrumbsFromPath(Astro.url.pathname, locale);
+const finalCrumbs =
+  lastName && derived.length > 0
+    ? [...derived.slice(0, -1), { ...derived[derived.length - 1], name: lastName }]
+    : derived;
+const schema = buildBreadcrumbList(finalCrumbs);
+---
+
+{schema && <Schema item={schema} />}

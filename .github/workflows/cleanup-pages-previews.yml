@@ -1,0 +1,54 @@
+name: Cleanup Cloudflare Pages preview deployments
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: Delete previews for closed PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete preview deployments matching head ref
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_PAGES_CLEANUP_TOKEN }}
+          CF_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CF_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$PR_BRANCH" ]]; then
+            echo "::error::PR head branch is empty — refusing to scan all deployments"
+            exit 1
+          fi
+
+          api="https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/pages/projects/${CF_PAGES_PROJECT}/deployments"
+
+          deleted=0
+          page=1
+          while :; do
+            resp=$(curl -fsS -H "Authorization: Bearer ${CF_API_TOKEN}" \
+              "${api}?per_page=25&page=${page}&env=preview")
+
+            ids=$(echo "$resp" | jq -r --arg branch "$PR_BRANCH" \
+              '.result[] | select(.deployment_trigger.metadata.branch == $branch) | .id')
+
+            while IFS= read -r id; do
+              [[ -z "$id" ]] && continue
+              echo "Deleting deployment $id (branch=$PR_BRANCH)"
+              curl -fsS -X DELETE \
+                -H "Authorization: Bearer ${CF_API_TOKEN}" \
+                "${api}/${id}?force=true" > /dev/null
+              deleted=$((deleted + 1))
+            done <<< "$ids"
+
+            count=$(echo "$resp" | jq '.result | length')
+            if [[ "$count" -lt 25 ]]; then break; fi
+            page=$((page + 1))
+          done
+
+          echo "Deleted $deleted preview deployment(s) for branch $PR_BRANCH"

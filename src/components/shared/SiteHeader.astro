@@ -1,0 +1,76 @@
+---
+import type { LocaleCode } from "../../lib/seo/types";
+import { DEFAULT_LOCALE } from "../../lib/seo/types";
+import { pathFor, routeKeyFromPath } from "../../lib/seo/locale";
+import { t } from "../../i18n/t";
+import LanguageSwitcher from "./LanguageSwitcher.astro";
+import MobileMenu from "./MobileMenu.astro";
+
+interface Props {
+  locale?: LocaleCode;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+
+/**
+ * Global site header — logo LEFT, nav + CTA grouped RIGHT.
+ * Blog is a real route; FAQ is the home-page #faq anchor (same-page when we
+ * are already on home, `/#faq` from any other page).
+ */
+const home = pathFor("home", locale);
+const onHome = routeKeyFromPath(Astro.url.pathname) === "home";
+
+const menu = [
+  { href: pathFor("blog", locale), label: t("header.menu.blog", locale) },
+  { href: onHome ? "#faq" : `${home}#faq`, label: t("header.menu.faq", locale) },
+];
+
+const ctaHref = "mailto:hello@example.com";
+const ctaLabel = t("header.cta", locale);
+---
+
+<header class="site-header sticky top-0 z-[40] bg-brand-surface-deep text-white">
+  <nav
+    class="site-header-nav flex items-center justify-between px-10 max-lgx:px-6 py-4"
+    aria-label="Primary"
+  >
+    <a
+      href={home}
+      class="flex items-center gap-[10px] font-display font-black text-lg text-white tracking-display no-underline"
+    >
+      <img src="/assets/logo-mark.svg" alt="" class="w-10 h-10" aria-hidden="true" />
+      <span>Example Site</span>
+    </a>
+
+    <div class="flex items-center gap-8 max-lgx:hidden">
+      <ul class="flex gap-7 list-none m-0 p-0">
+        {menu.map((m) => (
+          <li>
+            <a
+              href={m.href}
+              class="no-underline text-white/80 font-display font-semibold text-sm hover:text-brand-highlight transition-colors"
+            >
+              {m.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+      <LanguageSwitcher current={locale} variant="dark" />
+      <a
+        href={ctaHref}
+        class="bg-brand-highlight text-brand-ink no-underline inline-block font-display font-extrabold px-[22px] py-[11px] rounded-pill cursor-pointer text-[13px] tracking-[-0.01em] hover:bg-white transition-colors"
+      >
+        {ctaLabel}
+      </a>
+    </div>
+
+    <MobileMenu
+      locale={locale}
+      menu={menu}
+      ctaHref={ctaHref}
+      ctaLabel={ctaLabel}
+      theme="dark"
+      id={`site-header-mobile-menu-${locale}`}
+    />
+  </nav>
+</header>

@@ -1,0 +1,139 @@
+---
+import type { LocaleCode } from "../../lib/seo/types";
+import { DEFAULT_LOCALE } from "../../lib/seo/types";
+import { t } from "../../i18n/t";
+
+interface Props {
+  locale?: LocaleCode;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+---
+
+<section
+  data-hero
+  class="hero-section relative min-h-screen flex flex-col items-center justify-center text-center px-6 py-24 text-brand-cream-warm"
+>
+  <div class="max-w-[900px] mx-auto flex flex-col items-center">
+    <span class="hero-eyebrow font-mono text-[12px] tracking-caps-4 uppercase text-brand-highlight mb-7">
+      {t("home.hero.eyebrow", locale)}
+    </span>
+    <h1 class="hero-headline m-0 font-display font-black leading-[0.95] tracking-display-3 text-white uppercase text-display-md">
+      <span class="hl1 block">{t("home.hero.headline.line1", locale)}</span>
+      <span class="hl2 block text-brand-highlight">{t("home.hero.headline.line2", locale)}</span>
+    </h1>
+    <p class="hero-subhead mt-8 font-sans font-normal text-[18px] leading-[1.55] text-white/65 max-w-[560px]">
+      {t("home.hero.subhead", locale)}
+    </p>
+    <div class="hero-cta mt-10">
+      <a
+        href="mailto:hello@example.com"
+        class="inline-block bg-brand-highlight text-brand-ink no-underline font-display font-extrabold px-8 py-[18px] rounded-pill text-[16px] tracking-[-0.01em] hover:bg-white transition-colors"
+      >
+        {t("home.hero.cta", locale)}
+      </a>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Dark brand backdrop — solid brand-token gradient reads cleanly under the
+     sticky header and centered statement. */
+  .hero-section {
+    background: radial-gradient(
+      ellipse at 50% 110%,
+      var(--color-brand-primary) 0%,
+      var(--color-brand-primary-deep) 45%,
+      var(--color-brand-surface-deep) 100%
+    );
+  }
+  .hero-section .hl1,
+  .hero-section .hl2 {
+    overflow-y: clip;
+    padding-bottom: 0.12em;
+    margin-bottom: -0.12em;
+  }
+  /* While the intro overlay is pending, cloak the hero content so the
+     overlay's fade-out reveals an empty stage. Without this the content is
+     already visible during the fade, then playHeroIntro snaps it back to
+     opacity:0 and animates it in — reading as the intro playing twice.
+     Keyed on html.intro-pending (only ever set by JS) so no-JS and
+     reduced-motion visitors always get visible content. */
+  :global(html.intro-pending) .hero-section .hero-eyebrow,
+  :global(html.intro-pending) .hero-section .hero-headline,
+  :global(html.intro-pending) .hero-section .hero-subhead,
+  :global(html.intro-pending) .hero-section .hero-cta {
+    visibility: hidden;
+  }
+</style>
+
+<script>
+  import gsap from "gsap";
+
+  function heroTargets() {
+    const hero = document.querySelector<HTMLElement>(".hero-section");
+    if (!hero) return [];
+    return [
+      hero.querySelector<HTMLElement>(".hero-eyebrow"),
+      hero.querySelector<HTMLElement>(".hero-headline"),
+      hero.querySelector<HTMLElement>(".hero-subhead"),
+      hero.querySelector<HTMLElement>(".hero-cta"),
+    ].filter((el): el is HTMLElement => !!el);
+  }
+
+  function playHeroIntro() {
+    const targets = heroTargets();
+    if (!targets.length) return;
+
+    // Lift the intro-pending cloak (see <style> above). Normally BaseLayout's
+    // markIntroDone already removed it in this same task; this covers the
+    // 5s fallback path where intro:complete never arrived — without it the
+    // hero would animate while still visibility:hidden.
+    document.documentElement.classList.remove("intro-pending");
+
+    const tween = gsap.fromTo(
+      targets,
+      { y: 24, opacity: 0 },
+      {
+        y: 0,
+        opacity: 1,
+        duration: 0.9,
+        stagger: 0.12,
+        ease: "power3.out",
+      },
+    );
+
+    // Failsafe: gsap drives the reveal off requestAnimationFrame, which is
+    // SUSPENDED while the tab is in the background. Without this, a page
+    // opened in a background tab would leave the hero stuck at opacity:0
+    // (the tween's "from" state) until the tab gains focus. A timer still
+    // fires in background tabs, and gsap.set applies synchronously, so this
+    // guarantees the content becomes visible regardless of rAF state.
+    const failsafe = window.setTimeout(() => {
+      tween.kill();
+      gsap.set(targets, { opacity: 1, y: 0 });
+    }, 1600);
+    tween.eventCallback("onComplete", () => window.clearTimeout(failsafe));
+  }
+
+  const prefersReduced =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (prefersReduced) {
+    // Nothing to do — content is visible by default.
+  } else if (document.documentElement.classList.contains("intro-played")) {
+    playHeroIntro();
+  } else {
+    let started = false;
+    const run = () => {
+      if (started) return;
+      started = true;
+      playHeroIntro();
+    };
+    window.addEventListener("intro:complete", run, { once: true });
+    // Fallback in case intro:complete never arrives (intro disabled, errored,
+    // or the listener was attached after it fired) — reveal anyway.
+    window.setTimeout(run, 5000);
+  }
+</script>

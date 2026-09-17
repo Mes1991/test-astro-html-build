@@ -1,0 +1,256 @@
+---
+// Standalone 3D hero model for the coming-soon page. Centered, larger framing
+// than the home variant. Mouse-tracks toward the cursor and
+// idles with a tiny sinusoidal drift when the cursor leaves the window.
+// Skips post-processing + pointer follow when prefers-reduced-motion.
+---
+
+<div id="hero3dStage" class="hero-3d-stage" aria-hidden="true"></div>
+
+<style>
+  .hero-3d-stage {
+    /* Canvas is alpha-true; the page sets its own backdrop. The model
+       reads as ghostly when the page is dark behind it. */
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.55;
+  }
+  .hero-3d-stage canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+</style>
+
+<script>
+  import gsap from "gsap";
+  import * as THREE from "three";
+  import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+  import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+  import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+  import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+  import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+
+  const ChromaticAberrationShader = {
+    uniforms: {
+      tDiffuse: { value: null as THREE.Texture | null },
+      uOffset: { value: 0.0045 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D tDiffuse;
+      uniform float uOffset;
+      varying vec2 vUv;
+      void main() {
+        vec2 dir = vUv - 0.5;
+        float dist = length(dir);
+        vec2 offset = dir * uOffset * dist * 4.0;
+        float r = texture2D(tDiffuse, vUv + offset).r;
+        float g = texture2D(tDiffuse, vUv).g;
+        float b = texture2D(tDiffuse, vUv - offset).b;
+        float a = texture2D(tDiffuse, vUv).a;
+        gl_FragColor = vec4(r, g, b, a);
+      }
+    `,
+  };
+
+  function initHero3D() {
+    const container = document.getElementById("hero3dStage");
+    if (!container) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch (err) {
+      console.error("[hero-3d] WebGL unavailable", err);
+      return;
+    }
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+    camera.position.set(0, 0, 4.0);
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.NoToneMapping;
+    container.appendChild(renderer.domElement);
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+    const key = new THREE.DirectionalLight(0x8a4dc8, 1.6);
+    key.position.set(2.5, 3, 4);
+    const rim = new THREE.DirectionalLight(0x8bc84d, 1.0);
+    rim.position.set(-3, 1.5, -2);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.5);
+    fill.position.set(-2, -1, 3);
+    scene.add(key, rim, fill);
+
+    const heroMaterial = new THREE.MeshStandardMaterial({
+      color: 0x310d42,
+      roughness: 0.55,
+      metalness: 0,
+      side: THREE.DoubleSide,
+    });
+
+    // Particle field — sparse drifting motes around the model. Two-tone
+    // (highlight + primary-light) to echo the overlay copy. Additive blend
+    // so they read against the dark backdrop without muddying the model.
+    const PARTICLE_COUNT = 420;
+    const positions = new Float32Array(PARTICLE_COUNT * 3);
+    const colors = new Float32Array(PARTICLE_COUNT * 3);
+    const speeds = new Float32Array(PARTICLE_COUNT);
+    const highlightColor = new THREE.Color(0xf59e0b);
+    const primaryLight = new THREE.Color(0xbfdbfe);
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      // Bias the cloud forward of the model so the chromatic aberration
+      // catches them. Radius 1.6–4.0 in a soft spherical shell.
+      const r = 1.6 + Math.random() * 2.4;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      positions[i * 3 + 0] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = r * Math.cos(phi);
+      const c = Math.random() < 0.35 ? highlightColor : primaryLight;
+      colors[i * 3 + 0] = c.r;
+      colors[i * 3 + 1] = c.g;
+      colors[i * 3 + 2] = c.b;
+      speeds[i] = 0.2 + Math.random() * 0.8;
+    }
+    const particleGeo = new THREE.BufferGeometry();
+    particleGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    particleGeo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    const particleMat = new THREE.PointsMaterial({
+      size: 0.025,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      sizeAttenuation: true,
+    });
+    const particles = new THREE.Points(particleGeo, particleMat);
+    scene.add(particles);
+
+    // Procedural primitive — replaces the brand GLB.
+    const heroGeo = new THREE.IcosahedronGeometry(1.0, 1);
+    const heroModel = new THREE.Mesh(heroGeo, heroMaterial);
+    scene.add(heroModel);
+
+    if (!reducedMotion) {
+      gsap.from(heroModel.rotation, { y: Math.PI * 0.6, duration: 1.6, ease: "power3.out" });
+      gsap.from(heroModel.scale, { x: 0, y: 0, z: 0, duration: 1.3, ease: "back.out(1.6)" });
+    }
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    if (!reducedMotion) {
+      composer.addPass(new ShaderPass(ChromaticAberrationShader));
+    }
+    composer.addPass(new OutputPass());
+
+    // Pointer state. tx/ty are the target rotations driven by mousemove,
+    // x/y are the lerped current values. cursorIn tracks whether the
+    // cursor is over the window so we can ease back to centre + idle.
+    const pointer = { x: 0, y: 0, tx: 0, ty: 0, cursorIn: true };
+
+    const onMouseMove = (e: MouseEvent) => {
+      pointer.cursorIn = true;
+      pointer.tx = (e.clientX / window.innerWidth - 0.5) * 0.5;
+      pointer.ty = (e.clientY / window.innerHeight - 0.5) * 0.25;
+    };
+    const onMouseLeave = () => {
+      pointer.cursorIn = false;
+      pointer.tx = 0;
+      pointer.ty = 0;
+    };
+
+    if (!reducedMotion) {
+      window.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseleave", onMouseLeave);
+    }
+
+    const resize = () => {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (w === 0 || h === 0) return;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h, false);
+      composer.setSize(w, h);
+      composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    };
+    window.addEventListener("resize", resize);
+    resize();
+
+    let rafId = 0;
+    const start = performance.now();
+    function tick(now: number) {
+      pointer.x += (pointer.tx - pointer.x) * 0.08;
+      pointer.y += (pointer.ty - pointer.y) * 0.08;
+      if (heroModel) {
+        heroModel.rotation.y = pointer.x;
+        heroModel.rotation.x = pointer.y;
+        if (!pointer.cursorIn && !reducedMotion) {
+          // Tiny sinusoidal drift so the model doesn't freeze when the
+          // cursor leaves. Amplitude is ~3 degrees.
+          heroModel.rotation.y += Math.sin((now - start) / 1400) * 0.05;
+        }
+      }
+
+      // Particles: slow Y rotation of the whole cloud + per-mote vertical
+      // bob driven by per-particle speed. Lazy-write only Y to keep the
+      // attribute upload small.
+      if (!reducedMotion) {
+        particles.rotation.y = (now - start) / 18000;
+        const t = (now - start) / 1000;
+        const posAttr = particleGeo.getAttribute("position") as THREE.BufferAttribute;
+        const arr = posAttr.array as Float32Array;
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          arr[i * 3 + 1] += Math.sin(t * speeds[i] + i) * 0.0006;
+        }
+        posAttr.needsUpdate = true;
+      }
+
+      composer.render();
+      rafId = requestAnimationFrame(tick);
+    }
+
+    // Always tick — even in reduced-motion mode, we need RAF so the model
+    // renders the moment the async GLB load completes. Reduced-motion
+    // perceptual stillness is achieved by skipping the pointer listeners
+    // (so pointer.tx/ty stay 0 → model sits forward), the chromatic
+    // aberration pass, and the entry GSAP tweens. The lerp on a stationary
+    // target is a no-op after the first frame, so cost is negligible.
+    rafId = requestAnimationFrame(tick);
+
+    const cleanup = () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseleave", onMouseLeave);
+      window.removeEventListener("resize", resize);
+      composer.dispose();
+      renderer.dispose();
+      pmrem.dispose();
+      particleGeo.dispose();
+      particleMat.dispose();
+      heroGeo.dispose();
+      heroMaterial.dispose();
+    };
+    window.addEventListener("pagehide", cleanup, { once: true });
+  }
+
+  initHero3D();
+</script>

@@ -1,0 +1,98 @@
+---
+import type { LocaleCode } from "../../lib/seo/types";
+import { DEFAULT_LOCALE } from "../../lib/seo/types";
+import { t } from "../../i18n/t";
+import { getFaqEntries } from "../../lib/seo/data/faq";
+
+interface Props {
+  locale?: LocaleCode;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+
+// Single source of truth for both the on-page Q&A and the FAQPage JSON-LD
+// (which is built in the page-level frontmatter from the same data).
+const entries = getFaqEntries(locale);
+---
+
+<section id="faq-content" data-mood="bored" class="px-12 max-lgx:px-6 py-[130px]">
+  <div class="max-w-[1280px] mx-auto grid grid-cols-[1fr_1.3fr] gap-[60px] max-lgx:grid-cols-1">
+    <div>
+      <div class="faq-eyebrow font-mono text-[11px] tracking-caps-4 uppercase text-brand-primary mb-4">{t("home.faq.eyebrow", locale)}</div>
+      <h2 class="faq-title font-display font-black text-display-2xs leading-[0.95] tracking-display-3 text-brand-surface-dark">
+        {t("home.faq.titleA", locale)}<br /><em class="not-italic text-brand-primary">{t("home.faq.titleB", locale)}</em>
+      </h2>
+      <p class="faq-lede text-base text-ui-700 mt-[18px] max-w-[320px] leading-[1.55]">{t("home.faq.lede", locale)}</p>
+      <div class="faq-card mt-8 p-5 border-[1.5px] border-dashed border-brand-surface-dark/15 rounded-[14px]">
+        <span class="font-mono text-[10px] tracking-caps-3 uppercase text-ui-500">{t("home.faq.cardLabel", locale)}</span>
+        <a href="mailto:hello@example.com" data-mood="loving" class="block font-display font-extrabold text-lg text-brand-surface-dark no-underline mt-1 tracking-display hover:text-brand-primary">{t("home.faq.cardEmail", locale)}</a>
+      </div>
+    </div>
+
+    <div class="flex flex-col faq-list">
+      {entries.map((entry, i) => (
+        <div class={`q-item ${i === 0 ? "open border-t" : ""} border-b border-brand-surface-dark/10 py-[22px] cursor-pointer`}>
+          <div class="flex justify-between items-center font-display font-bold text-xl text-brand-surface-dark tracking-[-0.01em] gap-5">
+            <span>{entry.question}</span>
+            <span class="plus w-7 h-7 rounded-full bg-brand-cream-warm grid place-items-center text-base text-brand-primary transition-[transform,background] duration-[0.25s] shrink-0">+</span>
+          </div>
+          <div class="a text-[15px] text-ui-700 leading-[1.55]">{entry.answer}</div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Accordion expand — can't be done cleanly with utilities because we need
+     to animate max-height on a variable-height child. */
+  .q-item .a {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease, margin 0.35s ease;
+  }
+  .q-item.open .a {
+    max-height: 200px;
+    margin-top: 14px;
+  }
+  .q-item.open .plus {
+    transform: rotate(45deg);
+    background: var(--color-brand-primary);
+    color: #fff;
+  }
+</style>
+
+<script>
+  import gsap from "gsap";
+  import { ScrollTrigger } from "gsap/ScrollTrigger";
+  gsap.registerPlugin(ScrollTrigger);
+
+  document.querySelectorAll<HTMLElement>(".faq-list .q-item").forEach((item) => {
+    item.addEventListener("click", () => item.classList.toggle("open"));
+  });
+
+  const faq = document.getElementById("faq-content");
+  if (faq) {
+    const header = [
+      faq.querySelector<HTMLElement>(".faq-eyebrow"),
+      faq.querySelector<HTMLElement>(".faq-title"),
+      faq.querySelector<HTMLElement>(".faq-lede"),
+      faq.querySelector<HTMLElement>(".faq-card"),
+    ].filter((el): el is HTMLElement => !!el);
+    const items = Array.from(faq.querySelectorAll<HTMLElement>(".faq-list .q-item"));
+
+    gsap.set([...header, ...items], { opacity: 0, y: 28 });
+
+    const tl = gsap.timeline({
+      scrollTrigger: { trigger: faq, start: "top 75%", once: true },
+      defaults: { ease: "power3.out", duration: 0.9 },
+    });
+
+    tl.to(header, { opacity: 1, y: 0, stagger: { each: 0.1, from: "start" } });
+    tl.to(
+      items,
+      { opacity: 1, y: 0, duration: 0.7, stagger: { each: 0.07, from: "start" } },
+      "-=0.45",
+    );
+  }
+</script>

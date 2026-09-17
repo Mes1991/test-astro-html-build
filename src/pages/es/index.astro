@@ -1,0 +1,48 @@
+---
+/**
+ * Spanish home page — fully bilingual.
+ *
+ * Meta tags, OG image, JSON-LD (FAQPage uses Spanish entries), hreflang,
+ * and the <html lang> attribute are all locale-aware. Each home component
+ * receives `locale="es"` and reads its strings from src/i18n/es.json
+ * (with English fallback) so the rendered body is Mexican-Spanish copy.
+ */
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SiteHeader from "../../components/shared/SiteHeader.astro";
+import Hero from "../../components/home/Hero.astro";
+import FAQ from "../../components/home/FAQ.astro";
+import BlogTeaser from "../../components/home/BlogTeaser.astro";
+import Footer from "../../components/home/Footer.astro";
+
+import BreadcrumbsJsonLd from "../../components/seo/BreadcrumbsJsonLd.astro";
+import { buildFaqPage } from "../../lib/seo/schemas/faqPage";
+import { getFaqEntries } from "../../lib/seo/data/faq";
+import { t } from "../../i18n/t";
+
+const locale = "es";
+const description = t("pages.home.metaDescription", locale);
+
+const faqSchema = buildFaqPage(getFaqEntries(locale));
+---
+
+<BaseLayout
+  title=""
+  description={description}
+  locale={locale}
+  schema={faqSchema ? [faqSchema] : []}
+>
+  <Fragment slot="head">
+    <BreadcrumbsJsonLd locale={locale} />
+  </Fragment>
+  <SiteHeader locale="es" />
+  <main id="main">
+    <Hero locale="es" />
+    <section id="faq" aria-label="Preguntas frecuentes" style="background-color: var(--color-brand-paper);">
+      <FAQ locale="es" />
+    </section>
+    <section id="blog" aria-label="Lo más reciente del blog" style="background-color: var(--color-brand-paper);">
+      <BlogTeaser locale="es" />
+    </section>
+    <Footer locale="es" />
+  </main>
+</BaseLayout>

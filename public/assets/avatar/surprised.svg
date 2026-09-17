@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 92 92" fill="none">
+  <!-- Background circle -->
+  <circle cx="46" cy="46" r="44" fill="#1e293b" stroke="#64748b" stroke-width="2"/>
+  <!-- Eyes - wide open -->
+  <circle cx="32" cy="38" r="7" fill="#64748b"/>
+  <circle cx="60" cy="38" r="7" fill="#64748b"/>
+  <!-- Oval mouth (surprised "O") -->
+  <ellipse cx="46" cy="60" rx="8" ry="10" fill="#64748b"/>
+</svg>

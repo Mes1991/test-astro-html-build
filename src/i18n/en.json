@@ -1,0 +1,68 @@
+{
+  "nav": {
+    "home": "Home",
+    "blog": "The Blog"
+  },
+  "languageSwitcher": {
+    "label": "Language",
+    "en": "English",
+    "es": "Español",
+    "switchTo": "Switch to {lang}"
+  },
+  "common": {
+    "skipToContent": "Skip to content",
+    "scrollToTop": "Back to top"
+  },
+  "pages": {
+    "home": {
+      "metaTitle": "",
+      "metaDescription": "Example Site is a production-ready Astro starter template for building fast, accessible, multilingual websites with a built-in design system and SEO tooling."
+    },
+    "blog": {
+      "metaTitle": "The Blog — notes and insights",
+      "metaDescription": "Process notes, tutorials, and insights from the team — practical writing published while we ship real projects.",
+      "h1": "The Blog",
+      "tagline": "Notes and insights."
+    }
+  },
+  "footer": {
+    "copyright": "© {year} Example Site"
+  },
+  "header": {
+    "menu": {
+      "blog": "Blog",
+      "faq": "FAQ"
+    },
+    "cta": "Get started",
+    "logoTaglineSmall": "DIGITAL STUDIO"
+  },
+  "home": {
+    "hero": {
+      "eyebrow": "A studio for ambitious teams",
+      "headline": {
+        "line1": "Build something",
+        "line2": "that lasts."
+      },
+      "subhead": "Strategy, design, and code that work hard for your business — at any scale.",
+      "cta": "Get started"
+    },
+    "faq": {
+      "eyebrow": "— FAQ",
+      "titleA": "Common",
+      "titleB": "questions.",
+      "lede": "The questions we get every week, on record.",
+      "cardLabel": "Still have questions? Ask us directly",
+      "cardEmail": "hello@example.com →"
+    },
+    "blog": {
+      "eyebrow": "— Latest from the blog",
+      "titleA": "Latest",
+      "titleB": "posts.",
+      "lede": "Process notes, post-mortems, and launch recaps from the studio. Short reads — head to The Blog for more.",
+      "viewAll": "Open The Blog →",
+      "cardCta": "Read post",
+      "badge": "The Blog",
+      "viewAllCategories": "Open The Blog"
+    }
+  }
+}

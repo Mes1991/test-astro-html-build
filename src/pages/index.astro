@@ -1,0 +1,35 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SiteHeader from "../components/shared/SiteHeader.astro";
+import Hero from "../components/home/Hero.astro";
+import FAQ from "../components/home/FAQ.astro";
+import BlogTeaser from "../components/home/BlogTeaser.astro";
+import Footer from "../components/home/Footer.astro";
+
+import BreadcrumbsJsonLd from "../components/seo/BreadcrumbsJsonLd.astro";
+import { buildFaqPage } from "../lib/seo/schemas/faqPage";
+import { FAQ_ENTRIES } from "../lib/seo/data/faq";
+
+const faqSchema = buildFaqPage(FAQ_ENTRIES);
+---
+
+<BaseLayout
+  title=""
+  description="An agent-ready, production-ready Astro starter template for building fast, accessible, multilingual websites with a clean design system and built-in SEO tools."
+  schema={faqSchema ? [faqSchema] : []}
+>
+  <Fragment slot="head">
+    <BreadcrumbsJsonLd locale="en" />
+  </Fragment>
+  <SiteHeader locale="en" />
+  <main id="main">
+    <Hero locale="en" />
+    <section id="faq" aria-label="Frequently asked questions" style="background-color: var(--color-brand-paper);">
+      <FAQ locale="en" />
+    </section>
+    <section id="blog" aria-label="Latest from the blog" style="background-color: var(--color-brand-paper);">
+      <BlogTeaser locale="en" />
+    </section>
+    <Footer locale="en" />
+  </main>
+</BaseLayout>

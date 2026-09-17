@@ -1,0 +1,168 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SiteHeader from "../components/shared/SiteHeader.astro";
+import Footer from "../components/home/Footer.astro";
+import NotFoundBackground from "../components/react/NotFoundBackground.tsx";
+---
+
+<BaseLayout
+  title="Page not found — Example Site"
+  description="The page you are looking for does not exist. Head back to the home page and find what you need."
+  locale="en"
+  image={{ src: "/og/default.png", alt: "Example Site" }}
+>
+  <Fragment slot="head">
+    <meta name="robots" content="noindex" />
+    <script is:inline>
+      // Pick locale from the original URL the visitor was trying to reach.
+      // Static hosts serve a single 404.html; the browser still exposes the
+      // missing path via location.pathname, so we can render the right copy
+      // synchronously before first paint.
+      (function () {
+        var es = /^\/es(\/|$)/.test(location.pathname);
+        document.documentElement.lang = es ? "es" : "en";
+      })();
+    </script>
+    <style>
+      html[lang="en"] [data-l10n="es"] {
+        display: none;
+      }
+      html[lang="es"] [data-l10n="en"] {
+        display: none;
+      }
+      /* Page-scoped: pin the header over the WebGL gradient on /404 only. */
+      [data-page-404] .site-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        background: transparent;
+      }
+    </style>
+  </Fragment>
+
+  <main
+    id="main"
+    data-page-404
+    class="relative min-h-screen overflow-hidden flex flex-col"
+  >
+    <NotFoundBackground client:idle />
+
+    <div data-l10n="en" class="relative z-10 flex-1 flex flex-col min-h-screen">
+      <SiteHeader locale="en" />
+      <section
+        class="relative flex-1 grid place-items-center min-h-[80vh] px-12 py-24 max-lgx:px-8 max-lgx:py-16"
+      >
+        <div class="relative max-w-[760px] text-center">
+          <p
+            class="font-mono text-[11px] tracking-caps-4 uppercase text-brand-primary mb-4"
+          >
+            — 404 / PAGE NOT FOUND
+          </p>
+          <h1
+            class="font-display font-black text-display-md leading-[0.95] tracking-display-3 text-brand-surface-dark"
+          >
+            This page<br />
+            <em class="not-italic text-brand-primary">doesn't exist.</em>
+          </h1>
+          <p
+            class="mt-6 text-[18px] leading-[1.55] text-brand-surface-dark/80 max-w-[520px] mx-auto"
+          >
+            The page you are looking for could not be found. It may have moved
+            or the link may be incorrect.
+          </p>
+          <div class="mt-10 flex items-center justify-center gap-4 flex-wrap">
+            <a
+              href="/"
+              class="inline-flex items-center gap-2 rounded-md bg-brand-primary text-brand-cream px-6 py-3 font-display font-bold text-sm no-underline hover:bg-brand-primary-deep transition-colors"
+            >
+              Back to home
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14"></path>
+                <path d="m12 5 7 7-7 7"></path>
+              </svg>
+            </a>
+            <a
+              href="/blog"
+              class="inline-flex items-center gap-2 rounded-md border border-brand-surface-dark/15 bg-brand-paper/85 backdrop-blur-sm text-brand-surface-dark px-6 py-3 font-display font-bold text-sm no-underline hover:bg-brand-paper hover:border-brand-primary/40 hover:text-brand-primary transition-colors"
+            >
+              Read the blog
+            </a>
+          </div>
+        </div>
+      </section>
+      <Footer locale="en" />
+    </div>
+
+    <div data-l10n="es" class="relative z-10 flex-1 flex flex-col min-h-screen">
+      <SiteHeader locale="es" />
+      <section
+        class="relative flex-1 grid place-items-center min-h-[80vh] px-12 py-24 max-lgx:px-8 max-lgx:py-16"
+      >
+        <div class="relative max-w-[760px] text-center">
+          <p
+            class="font-mono text-[11px] tracking-caps-4 uppercase text-brand-primary mb-4"
+          >
+            — 404 / PÁGINA NO ENCONTRADA
+          </p>
+          <p
+            role="heading"
+            aria-level="1"
+            class="font-display font-black text-display-md leading-[0.95] tracking-display-3 text-brand-surface-dark m-0"
+          >
+            Esta página<br />
+            <em class="not-italic text-brand-primary">no existe.</em>
+          </p>
+          <p
+            class="mt-6 text-[18px] leading-[1.55] text-brand-surface-dark/80 max-w-[520px] mx-auto"
+          >
+            La página que buscas no fue encontrada. Puede que haya cambiado de
+            dirección o que el enlace sea incorrecto.
+          </p>
+          <div class="mt-10 flex items-center justify-center gap-4 flex-wrap">
+            <a
+              href="/es/"
+              class="inline-flex items-center gap-2 rounded-md bg-brand-primary text-brand-cream px-6 py-3 font-display font-bold text-sm no-underline hover:bg-brand-primary-deep transition-colors"
+            >
+              Volver al inicio
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14"></path>
+                <path d="m12 5 7 7-7 7"></path>
+              </svg>
+            </a>
+            <a
+              href="/es/blog"
+              class="inline-flex items-center gap-2 rounded-md border border-brand-surface-dark/15 bg-brand-paper/85 backdrop-blur-sm text-brand-surface-dark px-6 py-3 font-display font-bold text-sm no-underline hover:bg-brand-paper hover:border-brand-primary/40 hover:text-brand-primary transition-colors"
+            >
+              Leer el blog
+            </a>
+          </div>
+        </div>
+      </section>
+      <Footer locale="es" />
+    </div>
+  </main>
+</BaseLayout>

@@ -1,0 +1,24 @@
+---
+import type { Thing, WithContext } from 'schema-dts';
+
+interface Props {
+  /** One schema or an array. Falsy entries are skipped (lets callers pass nullable builders inline). */
+  item: WithContext<Thing> | (WithContext<Thing> | null | undefined)[] | null | undefined;
+}
+
+const { item } = Astro.props;
+
+const items: WithContext<Thing>[] = item == null
+  ? []
+  : Array.isArray(item)
+    ? (item.filter(Boolean) as WithContext<Thing>[])
+    : [item];
+---
+
+{items.map((entry) => (
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify(entry)}
+  />
+))}

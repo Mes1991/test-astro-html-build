@@ -1,0 +1,67 @@
+---
+import { LOCALES, DEFAULT_LOCALE, type LocaleCode } from "../../lib/seo/types";
+import { routeKeyFromPath, pathFor } from "../../lib/seo/locale";
+import { t } from "../../i18n/t";
+
+interface Props {
+  /** Current locale of the page. */
+  current: LocaleCode;
+  /** Optional override for the destination paths (used by case studies). */
+  hrefForLocale?: (l: LocaleCode) => string;
+  /**
+   * Color variant. "light" (default) is for use on light backgrounds (cream/white);
+   * "dark" inverts for use on the hero gradient and footer ink.
+   */
+  variant?: "light" | "dark";
+}
+
+const { current, hrefForLocale, variant = "light" } = Astro.props;
+
+const inactiveClasses =
+  variant === "dark"
+    ? "text-white/70 hover:bg-white/10 hover:text-white"
+    : "text-brand-surface-dark hover:bg-brand-primary/10";
+
+const activeClasses =
+  variant === "dark"
+    ? "bg-brand-highlight text-brand-ink"
+    : "bg-brand-primary text-brand-cream";
+
+const route = routeKeyFromPath(Astro.url.pathname);
+
+function urlFor(loc: LocaleCode): string {
+  if (hrefForLocale) return hrefForLocale(loc);
+  if (route) return pathFor(route, loc);
+
+  const p = Astro.url.pathname;
+
+  // Fallback — same path with /es/ prefix flipped. Blog posts share the
+  // same `blog` slug across locales, so the generic prefix-flip maps
+  // /blog/<slug> ⇄ /es/blog/<slug> correctly.
+  if (loc === DEFAULT_LOCALE) return p.replace(/^\/es(\/|$)/, "/");
+  return p.startsWith("/es/") || p === "/es" ? p : `/es${p === "/" ? "/" : p}`;
+}
+---
+
+<nav aria-label={t("languageSwitcher.label", current)} class="flex gap-3 text-sm">
+  {LOCALES.map((loc) => {
+    const isCurrent = loc === current;
+    const href = urlFor(loc);
+    const label = loc === "en" ? "EN" : "ES";
+    const fullName = t(`languageSwitcher.${loc}`, current);
+    return (
+      <a
+        href={href}
+        hreflang={loc}
+        aria-current={isCurrent ? "true" : undefined}
+        aria-label={t("languageSwitcher.switchTo", current, { lang: fullName })}
+        class:list={[
+          "px-2 py-1 rounded font-mono uppercase tracking-wider transition-colors",
+          isCurrent ? activeClasses : inactiveClasses,
+        ]}
+      >
+        {label}
+      </a>
+    );
+  })}
+</nav>

@@ -1,0 +1,212 @@
+---
+import "../styles/global.css";
+import type { SeoProps } from "../lib/seo/types";
+import { DEFAULT_LOCALE } from "../lib/seo/types";
+import SEO from "../components/seo/SEO.astro";
+import Schema from "../components/seo/Schema.astro";
+import GoogleAnalytics from "../components/seo/GoogleAnalytics.astro";
+import { buildOrganization } from "../lib/seo/schemas/organization";
+import { buildWebSite } from "../lib/seo/schemas/website";
+
+type Props = Partial<SeoProps> & { title: string };
+
+const seoProps = Astro.props;
+const lang = seoProps.locale ?? DEFAULT_LOCALE;
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <SEO {...seoProps}>
+      <slot name="head" slot="head" />
+    </SEO>
+    <Schema item={[buildOrganization(), buildWebSite(lang)]} />
+    <GoogleAnalytics />
+
+    <script is:inline>
+      // Per-window gate. sessionStorage is NOT actually per-window — it is copied
+      // to any new same-origin tab opened via target="_blank", window.open,
+      // Cmd/Ctrl+click, or tab duplication. That made the intro silently skip
+      // in those new tabs. window.name is preserved across reloads + in-tab
+      // navigation but is empty for freshly opened windows, which is what we
+      // want here.
+      try {
+        if (window.name && window.name.indexOf("site-intro-played") !== -1) {
+          document.documentElement.classList.add("intro-played");
+        } else {
+          document.documentElement.classList.add("intro-pending");
+        }
+      } catch (_) {
+        document.documentElement.classList.add("intro-pending");
+      }
+    </script>
+
+    <style is:global>
+      html.intro-pending,
+      html.intro-pending body {
+        overflow: hidden;
+      }
+      html.intro-played #introOverlay {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[10000] focus:bg-brand-highlight focus:text-brand-ink focus:px-4 focus:py-2 focus:rounded focus:font-display focus:font-extrabold"
+    >
+      Skip to content
+    </a>
+    <div
+      id="introOverlay"
+      aria-hidden="true"
+      class="fixed inset-0 z-[9999] overflow-hidden grid place-items-center bg-[radial-gradient(ellipse_at_50%_50%,#1e293b_0%,#0b1220_70%)]"
+    >
+      <!--
+        Intro wordmark — HARDCODED placeholder, intentionally not config-driven.
+        The intro animation is meant to be swapped per project (simple fade like
+        this, a Lottie file, a video, etc.), so there is no single config value.
+        To rebrand: change the word below, or replace this whole #introOverlay
+        block with your own intro. See AGENTS.md §12.
+      -->
+      <div id="introWord" class="relative z-[50] font-display font-black not-italic text-intro leading-[1.3] tracking-display uppercase text-brand-highlight whitespace-nowrap opacity-0">
+        Example Site
+      </div>
+    </div>
+
+    <slot />
+
+    <script>
+      import Lenis from "lenis";
+      import "lenis/dist/lenis.css";
+      import gsap from "gsap";
+      import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+      // Defer all heavy setup (Lenis, intro timeline, ScrollTrigger) until
+      // the browser is idle. This frees the main thread for hero image
+      // decode + first paint. Falls back to a 200ms setTimeout when
+      // requestIdleCallback isn't available (Safari < 16.4, etc.).
+      const ric =
+        typeof window !== "undefined" &&
+        typeof window.requestIdleCallback === "function"
+          ? window.requestIdleCallback.bind(window)
+          : (cb: IdleRequestCallback) =>
+              window.setTimeout(() => cb({ didTimeout: true, timeRemaining: () => 0 }), 200);
+
+      ric(() => {
+      gsap.registerPlugin(ScrollTrigger);
+
+      const INTRO_FLAG = "site-intro-played";
+
+      const lenis = new Lenis({
+        duration: 1.1,
+        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+      });
+
+      // Drive Lenis from GSAP's ticker so ScrollTrigger stays in lockstep
+      // with the smooth scroll. Using gsap.ticker also guarantees a single
+      // raf loop shared by every animation on the page.
+      lenis.on("scroll", ScrollTrigger.update);
+      gsap.ticker.add((time) => lenis.raf(time * 1000));
+      gsap.ticker.lagSmoothing(0);
+
+      // Expose globally so React components (portfolio carousel) can
+      // subscribe to the same scroll without a second Lenis instance.
+      (window as unknown as { __lenis: typeof lenis }).__lenis = lenis;
+
+      document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach((a) => {
+        a.addEventListener("click", (e) => {
+          const id = a.getAttribute("href");
+          if (!id || id === "#") return;
+          const target = document.querySelector(id);
+          if (!target || !(target instanceof HTMLElement)) return;
+          e.preventDefault();
+          lenis.scrollTo(target, { offset: 0 });
+          // Move keyboard focus to the target so screen-reader users land
+          // there and Tab continues from the main content (skip-link behaviour).
+          // tabindex="-1" lets non-interactive elements (like <main>) accept
+          // programmatic focus without entering the tab order.
+          if (!target.hasAttribute("tabindex")) {
+            target.setAttribute("tabindex", "-1");
+          }
+          target.focus({ preventScroll: true });
+          // Mirror the URL hash for back-button consistency without re-firing
+          // the browser's native anchor jump (Lenis already handled scroll).
+          try {
+            history.pushState(null, "", id);
+          } catch (_) {
+            /* no-op in unusual environments */
+          }
+        });
+      });
+
+      // ---------- Intro overlay (once per window) ----------
+      const overlay = document.getElementById("introOverlay");
+      const word = document.getElementById("introWord");
+
+      // See the inline head script for why this is window.name, not
+      // sessionStorage. Append-style so we don't clobber names set by other libs.
+      const alreadyPlayed = (() => {
+        try {
+          return window.name.indexOf(INTRO_FLAG) !== -1;
+        } catch (_) {
+          return false;
+        }
+      })();
+
+      function markIntroDone() {
+        try {
+          if (window.name.indexOf(INTRO_FLAG) === -1) {
+            window.name = window.name ? `${window.name}|${INTRO_FLAG}` : INTRO_FLAG;
+          }
+        } catch (_) {}
+        document.documentElement.classList.remove("intro-pending");
+        document.documentElement.classList.add("intro-played");
+        lenis.start();
+        window.dispatchEvent(new CustomEvent("intro:complete"));
+      }
+
+      function skipIntro() {
+        if (overlay) overlay.style.display = "none";
+        markIntroDone();
+      }
+
+      const prefersReduced = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+
+      if (alreadyPlayed || prefersReduced || !overlay || !word) {
+        skipIntro();
+      } else {
+        lenis.stop();
+        // Cap the fonts.ready wait so a hung font load can't leave the user
+        // stuck with a locked body and an invisible overlay forever.
+        const fontsReady = Promise.race([
+          document.fonts.ready,
+          new Promise((r) => setTimeout(r, 4000)),
+        ]);
+        fontsReady.then(() => playIntro(overlay, word));
+      }
+
+      // Simple fade intro: fade the wordmark in (~0.5s), hold (~0.4s), then
+      // fade the whole overlay out (~0.5s). Swappable per project — see the
+      // #introOverlay markup comment above.
+      function playIntro(overlayEl: HTMLElement, wordEl: HTMLElement) {
+        const tl = gsap.timeline({
+          onComplete: () => {
+            overlayEl.style.display = "none";
+            markIntroDone();
+          },
+        });
+        tl.to(wordEl, { opacity: 1, duration: 0.5, ease: "power2.out" });
+        tl.to(overlayEl, { opacity: 0, duration: 0.5, ease: "power2.inOut" }, "+=0.4");
+      }
+      });
+    </script>
+  </body>
+</html>

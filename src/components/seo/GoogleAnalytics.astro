@@ -1,0 +1,38 @@
+---
+/**
+ * GA4 + Partytown.
+ *
+ * Both <script> tags are typed text/partytown so the bundled Partytown
+ * worker (configured in astro.config.mjs) intercepts and runs them in a
+ * web worker. Astro's @astrojs/partytown integration is already enabled
+ * in Phase 1.
+ *
+ * Renders nothing in dev or when PUBLIC_GA_MEASUREMENT_ID is unset.
+ *
+ * Consent hook: a future cookie banner can opt out by setting
+ * `window.__site_consent_ga = false` BEFORE this component loads (it's
+ * mounted in BaseLayout's <head>). When false, the partytown scripts are
+ * still emitted but gtag's init call short-circuits.
+ */
+const measurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
+const isProd = import.meta.env.PROD;
+const enabled = isProd && Boolean(measurementId);
+---
+
+{enabled && (
+  <>
+    <script
+      type="text/partytown"
+      is:inline
+      src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
+    ></script>
+    <script type="text/partytown" is:inline define:vars={{ measurementId }}>{`
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){ dataLayer.push(arguments); }
+      gtag('js', new Date());
+      if (window.__site_consent_ga !== false) {
+        gtag('config', measurementId, { anonymize_ip: true });
+      }
+    `}</script>
+  </>
+)}

@@ -1,0 +1,45 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SiteHeader from "../../components/shared/SiteHeader.astro";
+import Footer from "../../components/home/Footer.astro";
+import BlogArchive from "../../components/blog/BlogArchive.astro";
+import BreadcrumbsJsonLd from "../../components/seo/BreadcrumbsJsonLd.astro";
+import { buildCollectionPage } from "../../lib/seo/schemas/page";
+import { siteSeo } from "../../lib/seo/defaults";
+import { absoluteUrl } from "../../lib/seo/url";
+import { t } from "../../i18n/t";
+
+const locale = "en";
+
+const all = (await getCollection("blog", (e) => !e.data.draft)).sort(
+  (a, b) =>
+    new Date(b.data.datePublished).getTime() -
+    new Date(a.data.datePublished).getTime(),
+);
+
+const title = t("pages.blog.metaTitle", locale);
+const description = t("pages.blog.metaDescription", locale);
+
+const collectionSchema = buildCollectionPage({
+  name: `${title} — ${siteSeo.brand}`,
+  url: absoluteUrl("/blog"),
+  description,
+  locale,
+  items: all.map((entry) => ({
+    name: entry.data.title,
+    url: absoluteUrl(`/blog/${entry.data.slug}`),
+  })),
+});
+---
+
+<BaseLayout title={title} description={description} locale={locale} schema={collectionSchema}>
+  <Fragment slot="head">
+    <BreadcrumbsJsonLd locale={locale} />
+  </Fragment>
+  <main id="main" class="bg-brand-cream min-h-screen">
+    <SiteHeader locale="en" />
+    <BlogArchive locale="en" />
+    <Footer locale="en" />
+  </main>
+</BaseLayout>

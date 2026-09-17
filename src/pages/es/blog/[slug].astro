@@ -1,0 +1,110 @@
+---
+import { getCollection, render } from "astro:content";
+import { Image } from "astro:assets";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import SiteHeader from "../../../components/shared/SiteHeader.astro";
+import Footer from "../../../components/home/Footer.astro";
+import BreadcrumbsJsonLd from "../../../components/seo/BreadcrumbsJsonLd.astro";
+import { buildBlogPosting } from "../../../lib/seo/schemas/article";
+import { absoluteUrl } from "../../../lib/seo/url";
+import { readingTime } from "../../../lib/blog/reading-time";
+import NextRead from "../../../components/blog/NextRead.astro";
+
+export async function getStaticPaths() {
+  const all = await getCollection("blog", (e) => !e.data.draft);
+  return all.map((entry) => ({
+    params: { slug: entry.data.slug },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { data } = entry;
+const es = data.translations?.es;
+const { Content } = await render(entry);
+const minutes = readingTime(entry.body ?? "");
+
+const locale = "es";
+const title = es?.seo?.title ?? es?.title ?? data.title;
+const description = es?.seo?.description ?? es?.description ?? data.description;
+const displayTitle = es?.title ?? data.title;
+const displayDescription = es?.description ?? data.description;
+const displayCategory = es?.category ?? data.category;
+const imageAlt = es?.imageAlt ?? data.imageAlt;
+
+const explicitAlternates = {
+  en: absoluteUrl(`/blog/${data.slug}`),
+  es: absoluteUrl(`/es/blog/${data.slug}`),
+  "x-default": absoluteUrl(`/blog/${data.slug}`),
+};
+
+const articleSchema = buildBlogPosting({
+  headline: displayTitle,
+  description: displayDescription,
+  slug: data.slug,
+  imageUrl: typeof data.image === "string" ? data.image : data.image.src,
+  datePublished: data.datePublished,
+  dateModified: data.dateModified,
+  authorName: data.author,
+  section: displayCategory,
+  keywords: data.keywords,
+  locale,
+  pageUrl: absoluteUrl(`/es/blog/${data.slug}`),
+});
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  locale={locale}
+  type="article"
+  alternates={explicitAlternates}
+  publishedTime={data.datePublished}
+  modifiedTime={data.dateModified}
+  author={data.author}
+  schema={articleSchema}
+  image={{ src: typeof data.image === "string" ? data.image : data.image.src, alt: imageAlt }}
+>
+  <Fragment slot="head">
+    <BreadcrumbsJsonLd
+      crumbs={[
+        { name: "Inicio", url: absoluteUrl("/es/") },
+        { name: "Blog", url: absoluteUrl("/es/blog") },
+        { name: displayTitle, url: absoluteUrl(`/es/blog/${data.slug}`) },
+      ]}
+    />
+  </Fragment>
+  <main id="main" class="bg-brand-cream-warm min-h-screen">
+    <SiteHeader locale="es" />
+    <article class="mx-auto max-w-[760px] px-12 py-20 max-lgx:px-6 max-lgx:py-12">
+      <header class="mb-12 max-lgx:mb-8">
+        <div class="font-mono text-[11px] tracking-caps-3 uppercase text-brand-primary mb-4">
+          {new Date(data.datePublished).toISOString().slice(0, 10)}
+          {displayCategory && <> · {displayCategory}</>}
+          <> · {minutes} min de lectura</>
+        </div>
+        <h1 class="font-display font-black text-display-md leading-[0.95] tracking-display-3 text-brand-surface-dark">
+          {displayTitle}
+        </h1>
+        <p class="mt-5 text-[18px] leading-[1.55] text-ui-700 max-w-[640px]">
+          {displayDescription}
+        </p>
+      </header>
+      <div class="aspect-[16/9] overflow-hidden rounded-card bg-brand-surface-dark/5 mb-12">
+        <Image
+          src={data.image}
+          alt={imageAlt}
+          widths={[640, 960, 1280, 1600]}
+          sizes="(min-width: 60rem) 760px, 100vw"
+          format="webp"
+          class="w-full h-full object-cover"
+        />
+      </div>
+      <div class="prose-blog text-[17px] leading-[1.7] text-brand-surface-dark/85">
+        <Content />
+      </div>
+    </article>
+    <NextRead current={entry} locale="es" />
+    <Footer locale="es" />
+  </main>
+</BaseLayout>

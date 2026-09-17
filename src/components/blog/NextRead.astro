@@ -1,0 +1,128 @@
+---
+import { Image } from "astro:assets";
+import { getCollection, type CollectionEntry } from "astro:content";
+import { pickNextReads } from "../../lib/blog/next-read";
+import type { LocaleCode } from "../../lib/seo/types";
+
+interface Props {
+  current: CollectionEntry<"blog">;
+  locale: LocaleCode;
+}
+
+const { current, locale } = Astro.props;
+
+const all = await getCollection("blog", (e) => !e.data.draft);
+const picks = pickNextReads(current, all);
+
+type Pick = (typeof picks)[number];
+
+function fields(entry: Pick) {
+  const es = entry.data.translations?.es;
+  return {
+    title: locale === "es" && es?.title ? es.title : entry.data.title,
+    description:
+      locale === "es" && es?.description
+        ? es.description
+        : entry.data.description,
+    category:
+      locale === "es" && es?.category ? es.category : entry.data.category,
+    imageAlt:
+      locale === "es" && es?.imageAlt ? es.imageAlt : entry.data.imageAlt,
+    image: entry.data.image,
+    slug: entry.data.slug,
+    date: entry.data.datePublished,
+  };
+}
+
+const items = picks.map(fields);
+
+const eyebrow = locale === "es" ? "— SIGUE LEYENDO" : "— NEXT READ";
+const heading = locale === "es" ? "Más del blog." : "More from the blog.";
+const readMoreLabel = locale === "es" ? "Leer más" : "Read more";
+
+const dateFormatter = new Intl.DateTimeFormat(
+  locale === "es" ? "es-MX" : "en-US",
+  { day: "2-digit", month: "long", year: "numeric" },
+);
+const fmtDate = (iso: string) =>
+  dateFormatter.format(new Date(iso)).replace(/\.$/, "");
+
+const postHref = (slug: string) =>
+  locale === "es" ? `/es/blog/${slug}` : `/blog/${slug}`;
+---
+
+{
+  items.length > 0 && (
+    <section class="border-t border-brand-surface-dark/10 mx-auto max-w-7xl px-6 lg:px-8 py-20">
+      <p class="font-mono text-[11px] tracking-caps-3 uppercase text-brand-primary">
+        {eyebrow}
+      </p>
+      <h2 class="mt-3 font-display font-black text-2xl md:text-3xl lg:text-display-xs leading-[1.05] tracking-display-3 text-brand-surface-dark">
+        {heading}
+      </h2>
+
+      <div class="mt-10 grid gap-6 sm:grid-cols-2">
+        {items.map((p) => (
+          <article class="group flex flex-col gap-6 rounded-xl border border-brand-surface-dark/10 bg-brand-paper py-6 overflow-hidden transition-all duration-300 hover:border-brand-primary/30">
+            <div class="px-6 space-y-3.5">
+              <div class="overflow-hidden rounded-lg mb-6 sm:mb-8">
+                <a href={postHref(p.slug)} class="block">
+                  <Image
+                    src={p.image}
+                    alt={p.imageAlt}
+                    widths={[400, 720, 960]}
+                    sizes="(min-width: 1024px) 540px, (min-width: 640px) 50vw, 100vw"
+                    format="webp"
+                    loading="lazy"
+                    class="h-[220px] w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                </a>
+              </div>
+              <div class="flex items-center justify-between gap-1.5">
+                <span class="text-ui-600 text-sm">{fmtDate(p.date)}</span>
+                {p.category && (
+                  <span class="inline-flex w-fit shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary px-2 py-0.5 text-sm font-medium whitespace-nowrap">
+                    {p.category}
+                  </span>
+                )}
+              </div>
+              <h3 class="line-clamp-2 text-lg font-medium md:text-xl font-display text-brand-surface-dark">
+                <a
+                  href={postHref(p.slug)}
+                  class="no-underline hover:text-brand-primary transition-colors"
+                >
+                  {p.title}
+                </a>
+              </h3>
+              <p class="text-ui-700 line-clamp-2 text-base">{p.description}</p>
+              <div class="flex items-center justify-end pt-1">
+                <a
+                  href={postHref(p.slug)}
+                  aria-label={`${readMoreLabel}: ${p.title}`}
+                  class="inline-flex shrink-0 items-center justify-center rounded-md border border-brand-surface-dark/15 size-9 bg-brand-paper text-brand-surface-dark hover:bg-brand-primary hover:text-brand-cream hover:border-brand-primary group-hover:bg-brand-primary group-hover:text-brand-cream group-hover:border-brand-primary transition-colors"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="-rotate-45"
+                    aria-hidden="true"
+                  >
+                    <path d="M5 12h14" />
+                    <path d="m12 5 7 7-7 7" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}

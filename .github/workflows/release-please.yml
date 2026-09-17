@@ -1,0 +1,64 @@
+name: release-please
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+      - name: Auto-merge Release PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # release-please opens Release PRs on branches named
+          # `release-please--branches--<base>` (or
+          # `release-please--branches--<base>--components--<name>` for
+          # monorepos). Filter by head branch instead of by the
+          # `autorelease: pending` label: the head branch is set
+          # atomically at PR-create time, while the label index is
+          # eventually consistent and trails the PR by 1-2s — racing the
+          # auto-merge step that runs immediately after the action's
+          # create call. The label-based query missed PRs on first
+          # creation; head-branch is reliable.
+          #
+          # Try --auto first (queues merge if any required checks ever
+          # appear later); fall back to immediate merge when the repo
+          # doesn't have "Allow auto-merge" enabled. Free-tier private
+          # repos default that setting off; plain merge fires immediately
+          # since bot-authored Release PRs don't gate on path-filtered
+          # workflows like tofu-plan.
+          prs=$(gh pr list -R "$REPO" --state open --json number,headRefName \
+                  -q '.[] | select(.headRefName | startswith("release-please--")) | .number')
+          if [ -z "$prs" ]; then
+            echo "No Release PRs to merge."
+            exit 0
+          fi
+          for pr in $prs; do
+            echo "Merging Release PR #$pr"
+            gh pr merge "$pr" --squash --auto -R "$REPO" \
+              || gh pr merge "$pr" --squash -R "$REPO"
+          done
+          # GitHub safety: workflow runs triggered by GITHUB_TOKEN-driven
+          # pushes (which the merge above produces) do NOT cascade into
+          # other workflows. That means release-please-action's second
+          # phase — detect merged Release PR, cut the GitHub Release +
+          # tag — would silently never fire on the merge commit.
+          # workflow_dispatch IS allowed to be triggered by GITHUB_TOKEN,
+          # so re-fire this workflow explicitly. The next run sees the
+          # post-merge manifest, finds no release tagged for the new
+          # version, and creates it.
+          echo "Re-firing workflow to cut release tag"
+          gh workflow run release-please.yml -R "$REPO"

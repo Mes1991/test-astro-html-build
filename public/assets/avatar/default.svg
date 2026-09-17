@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 92 92" fill="none">
+  <!-- Background circle -->
+  <circle cx="46" cy="46" r="44" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
+  <!-- Eyes -->
+  <circle cx="32" cy="40" r="5" fill="#3b82f6"/>
+  <circle cx="60" cy="40" r="5" fill="#3b82f6"/>
+  <!-- Smile -->
+  <path d="M32 58 Q46 68 60 58" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" fill="none"/>
+</svg>

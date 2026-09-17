@@ -1,0 +1,68 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "blog": "El Blog"
+  },
+  "languageSwitcher": {
+    "label": "Idioma",
+    "en": "English",
+    "es": "Español",
+    "switchTo": "Cambiar a {lang}"
+  },
+  "common": {
+    "skipToContent": "Saltar al contenido",
+    "scrollToTop": "Volver arriba"
+  },
+  "pages": {
+    "home": {
+      "metaTitle": "",
+      "metaDescription": "Este es un proyecto de plantilla Astro para sitios web rápidos, accesibles y multilingües con sistema de diseño integrado y herramientas de SEO listas para producción."
+    },
+    "blog": {
+      "metaTitle": "El Blog — notas e ideas",
+      "metaDescription": "Notas de proceso, tutoriales e ideas del equipo — escritura práctica publicada mientras enviamos proyectos reales.",
+      "h1": "El Blog",
+      "tagline": "Notas e ideas."
+    }
+  },
+  "footer": {
+    "copyright": "© {year} Example Site"
+  },
+  "header": {
+    "menu": {
+      "blog": "Blog",
+      "faq": "FAQ"
+    },
+    "cta": "Comenzar",
+    "logoTaglineSmall": "ESTUDIO DIGITAL"
+  },
+  "home": {
+    "hero": {
+      "eyebrow": "Un estudio para equipos ambiciosos",
+      "headline": {
+        "line1": "Crea algo",
+        "line2": "que perdure."
+      },
+      "subhead": "Estrategia, diseño y código que trabajan duro por tu negocio — a cualquier escala.",
+      "cta": "Comenzar"
+    },
+    "faq": {
+      "eyebrow": "— FAQ",
+      "titleA": "Preguntas",
+      "titleB": "frecuentes.",
+      "lede": "Las preguntas que nos hacen cada semana, en una sola página.",
+      "cardLabel": "¿Sigues con dudas? Pregúntanos directo",
+      "cardEmail": "hello@example.com →"
+    },
+    "blog": {
+      "eyebrow": "— Lo último del blog",
+      "titleA": "Entradas",
+      "titleB": "recientes.",
+      "lede": "Notas de proceso, post-mortems y recaps de lanzamientos del estudio. Lecturas cortas — abre El Blog para más.",
+      "viewAll": "Abrir El Blog →",
+      "cardCta": "Leer entrada",
+      "badge": "El Blog",
+      "viewAllCategories": "Abrir El Blog"
+    }
+  }
+}

@@ -1,0 +1,209 @@
+---
+import type { LocaleCode } from "../../lib/seo/types";
+import LanguageSwitcher from "./LanguageSwitcher.astro";
+
+interface MenuItem {
+	href: string;
+	label: string;
+}
+
+interface Props {
+	locale: LocaleCode;
+	menu: MenuItem[];
+	ctaHref: string;
+	ctaLabel: string;
+	/** Color of the trigger button on the closed state. "dark" = white on
+      transparent (for dark hero); "light" = dark on paper (for light header). */
+	theme?: "dark" | "light";
+	/** Stable id so multiple instances on a page don't collide. */
+	id?: string;
+}
+
+const {
+	locale,
+	menu,
+	ctaHref,
+	ctaLabel,
+	theme = "light",
+	id = "mobile-menu",
+} = Astro.props;
+
+const triggerLabel = locale === "es" ? "Menú" : "Menu";
+const ctaSwitcherVariant = theme === "dark" ? "dark" : "light";
+
+const triggerClasses = theme === "dark" ? "text-white" : "text-brand-surface-dark";
+---
+
+<div class="mobile-menu-root contents lgx:hidden" data-mobile-menu>
+  <button
+    type="button"
+    class={`mobile-menu-trigger hidden max-lgx:inline-flex items-center justify-center size-11 ${triggerClasses} transition-colors`}
+    aria-label={triggerLabel}
+    aria-controls={id}
+    aria-expanded="false"
+  >
+    <span class="mobile-menu-icon relative block size-5" aria-hidden="true">
+      <span class="mobile-menu-line mobile-menu-line-top absolute left-0 right-0 top-[3px] h-[2px] rounded-full bg-current origin-center"></span>
+      <span class="mobile-menu-line mobile-menu-line-mid absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] rounded-full bg-current origin-center"></span>
+      <span class="mobile-menu-line mobile-menu-line-bot absolute left-0 right-0 bottom-[3px] h-[2px] rounded-full bg-current origin-center"></span>
+    </span>
+  </button>
+
+  <!-- Fullscreen overlay container. Hidden by default; GSAP toggles
+       visibility on open. The inner stage is over-sized + rotated so the
+       two brand panels can sweep diagonally past the corners. -->
+  <div
+    id={id}
+    class="mobile-menu-overlay fixed inset-0 z-[65] invisible pointer-events-none"
+    aria-hidden="true"
+  >
+    <div class="mobile-menu-stage absolute -inset-1/2 grid place-items-center rotate-[-15deg]">
+      <div class="mobile-menu-panel mobile-menu-panel-top absolute left-1/2 top-1/2 w-full h-[80%] bg-brand-primary"></div>
+      <div class="mobile-menu-panel mobile-menu-panel-bot absolute left-1/2 top-[49.9%] w-full h-[80%] bg-brand-primary-darker"></div>
+
+      <nav class="mobile-menu-nav relative z-10 rotate-[15deg] px-8" aria-label="Mobile primary">
+        <ul class="list-none p-0 m-0 flex flex-col gap-2">
+          {menu.map((m, i) => (
+            <li class="mobile-menu-item">
+              <a
+                href={m.href}
+                class="mobile-menu-link inline-flex items-baseline gap-3 font-display font-black uppercase text-white tracking-[0.02em] no-underline text-[clamp(28px,8vw,44px)] leading-[1.05] hover:text-brand-highlight transition-colors"
+              >
+                <span class="mobile-menu-num font-mono font-normal text-brand-highlight/80 text-[clamp(11px,2.6vw,14px)] tracking-caps-3">
+                  {String(i + 1).padStart(2, "0")}//
+                </span>
+                <span>{m.label}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+
+        <div class="mobile-menu-footer mt-10 flex items-center justify-between gap-6 flex-wrap">
+          <LanguageSwitcher current={locale} variant={ctaSwitcherVariant} />
+          <a
+            href={ctaHref}
+            class="inline-flex items-center justify-center bg-brand-highlight text-brand-ink no-underline font-display font-extrabold px-6 py-3 rounded-pill text-[14px] tracking-[-0.01em] hover:bg-white transition-colors"
+          >
+            {ctaLabel}
+          </a>
+        </div>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Lock body scroll while any menu is open. */
+  :global(html.mobile-menu-open),
+  :global(html.mobile-menu-open body) {
+    overflow: hidden;
+  }
+  .mobile-menu-overlay.is-open {
+    pointer-events: auto;
+  }
+  /* The stage sits at -50%/-50% offset so it's twice the viewport on every
+     side — gives the diagonal panels room to slide off-screen cleanly. */
+  .mobile-menu-stage {
+    width: 200%;
+    height: 200%;
+  }
+</style>
+
+<script>
+  import gsap from "gsap";
+
+  function setupMobileMenu(root: HTMLElement) {
+    const trigger = root.querySelector<HTMLButtonElement>(".mobile-menu-trigger");
+    const overlay = root.querySelector<HTMLElement>(".mobile-menu-overlay");
+    if (!trigger || !overlay) return;
+
+    // Query line refs BEFORE moving the trigger out of `root`.
+    const lineTop = trigger.querySelector<HTMLElement>(".mobile-menu-line-top");
+    const lineMid = trigger.querySelector<HTMLElement>(".mobile-menu-line-mid");
+    const lineBot = trigger.querySelector<HTMLElement>(".mobile-menu-line-bot");
+    const panelTop = overlay.querySelector<HTMLElement>(".mobile-menu-panel-top");
+    const panelBot = overlay.querySelector<HTMLElement>(".mobile-menu-panel-bot");
+    // Animate the footer (lang switcher + CTA) on the same staggered timeline
+    // as the nav items so it doesn't blink in/out at the end abruptly.
+    const items = overlay.querySelectorAll<HTMLElement>(
+      ".mobile-menu-item, .mobile-menu-footer",
+    );
+    if (!panelTop || !panelBot || !lineTop || !lineMid || !lineBot) return;
+
+    // Move both the overlay AND the trigger to <body>. Inside the Hero /
+    // SiteHeader, GSAP applies transforms which create a new containing
+    // block — `position: fixed` anchors to that ancestor instead of the
+    // viewport, so the overlay renders at the wrong size and the trigger's
+    // stacking context can't sit on top of the body-level overlay. Hoisting
+    // both fixes both problems with a single move.
+    trigger.classList.add("fixed", "top-[26px]", "right-6", "z-[70]");
+    document.body.appendChild(overlay);
+    document.body.appendChild(trigger);
+
+    // Initial positions: panels off-screen on opposite diagonals, items hidden.
+    gsap.set(panelTop, { xPercent: 100, yPercent: -100 });
+    gsap.set(panelBot, { xPercent: -150, yPercent: 0 });
+    gsap.set(items, { opacity: 0, x: -16 });
+
+    const tl = gsap.timeline({
+      paused: true,
+      defaults: { ease: "power3.out" },
+      onStart: () => {
+        overlay.classList.add("is-open");
+        overlay.style.visibility = "visible";
+        overlay.setAttribute("aria-hidden", "false");
+        document.documentElement.classList.add("mobile-menu-open");
+      },
+      onReverseComplete: () => {
+        overlay.classList.remove("is-open");
+        overlay.style.visibility = "hidden";
+        overlay.setAttribute("aria-hidden", "true");
+        document.documentElement.classList.remove("mobile-menu-open");
+      },
+    });
+
+    tl.to(panelTop, { xPercent: -50, yPercent: -100, duration: 0.5 }, 0);
+    tl.to(panelBot, { xPercent: -50, yPercent: 0, duration: 0.5 }, 0.08);
+    tl.to(items, { opacity: 1, x: 0, duration: 0.32, stagger: 0.05 }, 0.28);
+
+    // Hamburger lines morph to X: top line rotates down to 45°, bottom to -45°,
+    // middle scales to 0. Reverses cleanly with the same timeline.
+    const iconTl = gsap.timeline({
+      paused: true,
+      defaults: { duration: 0.28, ease: "power3.inOut" },
+    });
+    iconTl.to(lineTop, { y: 5, rotate: 45 }, 0);
+    iconTl.to(lineBot, { y: -7, rotate: -45 }, 0);
+    iconTl.to(lineMid, { scaleX: 0, opacity: 0, duration: 0.18 }, 0);
+
+    let open = false;
+    const setOpen = (next: boolean) => {
+      if (open === next) return;
+      open = next;
+      trigger.setAttribute("aria-expanded", next ? "true" : "false");
+      if (next) {
+        tl.play();
+        iconTl.play();
+      } else {
+        tl.reverse();
+        iconTl.reverse();
+      }
+    };
+
+    trigger.addEventListener("click", () => setOpen(!open));
+    overlay.querySelectorAll<HTMLAnchorElement>("a").forEach((a) => {
+      a.addEventListener("click", () => setOpen(false));
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && open) setOpen(false);
+    });
+    const mq = window.matchMedia("(min-width: 60rem)");
+    mq.addEventListener("change", (e) => {
+      if (e.matches && open) setOpen(false);
+    });
+  }
+
+  document
+    .querySelectorAll<HTMLElement>("[data-mobile-menu]")
+    .forEach((root) => setupMobileMenu(root));
+</script>

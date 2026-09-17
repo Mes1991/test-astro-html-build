@@ -1,0 +1,52 @@
+---
+import type { LocaleCode } from "../../lib/seo/types";
+import { DEFAULT_LOCALE } from "../../lib/seo/types";
+import { pathFor, routeKeyFromPath } from "../../lib/seo/locale";
+import { t } from "../../i18n/t";
+import LanguageSwitcher from "../shared/LanguageSwitcher.astro";
+
+interface Props {
+  locale?: LocaleCode;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+
+const year = new Date().getFullYear();
+const home = pathFor("home", locale);
+const onHome = routeKeyFromPath(Astro.url.pathname) === "home";
+
+const links = [
+  { label: t("header.menu.blog", locale), href: pathFor("blog", locale) },
+  { label: t("header.menu.faq", locale), href: onHome ? "#faq" : `${home}#faq` },
+];
+---
+
+<footer
+  class="bg-brand-ink text-white/65 px-10 max-lgx:px-6 py-8"
+  role="contentinfo"
+>
+  <div class="max-w-[1280px] mx-auto flex items-center justify-between gap-6 flex-wrap">
+    <a
+      href={home}
+      class="font-display font-black text-xl text-white tracking-display no-underline"
+    >
+      Example Site
+    </a>
+
+    <ul class="flex items-center gap-7 list-none m-0 p-0 font-display font-semibold text-sm">
+      {links.map((l) => (
+        <li>
+          <a href={l.href} class="no-underline text-white/75 hover:text-brand-highlight transition-colors">
+            {l.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    <LanguageSwitcher current={locale} variant="dark" />
+
+    <span class="font-mono text-[10px] tracking-caps-3 uppercase text-white/35">
+      {t("footer.copyright", locale, { year })}
+    </span>
+  </div>
+</footer>

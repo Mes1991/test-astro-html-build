@@ -1,0 +1,261 @@
+---
+import { Image } from "astro:assets";
+import { getCollection } from "astro:content";
+import { t } from "../../i18n/t";
+import type { LocaleCode } from "../../lib/seo/types";
+
+interface Props {
+	locale: LocaleCode;
+}
+
+const { locale } = Astro.props;
+
+const all = (await getCollection("blog", (e) => !e.data.draft)).sort(
+	(a, b) =>
+		new Date(b.data.datePublished).getTime() -
+		new Date(a.data.datePublished).getTime(),
+);
+
+type Entry = (typeof all)[number];
+function fields(entry: Entry) {
+	const es = entry.data.translations?.es;
+	return {
+		title: locale === "es" && es?.title ? es.title : entry.data.title,
+		description:
+			locale === "es" && es?.description
+				? es.description
+				: entry.data.description,
+		category:
+			locale === "es" && es?.category ? es.category : entry.data.category,
+		imageAlt:
+			locale === "es" && es?.imageAlt ? es.imageAlt : entry.data.imageAlt,
+		image: entry.data.image,
+		slug: entry.data.slug,
+		author: entry.data.author,
+		date: entry.data.datePublished,
+		keywords: entry.data.keywords ?? [],
+	};
+}
+
+const items = all.map(fields);
+const categories = Array.from(new Set(items.map((i) => i.category))).sort();
+
+const dateFormatter = new Intl.DateTimeFormat(
+	locale === "es" ? "es-MX" : "en-US",
+	{ day: "2-digit", month: "long", year: "numeric" },
+);
+const fmtDate = (iso: string | Date) =>
+	dateFormatter.format(new Date(iso)).replace(/\.$/, "");
+
+const postHref = (slug: string) =>
+	locale === "es" ? `/es/blog/${slug}` : `/blog/${slug}`;
+
+const eyebrow = t("pages.blog.h1", locale);
+const headingTitle =
+	locale === "es"
+		? "Notas y recapitulaciones del estudio."
+		: "Notes & recaps from the studio.";
+const lede = t("pages.blog.metaDescription", locale);
+const allLabel = locale === "es" ? "Todos" : "All";
+const searchPlaceholder = locale === "es" ? "Buscar" : "Search";
+const emptyLabel =
+	locale === "es" ? "Sin coincidencias." : "No posts match.";
+const readMoreLabel =
+	locale === "es" ? "Leer más" : "Read more";
+
+const slugify = (s: string) =>
+	s
+		.toLowerCase()
+		.normalize("NFD")
+		.replace(/[̀-ͯ]/g, "")
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/(^-|-$)/g, "");
+---
+
+<section
+  id="blog-archive"
+  class="mx-auto max-w-7xl space-y-8 px-6 lg:space-y-16 lg:px-8 py-24"
+>
+  {/* Header */}
+  <div class="space-y-4">
+    <p class="font-mono text-[11px] tracking-caps-3 uppercase text-brand-primary">
+      {eyebrow}
+    </p>
+    <h1 class="font-display font-black text-2xl md:text-3xl lg:text-display-xs leading-[1.05] tracking-display-3 text-brand-surface-dark">
+      {headingTitle}
+    </h1>
+    <p class="text-ui-700 text-lg md:text-xl max-w-[680px]">
+      {lede}
+    </p>
+  </div>
+
+  {/* Tabs + search */}
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="bg-brand-cream-warm rounded-lg p-[3px] w-full sm:w-auto overflow-x-auto">
+      <div role="tablist" class="inline-flex w-fit items-center justify-center gap-1">
+        <button
+          type="button"
+          role="tab"
+          data-tab="all"
+          aria-selected="true"
+          class="blog-tab cursor-pointer rounded-md px-4 py-1 text-base font-medium whitespace-nowrap text-brand-surface-dark/70 hover:text-brand-surface-dark hover:bg-brand-primary/10 transition-colors aria-selected:bg-brand-paper aria-selected:text-brand-surface-dark aria-selected:shadow-sm"
+        >
+          {allLabel}
+        </button>
+        {categories.map((cat) => (
+          <button
+            type="button"
+            role="tab"
+            data-tab={slugify(cat)}
+            aria-selected="false"
+            class="blog-tab cursor-pointer rounded-md px-4 py-1 text-base font-medium whitespace-nowrap text-brand-surface-dark/70 hover:text-brand-surface-dark hover:bg-brand-primary/10 transition-colors aria-selected:bg-brand-paper aria-selected:text-brand-surface-dark aria-selected:shadow-sm"
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <div class="relative max-md:w-full md:w-72">
+      <span class="text-ui-600 pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m21 21-4.34-4.34"></path>
+          <circle cx="11" cy="11" r="8"></circle>
+        </svg>
+      </span>
+      <input
+        type="search"
+        id="blog-search"
+        placeholder={searchPlaceholder}
+        aria-label={searchPlaceholder}
+        class="h-10 w-full rounded-md border border-brand-surface-dark/15 bg-brand-paper px-9 text-sm text-brand-surface-dark placeholder:text-ui-600 focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary/40"
+      />
+    </div>
+  </div>
+
+  {/* Grid */}
+  {items.length === 0 ? (
+    <p class="font-mono text-[11px] tracking-caps-3 uppercase text-brand-surface-dark/55">
+      {emptyLabel}
+    </p>
+  ) : (
+    <>
+      <div id="blog-grid" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((p) => {
+          const searchBlob = [p.title, p.description, p.category, ...p.keywords]
+            .join(" ")
+            .toLowerCase();
+          return (
+            <article
+              data-blog-card
+              data-category={slugify(p.category)}
+              data-search={searchBlob}
+              class="bg-brand-paper border border-brand-surface-dark/10 flex flex-col gap-6 rounded-xl py-6 group h-full overflow-hidden shadow-none transition-all duration-300 hover:border-brand-primary/30"
+            >
+              <div class="px-6 space-y-3.5">
+                <div class="overflow-hidden rounded-lg mb-6 sm:mb-10">
+                  <a href={postHref(p.slug)} class="block">
+                    <Image
+                      src={p.image}
+                      alt={p.imageAlt}
+                      widths={[400, 720, 960]}
+                      sizes="(min-width: 1024px) 360px, (min-width: 640px) 50vw, 100vw"
+                      format="webp"
+                      loading="lazy"
+                      class="h-[238px] w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  </a>
+                </div>
+                <div class="flex items-center justify-between gap-1.5">
+                  <div class="text-ui-600 flex items-center gap-1.5 text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M8 2v4"></path>
+                      <path d="M16 2v4"></path>
+                      <rect width="18" height="18" x="3" y="4" rx="2"></rect>
+                      <path d="M3 10h18"></path>
+                    </svg>
+                    <span>{fmtDate(p.date)}</span>
+                  </div>
+                  <span class="inline-flex w-fit shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary px-2 py-0.5 text-sm font-medium whitespace-nowrap">
+                    {p.category}
+                  </span>
+                </div>
+                <h2 class="line-clamp-2 text-lg font-medium md:text-xl font-display text-brand-surface-dark">
+                  <a href={postHref(p.slug)} class="no-underline hover:text-brand-primary transition-colors">
+                    {p.title}
+                  </a>
+                </h2>
+                <p class="text-ui-700 line-clamp-2 text-base">
+                  {p.description}
+                </p>
+                <div class="flex items-center justify-between pt-1">
+                  <span class="text-sm font-medium text-brand-surface-dark">{p.author}</span>
+                  <a
+                    href={postHref(p.slug)}
+                    aria-label={`${readMoreLabel}: ${p.title}`}
+                    class="inline-flex shrink-0 items-center justify-center rounded-md border border-brand-surface-dark/15 size-9 bg-brand-paper text-brand-surface-dark hover:bg-brand-primary hover:text-brand-cream hover:border-brand-primary group-hover:bg-brand-primary group-hover:text-brand-cream group-hover:border-brand-primary transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="-rotate-45" aria-hidden="true">
+                      <path d="M5 12h14"></path>
+                      <path d="m12 5 7 7-7 7"></path>
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      <p
+        id="blog-empty"
+        class="hidden font-mono text-[11px] tracking-caps-3 uppercase text-brand-surface-dark/55"
+      >
+        {emptyLabel}
+      </p>
+    </>
+  )}
+</section>
+
+<script>
+  const root = document.getElementById("blog-archive");
+  if (root) {
+    const tabs = root.querySelectorAll<HTMLButtonElement>(".blog-tab");
+    const search = root.querySelector<HTMLInputElement>("#blog-search");
+    const cards = root.querySelectorAll<HTMLElement>("[data-blog-card]");
+    const empty = root.querySelector<HTMLElement>("#blog-empty");
+
+    let activeTab = "all";
+    let query = "";
+
+    const apply = () => {
+      let visible = 0;
+      cards.forEach((card) => {
+        const cat = card.dataset.category ?? "";
+        const blob = card.dataset.search ?? "";
+        const tabMatch = activeTab === "all" || cat === activeTab;
+        const queryMatch = !query || blob.includes(query);
+        const show = tabMatch && queryMatch;
+        card.style.display = show ? "" : "none";
+        if (show) visible++;
+      });
+      if (empty) empty.classList.toggle("hidden", visible !== 0);
+    };
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        activeTab = tab.dataset.tab ?? "all";
+        tabs.forEach((t) =>
+          t.setAttribute("aria-selected", t === tab ? "true" : "false"),
+        );
+        apply();
+      });
+    });
+
+    if (search) {
+      search.addEventListener("input", () => {
+        query = search.value.trim().toLowerCase();
+        apply();
+      });
+    }
+  }
+</script>
