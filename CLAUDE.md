@@ -3,9 +3,15 @@
 test-astro-html-build is an **AI-first Astro static site template**. It is meant to be driven by AI
 coding agents, not hand-edited by humans.
 
-It is a **bold, blog-only site**: the home page flow is
-`SiteHeader → Hero → FAQ → BlogTeaser → Footer`. The blog is the only content type;
-there are no project-showcase, pricing, or contact features.
+**Current state** — the template ships blog-only: the home page flow is
+`SiteHeader → Hero → FAQ → BlogTeaser → Footer`, and `blog` is the only content
+collection defined in `src/content.config.ts`.
+
+That is a description of what exists, **not a restriction on what you may build**.
+A brief asking for services, projects, pricing or contact pages is asking you to
+extend the template, which is what it is for. Add a content collection as a
+structural sibling of `blog`, keep en/es key parity, and keep the route map in
+`astro.config.mjs` in sync with `src/lib/seo/locale.ts` (rules 3 and 4 below).
 
 **`AGENTS.md` is the source of truth.** Read it before doing anything — it routes to
 the architecture docs, the component catalog, SEO/OG/i18n/motion systems, and
