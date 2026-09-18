@@ -29,9 +29,9 @@ esos archivos deben enlazar aquí, no repetir la lista.
   - `src/layouts/BaseLayout.astro:76-78` (`#introWord`, dentro de
     `#introOverlay`) — overlay de intro con el texto "Example Site"; el
     propio archivo lo documenta como intencional: *"Intro wordmark —
-    HARDCODED placeholder... To rebrand: change the word below... See AGENTS.md
-    §12"* (esa referencia a "§12" está rota — ver nota al final de este
-    documento).
+    HARDCODED placeholder... To rebrand: change the word below, or replace this
+    whole #introOverlay block with your own intro. See
+    docs/product/rebrand-checklist.md"* — el comentario apunta a este documento.
 - **CTA `mailto:` hardcodeado**, repetido en cuatro archivos (no es
   configuración, es texto literal):
   - `src/components/shared/SiteHeader.astro:28` — `const ctaHref =
@@ -156,9 +156,6 @@ y `bun run test`) terminan en verde desde un checkout limpio.
 
 ---
 
-**Nota sobre `BaseLayout.astro:74` ("See AGENTS.md §12"):** ese comentario en
-código apunta a una sección que no existe en el `AGENTS.md` actual (no tiene
-numeración). Esta corrección de documentación no incluye editar
-`src/layouts/BaseLayout.astro` — ese archivo está fuera del alcance de este
-cambio. Cuando se edite, debe apuntar a este documento
-(`docs/product/rebrand-checklist.md`), no a "AGENTS.md §12".
+**Nota sobre `BaseLayout.astro:74`:** ese comentario en código apuntaba a una
+sección inexistente (`AGENTS.md §12`). Ya fue corregido y ahora apunta a este
+documento. Si vuelves a moverlo, actualiza también esta nota.
