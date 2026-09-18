@@ -38,7 +38,15 @@ function fields(entry: Entry) {
 }
 
 const items = all.map(fields);
-const categories = Array.from(new Set(items.map((i) => i.category))).sort();
+
+/**
+ * `category` is optional in the content schema, so an entry may have none.
+ * Uncategorized entries do not get a filter tab — they stay reachable through
+ * the "All" tab and through search, and match no specific category.
+ */
+const categories = Array.from(
+	new Set(items.map((i) => i.category).filter((c): c is string => Boolean(c))),
+).sort();
 
 const dateFormatter = new Intl.DateTimeFormat(
 	locale === "es" ? "es-MX" : "en-US",
@@ -148,7 +156,7 @@ const slugify = (s: string) =>
           return (
             <article
               data-blog-card
-              data-category={slugify(p.category)}
+              data-category={p.category ? slugify(p.category) : ""}
               data-search={searchBlob}
               class="bg-brand-paper border border-brand-surface-dark/10 flex flex-col gap-6 rounded-xl py-6 group h-full overflow-hidden shadow-none transition-all duration-300 hover:border-brand-primary/30"
             >
@@ -176,9 +184,11 @@ const slugify = (s: string) =>
                     </svg>
                     <span>{fmtDate(p.date)}</span>
                   </div>
-                  <span class="inline-flex w-fit shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary px-2 py-0.5 text-sm font-medium whitespace-nowrap">
-                    {p.category}
-                  </span>
+                  {p.category && (
+                    <span class="inline-flex w-fit shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary px-2 py-0.5 text-sm font-medium whitespace-nowrap">
+                      {p.category}
+                    </span>
+                  )}
                 </div>
                 <h2 class="line-clamp-2 text-lg font-medium md:text-xl font-display text-brand-surface-dark">
                   <a href={postHref(p.slug)} class="no-underline hover:text-brand-primary transition-colors">

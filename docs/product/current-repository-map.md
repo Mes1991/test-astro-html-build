@@ -2,21 +2,23 @@
 
 Este documento describe el repositorio **tal como existe hoy**, no el producto
 objetivo. Fue extraído del `AGENTS.md` anterior (commit `HEAD` de este archivo,
-552 líneas, stack Bun/Astro 6/bilingüe obligatorio/GSAP+Lenis+React+Three
+552 líneas, stack Bun/Astro 7/bilingüe obligatorio/GSAP+Lenis+React+Three
 obligatorio) antes de que `AGENTS.md` se reemplazara por el nuevo contrato de
 producto en `docs/product/template-contract.md`.
 
 El propósito de este archivo es que ningún agente pierda la capacidad de
-operar sobre el código real mientras las unidades de migración (Unidad 1 en
-adelante) no se hayan ejecutado. Cuando una migración reemplace un hecho de
-aquí (por ejemplo, Bun → pnpm), edita este archivo para reflejar el nuevo
-estado — no lo borres de golpe; es el mapa vivo del repositorio actual.
+operar sobre el código real mientras las unidades de migración pendientes
+no se hayan ejecutado. Cuando una migración reemplace un hecho de aquí (por
+ejemplo, cuando el bilingüe obligatorio pase a extensión opt-in), edita este
+archivo para reflejar el nuevo estado — no lo borres de golpe; es el mapa vivo
+del repositorio actual. Bun **no** es una de estas migraciones pendientes: es
+la decisión final del gestor de paquetes de este repositorio.
 
 ---
 
 ## 1. Comandos reales actuales
 
-Este proyecto usa **Bun** hoy (pendiente de migración a pnpm en la Unidad 1).
+Este proyecto usa **Bun** como gestor de paquetes definitivo (`bun.lock` es el único lockfile permitido; no hay migración a pnpm).
 
 ```bash
 bun install          # instala dependencias
@@ -33,9 +35,9 @@ bun astro check      # chequeo de tipos TypeScript/Astro
 **Advertencia vigente:** usar `bun run test`, nunca `bun test` — este último
 invoca el test runner nativo de Bun, no vitest, y falla o reporta mal.
 
-**Definición de "hecho" (heredada, hoy):** `bun run build` (incluye seo-lint)
-**y** `bun run test` en verde. Después de la Unidad 1 esto pasa a los scripts
-`pnpm run *` listados en `AGENTS.md` → "Validación".
+**Definición de "hecho":** `bun run build` (incluye seo-lint) **y** `bun run
+test` en verde — estos son los comandos definitivos del proyecto, también
+documentados en `AGENTS.md` → "Validación".
 
 **Rutas que compilan hoy:** `/`, `/es/`, `/blog`, `/blog/example-post`,
 `/es/blog`, `/es/blog/example-post`, `/404`, `/coming-soon`.
@@ -50,7 +52,6 @@ invoca el test runner nativo de Bun, no vitest, y falla o reporta mal.
 ├── package.json            scripts (nota: test = vitest run)
 ├── lighthouserc.json       presupuestos Lighthouse CI (desktop)
 ├── lighthouserc.mobile.json    presupuestos Lighthouse CI (mobile)
-├── .env.example            plantilla de variables de entorno
 ├── public/
 │   ├── assets/
 │   │   ├── logo-mark.svg    marca (reemplazable)
@@ -99,8 +100,8 @@ invoca el test runner nativo de Bun, no vitest, y falla o reporta mal.
 ```
 
 **Tech stack real hoy** (referencia rápida; el detalle vive en `package.json`):
-Astro 6 (SSG), Bun (package manager + test runner driver, `bun.lock` committed —
-migrar en Unidad 1), Tailwind v4, GSAP 3.x + ScrollTrigger, Lenis 1.x (smooth
+Astro 7 (SSG), Bun (gestor de paquetes definitivo; `bun.lock` committed; usar
+`bun run test`, nunca `bun test`, para el test runner), Tailwind v4, GSAP 3.x + ScrollTrigger, Lenis 1.x (smooth
 scroll compartiendo el RAF loop de GSAP, expuesto en `window.__lenis`), React 19
 vía `@astrojs/react` (solo isla 404), Three.js 0.18x (mesh procedural en
 coming-soon), `gradflow` (gradiente WebGL animado del fondo 404), Satori +
@@ -151,9 +152,10 @@ Vive en `src/integrations/seo-lint/lint.ts`, corre dentro de `bun run build`.
 - `LD_NO_CONTEXT` — entrada JSON-LD sin `@context: "https://schema.org"`
 - `LD_LANG_MISMATCH` — `inLanguage` del JSON-LD no coincide con `<html lang>`
 
-> Gap conocido (ver `skills/registry.yaml` → `gaps.tools-seo-mjs`): la skill
-> `static-site-seo` (§27-36) asume un `tools/seo.mjs` autónomo que no existe en
-> este snapshot del repositorio.
+> Gap conocido: los contratos genéricos de la skill `static-site-seo` describen
+> un `tools/seo.mjs` autónomo que **no existe** en este repositorio y no está
+> planificado. El validador real es `src/integrations/seo-lint/`, que corre
+> dentro de `bun run build`; la skill ya lo indica así.
 
 Componentes SEO relacionados: `SEO.astro` (props, emite meta/canonical/hreflang/
 OG+Twitter/JSON-LD vía `<Schema>`), builders en `src/lib/seo/schemas/`
@@ -185,7 +187,8 @@ Pipeline en build-time: **manifest → template JSX → Satori (SVG) → Resvg (
 
 ## 6. Variables de entorno
 
-Definidas en `.env.example`, copiar a `.env`:
+Leídas por el código en `src/`. **No existe todavía un `.env.example` en el
+repositorio**; para trabajar en local, crea un `.env` con las que necesites:
 
 - `PUBLIC_COMING_SOON` — `"true"` sirve `/coming-soon` en toda ruta (vía `middleware.ts`).
 - `PUBLIC_GA_MEASUREMENT_ID` — ID de GA4; GA solo emite en producción con esto seteado.
@@ -253,12 +256,14 @@ Cloudflare Pages). `public/_headers` da cache headers en formato Netlify/Cloudfl
 
 ## Notas de migración
 
-- Bun → pnpm es responsabilidad de la Unidad 1. Hasta que se ejecute, todos
-  los comandos reales siguen siendo los de la sección 1 (`bun run *`), no los
-  `pnpm run *` que ya aparecen en `AGENTS.md` como estado objetivo.
+- Bun es el gestor de paquetes definitivo de este repositorio (ver
+  `docs/product/template-contract.md` y `AGENTS.md`); no existe una migración
+  a pnpm, ni pendiente ni planificada. Los comandos reales siguen siendo
+  siempre los de la sección 1 (`bun run *`).
 - El checklist de rebrand (siteSeo, wordmark de intro hardcodeado, CTA
-  `mailto:` hardcodeado) descrito en el `AGENTS.md` anterior queda obsoleto
-  como metodología — el nuevo contrato reemplaza esos puntos de edición
-  dispersos por `src/site.config.ts` como única configuración pública. Los
-  archivos concretos (`src/lib/seo/defaults.ts`, `BaseLayout.astro`) siguen
-  existiendo hoy y están documentados en la sección 2 de este mapa.
+  `mailto:` hardcodeado) descrito en el `AGENTS.md` anterior fue reemplazado
+  por [`docs/product/rebrand-checklist.md`](./rebrand-checklist.md), que
+  documenta los puntos de edición reales vigentes hoy (`src/lib/seo/defaults.ts`,
+  `astro.config.mjs`, `BaseLayout.astro`, `SiteHeader.astro`, etc.). Cuando
+  `src/site.config.ts` como configuración única exista, ese checklist debe
+  actualizarse para apuntar ahí en vez de a los archivos dispersos actuales.

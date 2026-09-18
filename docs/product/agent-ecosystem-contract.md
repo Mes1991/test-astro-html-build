@@ -5,9 +5,10 @@ ningún script, dependencia ni `package.json` fue tocado para producir este
 contrato.
 
 Este documento es la fuente autoritativa de Unidad 0. Complementa, no
-sustituye, a `docs/product/template-contract.md` (contrato de producto) y a
-`skills/registry.yaml` (metadata de skills). En caso de conflicto sobre
-distribución de skills entre agentes, este documento gana.
+sustituye, a `docs/product/template-contract.md` (contrato de producto) y al
+futuro `skills/registry.yaml` (metadata de skills — no existe todavía, ver
+"Estado de implementación"). En caso de conflicto sobre distribución de
+skills entre agentes, este documento gana.
 
 ## Decisiones ratificadas
 
@@ -26,18 +27,19 @@ distribución de skills entre agentes, este documento gana.
      `skills/registry.yaml` — puede ser contenido manual no gestionado);
    - skills desactualizadas (existe en ambos lados, hash distinto).
 5. Setup inicial ejecutable como `node scripts/agent-setup.mjs
-   <codex|claude|opencode|all>`, porque pnpm todavía no existe en este
-   repositorio hasta que la Unidad 1 (Bun→pnpm) se complete. `node` es la única
-   dependencia asumida.
-6. Después de la migración Bun→pnpm, `package.json` expondrá los aliases
-   `pnpm agent:setup` y `pnpm agent:check` como envoltorios finos sobre el
-   mismo script — no una reimplementación paralela.
+   <codex|claude|opencode|all>` (script todavía no implementado — ver "Estado
+   de implementación"). `node` es la única dependencia asumida; no depende de
+   pnpm, que no es ni será el gestor de paquetes de este repositorio (Bun es
+   la decisión final, ver `template-contract.md`).
+6. Cuando ese script exista, `package.json` puede exponer `bun run agent:setup`
+   y `bun run agent:check` como envoltorios finos sobre el mismo script — no
+   una reimplementación paralela. No habrá equivalentes `pnpm`.
 7. `all` es un **modo avanzado para orquestadores** (Orca u otro), no el modo
    por defecto para un agente individual. Debe emitir una advertencia
-   explícita: ejecutar `all` sin `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1`
-   permite que OpenCode descubra simultáneamente `.agents/skills/` y
-   `.claude/skills/`, contaminando su contexto con instrucciones ajenas a su
-   propio adaptador.
+   explícita: ejecutar `all` sin aislar el descubrimiento de skills por agente
+   permite que un runtime multi-agente descubra simultáneamente
+   `.agents/skills/` y `.claude/skills/`, contaminando su contexto con
+   instrucciones ajenas a su propio adaptador.
 8. Orca permanece **fuera del contrato del template** — configuración personal
    de máquina (`.orca/`), no una dependencia que el producto test-astro-html-build asuma.
 
@@ -66,23 +68,27 @@ Este riesgo queda documentado aquí para que la unidad de implementación de
 
 ## Estado de implementación
 
-Puramente documental. No existe todavía:
+Puramente documental. Estado real verificado:
 
-- `scripts/agent-setup.mjs` ni `scripts/agent-check.mjs`.
-- Ningún archivo de skill materializado bajo `skills/` más allá de
-  `skills/registry.yaml` (los `core_skills` siguen `installed: false`, con
-  `source` apuntando a una ruta local fuera del repositorio — ver
-  `skills/registry.yaml`). `agent:setup` no tiene contenido real que copiar
-  hasta que esa vendorización ocurra en una unidad posterior.
-- El directorio `.agents/skills/` (no existe aún en este worktree).
-- Entradas de `.gitignore` para `.agents/skills/` y `.claude/skills/`.
+- **Existe:** `skills/` con las 7 skills reales del catálogo (`astro-craft`,
+  `design-ingestion`, `form-slot`, `project-setup`, `site-build`,
+  `static-site-seo`, `visual-gate`), cada una con su `SKILL.md` y sus
+  `references/` completos. Hoy un agente limpio abre cada una directamente
+  por su ruta canónica: `skills/<nombre>/SKILL.md`.
+- **No existe todavía:** `skills/registry.yaml`, `scripts/agent-setup.mjs`,
+  `scripts/agent-check.mjs`, el directorio `.agents/skills/`, ni entradas de
+  `.gitignore` para `.agents/skills/`/`.claude/skills/`. La distribución
+  automática hacia adaptadores por agente sigue siendo trabajo futuro; ningún
+  párrafo de este documento describe esos scripts como ya funcionando.
 
 Ninguna de estas ausencias bloquea Unidad 0: el contrato queda ratificado y
 verificable por criterios, independientemente de cuándo se implemente.
 
-## Criterios verificables de `agent:setup`
+## Criterios verificables de `agent:setup` (trabajo futuro — script no implementado)
 
-`node scripts/agent-setup.mjs <codex|claude|opencode|all>` debe cumplir, para
+Estos criterios se aplicarán cuando el script exista (ver "Estado de
+implementación"); hoy no hay código que ejecutar. `node scripts/agent-setup.mjs
+<codex|claude|opencode|all>` debe cumplir, para
 cada target invocado:
 
 1. Lee `skills/registry.yaml` como única fuente de qué skills existen; nunca
@@ -104,10 +110,12 @@ cada target invocado:
 7. Con un target desconocido (ni `codex`, `claude`, `opencode` ni `all`),
    termina con código de salida distinto de cero y sin escribir nada.
 
-## Criterios verificables de `agent:check`
+## Criterios verificables de `agent:check` (trabajo futuro — script no implementado)
 
-`node scripts/agent-check.mjs [<codex|claude|opencode|all>]` (target opcional;
-por defecto revisa los tres) debe cumplir:
+Estos criterios se aplicarán cuando el script exista (ver "Estado de
+implementación"); hoy no hay código que ejecutar. `node scripts/agent-check.mjs
+[<codex|claude|opencode|all>]` (target opcional; por defecto revisa los tres)
+debe cumplir:
 
 1. Para cada skill de `skills/registry.yaml`, calcula un hash de su contenido
    en `skills/<nombre>/` y lo compara contra el hash del contenido
@@ -125,22 +133,23 @@ por defecto revisa los tres) debe cumplir:
    un hallazgo de "faltante" — solo lo es cuando `skills/registry.yaml` marca
    al menos una skill como instalada y el destino no la refleja.
 
-## Matriz de aceptación por agente/orquestador
+## Matriz de aceptación por agente/orquestador (trabajo futuro)
 
-| Agente/orquestador | Destino leído | Precondición de aislamiento | Criterio de aceptación |
+Estos criterios asumen que `agent:check` ya existe; hoy no es así (ver "Estado
+de implementación"). Mientras tanto, todo agente abre skills directamente por
+`skills/<nombre>/SKILL.md`.
+
+| Agente/orquestador | Destino leído (futuro) | Precondición de aislamiento | Criterio de aceptación (futuro) |
 |---|---|---|---|
 | Codex | `.agents/skills/` | Ninguna adicional conocida | `agent:check codex` retorna código 0 antes de que Codex arranque una tarea que dependa de una skill |
-| OpenCode | `.agents/skills/` | Launcher exporta `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1`; para el modo `all`, también `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` | `agent:check opencode` retorna código 0; terminal fresca confirmada por el gate de aislamiento existente (`template-contract.md` → "Gate de aislamiento de agentes") |
+| OpenCode | `.agents/skills/` | Aislar el descubrimiento de skills por agente (ver "Principio de aislamiento de agentes" en `template-contract.md`) | `agent:check opencode` retorna código 0; terminal fresca confirmada por ese mismo principio |
 | Claude | `.claude/skills/` | Ninguna adicional conocida; respetar el "Riesgo conocido" (contenido preexistente no gestionado) | `agent:check claude` retorna código 0 **y** cero hallazgos de categoría "adicional" que correspondan a skills de este registro (contenido preexistente ajeno se tolera, se reporta, no bloquea) |
 | Orca | No lee ningún destino de skills; permanece fuera del contrato | Ninguna — Orca es configuración personal, no parte del producto | El template debe construir, testear y pasar `agent:check` sin que Orca esté instalado en la máquina |
 
 ## Referencia cruzada
 
 - `AGENTS.md` → tabla "Estado transitorio", fila "Distribución de skills".
-- `skills/registry.yaml` → bloque `distribution:` y `human_decisions_pending`.
+- `skills/registry.yaml` (futuro, no existe todavía) → bloque `distribution:`
+  y `human_decisions_pending`, una vez se cree.
 - `docs/product/template-contract.md` → "Decisiones humanas todavía
   necesarias" (actualizado para remitir aquí).
-- `docs/sessions/2026-09-16-product-skills/unit-0-portable-skills.md` →
-  versión previa de esta decisión, ahora superada por este contrato (la
-  arquitectura de destinos no cambió; este documento añade el mecanismo,
-  `agent:check` y la matriz de aceptación que faltaban).

@@ -163,14 +163,14 @@ that validation exists:
 verify each claim against your own installed version and query before relying on it:**
 `ios_saf` is documented as a separate browser to `safari` in Browserslist's own data, and leaving it
 out is a documented mistake to avoid. `safari` is documented as covering desktop Safari only, so a
-query naming just `safari` is documented as resolving to zero iOS entries. Run
-`pnpm exec browserslist "<your query>"` and read the actual output for your project: if no `ios_saf`
-line appears, confirm whether your floor is doing the job it was written for. Confirm `browserslist`
-is actually resolvable as a transitive dependency in your project before assuming `pnpm exec` finds
-it; where it is not, `pnpm dlx browserslist "<your query>"` is documented as fetching it for the one
-run, but running it still depends on your having permission and connectivity to fetch packages — do
-not assume that silently. Not `npx` — [toolchain.md](../../project-setup/references/toolchain.md)
-section 2 owns why this stack does not use npm.
+query naming just `safari` is documented as resolving to zero iOS entries. Confirm `browserslist` is
+actually resolvable as a transitive dependency in your project, then run
+`bunx browserslist "<your query>"` and read the actual output for your project: if no `ios_saf` line
+appears, confirm whether your floor is doing the job it was written for. Where `browserslist` is not
+resolvable locally, `bunx` is documented as fetching it for the one run, but running it still depends
+on your having permission and connectivity to fetch packages — do not assume that silently. Not
+npm's `npx` — [toolchain.md](../../project-setup/references/toolchain.md) section 2 owns why this
+stack runs package binaries through Bun's own tooling rather than npm's.
 
 **Android Chrome query behaviour is `needs_validation` against the installed Browserslist version
 and dataset, not evidence of this project's compatibility or floor.** Inspect the available

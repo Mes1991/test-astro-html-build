@@ -1,6 +1,7 @@
 import type { AstroIntegration } from 'astro';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { lintHtml, type Finding } from './lint';
 
 const SITE_ORIGIN = 'https://example.com';
@@ -50,7 +51,23 @@ interface PageReport {
   findings: Finding[];
 }
 
-async function walkHtml(dir: string): Promise<string[]> {
+/**
+ * Convert the build-output directory URL that Astro hands to `astro:build:done`
+ * into a real filesystem path.
+ *
+ * `URL.pathname` must never be used for this: it stays percent-encoded (so any
+ * path containing a space resolves to a non-existent `%20` directory) and on
+ * Windows it keeps a leading slash in front of the drive letter (`/C:/...`).
+ * `fileURLToPath` is the standard Node API that handles both, on every platform.
+ *
+ * Exported for tests.
+ */
+export function resolveDistPath(dir: URL): string {
+  return fileURLToPath(dir);
+}
+
+/** Recursively collect every `.html` file under `dir`. Exported for tests. */
+export async function walkHtml(dir: string): Promise<string[]> {
   const out: string[] = [];
   const entries = await readdir(dir, { withFileTypes: true });
   for (const e of entries) {
@@ -75,7 +92,7 @@ export default function seoLint(options: SeoLintOptions = {}): AstroIntegration 
     name: 'seo-lint',
     hooks: {
       'astro:build:done': async ({ dir, logger }) => {
-        const distPath = dir.pathname;
+        const distPath = resolveDistPath(dir);
         const htmlFiles = await walkHtml(distPath);
 
         const reports: PageReport[] = [];

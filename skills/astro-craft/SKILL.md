@@ -27,6 +27,16 @@ configuration has to match. Install those from the same place if the site is goi
 each one at the step where it applies; if a number here ever disagrees with the table, the table is
 the one to trust.
 
+**The split with `site-build`, stated once so it does not have to be inferred:** `../site-build/SKILL.md`
+owns the **sequence** — where building an Astro page or section falls among the other skills in the
+set, and which input wins when they disagree. This file owns Astro **implementation** detail — the
+order layout, sections and pages are built in, when a `client:*` directive is warranted, when
+repeated content becomes a collection. The numbered steps below are internal to this skill; they say
+nothing about when in a larger build this skill runs, and `site-build` is the only file that answers
+that. Neither file tells you to read the other's full reference set — `site-build` names specific
+steps here (its own step 5 and 6), and this file does not name `site-build` at all, because nothing
+in it needs to.
+
 ## The order, and why it is this order
 
 Every step here is cheap before the one below it and expensive after. That is the whole reason the
@@ -41,8 +51,9 @@ installed, it should have run before this one.
 
 ### 0. Pin the toolchain before installing anything
 
-`../project-setup/references/toolchain.md` sections 1 and 3. Node's version, the two pins in `package.json`, and
-`pnpm-workspace.yaml` with the release-age delay set explicitly.
+`../project-setup/references/toolchain.md` sections 1 and 3. Node's and Bun's versions, the two pins
+in `package.json`, and — since Bun has no release-age delay of its own — the frozen-lockfile
+discipline that stands in for it.
 
 **This one is first because it is the only step whose cost is not recoverable.** Every other step here
 produces work that can be redone. An install that ran a compromised dependency's script already ran

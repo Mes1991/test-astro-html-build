@@ -1,10 +1,5 @@
 # Toolchain — the install contract
 
-> **Target guidance, not current state.** This contract describes the pnpm-based toolchain the
-> product is migrating to. The repository may still be on Bun until the package-manager migration
-> unit is implemented and validated. Do not describe pnpm, `pnpm-workspace.yaml` or the hardening
-> posture below as already in place until that unit's diff and validations are recorded.
-
 ## Start here
 
 What gets installed on the machine, which package manager puts it there, and what has to be true
@@ -17,137 +12,110 @@ rules are about a **risk** rather than a result.
 | the install-time security posture and how a dependency is admitted | what the result looks like — [visual-craft.md](../../astro-craft/references/visual-craft.md) |
 | whether a styling toolkit is installed at all | whether a value may be a literal — [visual-craft.md](../../astro-craft/references/visual-craft.md) |
 
-Verified against **Astro 7** and **pnpm 11**. Every version and default below is a fact read from
-those tools, not a preference, and each is the kind of fact that moves — check it rather than trusting
-this file to be current.
+Verified against **Astro 7** and **Bun 1.2.13**, against this project's own `package.json` and
+against `bun install --help` and `bun pm --help` run on the installed Bun. Every version and default
+below is a fact read from those, not a preference — check it rather than trusting this file to be
+current.
+
+**Bun is this project's package manager. There is no pnpm migration, planned or in progress.**
+`bun.lock` is the only lockfile this project keeps; it is committed and it is the source of truth for
+what actually gets installed.
 
 ## 1. What has to be installed
 
-Three things, and nothing global beyond the first two.
-
 | Requirement | Version | Note |
 |---|---|---|
-| Node.js | **v22.12.0 or higher** | Astro 7's own floor. **Even-numbered releases only** — `v23` and other odd majors are not supported, so "latest" is the wrong thing to install. |
-| pnpm | 11.x | Installed once, then pinned per project by the field below. |
+| Node.js | **v22.12.0 or higher** | Astro 7's own floor. Pinned in `package.json`'s `engines.node`. |
+| Bun | **1.2.13 or higher** | The package manager and the script runner both. Pinned in `package.json`'s `packageManager` and `engines.bun`. |
 | A terminal and an editor | — | The Astro extension for VS Code is worth having and is not a requirement. |
 
-**Pin both in `package.json`, in the same commit as anything else:**
+**Both are pinned in `package.json`, as they already are in this project:**
 
 ```json
 {
-  "packageManager": "pnpm@11.0.8",
-  "engines": { "node": ">=22.12.0 <23 || ^24 || ^26" }
+  "packageManager": "bun@1.2.13",
+  "engines": { "node": ">=22.12.0", "bun": ">=1.2.13" }
 }
 ```
 
-Neither line is ceremony. `packageManager` is what makes a teammate's `pnpm install` run the same
-pnpm as yours, and a different pnpm can resolve a different tree from the same `package.json` — which
-is a lockfile diff nobody can explain.
+`packageManager` is what makes a teammate's `bun install` run the same Bun as yours. `engines`
+documents the floor for anyone reading the manifest; verify on your own machine whether the installed
+Bun actually refuses a mismatched Node before relying on that as an enforced gate — this file does not
+claim an enforcement behaviour it has not confirmed against the installed tool.
 
-**`engines` is enforced, not advisory** — for the root project specifically. pnpm's wording:
-*"Regardless of this configuration, installation will always fail if a project (not a dependency)
-specifies an incompatible version in its `engines` field."* (The configuration in question is
-`engineStrict`, default `false`, which only governs whether a *dependency's* engine claim is
-checked.) So this line turns "it works on my machine" into a failed install naming the reason.
-
-**Which makes the range itself load-bearing, and `">=22.12.0"` alone is wrong.** It admits 23, 25 and
-every future odd major — the exact versions the row above declares unsupported. A single lower bound
-cannot express "even majors only", so the constraint has to be a union with a closed upper bound on
-each clause:
-
-| Clause | Admits |
-|---|---|
-| `>=22.12.0 <23` | 22.12 and later 22.x, which is Astro's floor |
-| `^24` | 24.x only |
-| `^26` | 26.x only |
-
-At the time of writing those are the even majors that exist and are supported — 22 and 24 are LTS, 26
-is Current. **This list is the maintenance cost of the guarantee**: when the next even major ships,
-add a clause. That is a real cost and it is the honest one — the alternative is an open bound that
-silently permits the runtime the document says not to use.
-
-Do not "simplify" it back to a single `>=`. That is the change that reintroduces the bug, and it will
-look like tidying.
-
-Starting a project:
+Starting a fresh project (this one already exists, so this is for a new one):
 
 ```bash
-pnpm create astro@latest
+bun create astro
 ```
 
-## 2. Why pnpm, and it has nothing to do with disk space
+## 2. Bun's install-time security posture — verified, and the genuine advantage
 
-**The mechanism first, because the mitigation only makes sense once it is clear.** A package can
-declare `preinstall`, `install` and `postinstall` scripts, and those run **arbitrary code on the
-machine performing the install**, with that machine's shell, environment variables, credential files
-and network access.
+**The mechanism first, because the posture only makes sense once it is clear.** A package can declare
+`preinstall`, `install` and `postinstall` scripts, and those run **arbitrary code on the machine
+performing the install**, with that machine's shell, environment variables, credential files and
+network access.
 
-Read that again with the consequence attached: the danger is not the code you `import`. It is the code
-that runs *before you import anything*. A compromised version of a package you never call, pulled in
-four levels deep as somebody else's transitive dependency, still gets execution on your laptop and in
-your CI. That is why "I only installed it, I didn't use it yet" is not a defence, and it is the vector
-behind the npm compromises worth worrying about.
+Read that again with the consequence attached: the danger is not the code you `import`. It is the
+code that runs *before you import anything*. A compromised version of a package you never call,
+pulled in four levels deep as somebody else's transitive dependency, still gets execution on your
+laptop and in your CI.
 
-`npm` runs those scripts by default. pnpm 11 does not, and adds a second control npm has no equivalent
-for. Three defaults are worth naming because they are the whole argument:
+`npm` runs those scripts by default. **Bun does not, unless the package is listed in
+`trustedDependencies`.** Verified directly from `bun install --help`:
 
-| Setting | Default in pnpm 11 | What it does |
-|---|---|---|
-| `allowBuilds` | a package not listed is **disallowed** | a dependency's build scripts run only if the project has named it |
-| `strictDepBuilds` | `true` | the install **exits non-zero** when any dependency has unreviewed build scripts. Fails closed — it does not warn and continue. |
-| `minimumReleaseAge` | `1440` (minutes — one day) | delays a version published less than a day ago, transitive ones included — but see the strictness note below |
-
-**`minimumReleaseAge` is the quiet one and probably the most valuable.** These compromises are
-typically discovered and the bad version pulled within hours of publication. A one-day cooldown means
-an ordinary install never sees the window at all — no detection, no judgement, no alertness required.
-Before pnpm 11 this defaulted to `0`, so a project on an older pnpm has the control available but
-switched off.
-
-**The inherited default is not fail-closed, and this is the one place to be exact.** pnpm's own
-wording: *"The built-in default of `minimumReleaseAge` (1440 minutes) is non-strict for backward
-compatibility."* Non-strict means that when no version in the requested range is old enough, *"pnpm
-falls back to a version that doesn't meet the `minimumReleaseAge` constraint so installation can still
-succeed."* So a project that merely inherits the default has a delay, not a guarantee — and the case
-where it gives way is precisely the case that matters, a range whose only satisfying version was
-published minutes ago.
-
-What closes it is `minimumReleaseAgeStrict`, whose default is *"`true` if `minimumReleaseAge` is
-explicitly configured, `false` otherwise"*. Setting the age yourself therefore switches strictness on
-as a side effect — which is real, and is still the wrong thing to rely on. Set both, so the posture is
-written down rather than inferred from the fact that a line exists.
-
-To be fair rather than partisan: `npm` accepts `--ignore-scripts`, and a strict team can run it. But a
-protection you have to remember every time is not a control — it is a habit with an outage attached to
-the day somebody forgets. The difference that matters is which behaviour is the default.
-
-## 3. The hardening file
-
-pnpm settings live in **`pnpm-workspace.yaml`** at the repository root. Not `.npmrc`, which now carries
-authentication and little else — a setting written there is silently ignored, which is the worst way
-for a security control to fail.
-
-```yaml
-minimumReleaseAge: 1440
-# Both lines, deliberately. Setting the age above already turns strictness on, but relying on
-# that means the project's posture depends on a side effect nobody reading the file can see.
-minimumReleaseAgeStrict: true
-allowBuilds:
-  esbuild: true
+```text
+--ignore-scripts   Skip lifecycle scripts in the project's package.json (dependency scripts are never run)
+--trust            Add to trustedDependencies in the project's package.json and install the package(s)
 ```
 
-Two things about that file:
+That parenthetical — "dependency scripts are never run" — is Bun's own wording for the default
+behaviour, not a flag you have to remember to pass. This is a stronger default than npm's, where every
+install runs every script unless you remember `--ignore-scripts` on every single command.
 
-- **Every line in `allowBuilds` is a decision with somebody's name on it.** Before adding one, read
-  what that package's install script actually does. A build script is often legitimate — native
-  binaries have to be fetched or compiled — but "the install failed until I allowed it" is not a
-  review.
-- **`dangerouslyAllowAllBuilds` exists and is named that way on purpose.** It turns every dependency's
-  scripts back on. There is no project in which it is the right answer to a failing install.
+**Bun also ships a curated allowlist of common, legitimate script-running packages** (`esbuild`,
+`sharp`, and roughly 360 others as of 1.2.13 — see `bun pm default-trusted`), so tooling that
+genuinely needs a postinstall to fetch a prebuilt binary keeps working without every project having to
+declare it by hand. This project's `package.json` declares **no `trustedDependencies` of its own**;
+running `bun pm untrusted` against the installed tree confirms **0 untrusted dependencies with
+scripts** — every dependency that has a script is either script-free or covered by Bun's own default
+allowlist, and nothing in this project has been opted in beyond that.
 
-Related settings worth knowing before you need them: `minimumReleaseAgeExclude` exempts named packages
-or patterns from the delay, for the case where a fix genuinely cannot wait; `verifyDepsBeforeRun`
-decides what `pnpm run` does when the installed tree does not match the lockfile; and `trustPolicy`
-set to `no-downgrade` refuses a package whose trust level dropped since an earlier release.
+Two commands worth knowing:
+
+- **`bun pm untrusted`** — prints every dependency with a script that Bun did *not* run. Run it after
+  any install that added a package with a native or postinstall step; an empty list is not a
+  guarantee, it is a fact about the tree as it exists right now.
+- **`bun pm trust <name>`** — adds `<name>` to this project's own `trustedDependencies` and runs its
+  scripts. Do this deliberately, one package at a time, after reading what the script does — never as
+  a reflex to make an install stop complaining.
+
+## 3. What Bun does not give you
+
+**Say this plainly, because pretending otherwise is worse than the gap itself.**
+
+- **No `minimumReleaseAge` equivalent.** pnpm 11 can delay a newly published version by a
+  configurable window so that an ordinary install never sees the first hours after a compromised
+  publish. Bun has no counterpart flag or setting — a fresh publish is installable the moment it
+  resolves, exactly like npm.
+- **No `pnpm-workspace.yaml`, and no per-package `allowBuilds`/`strictDepBuilds` surface.** Bun's
+  script control is the binary `trustedDependencies` list described above, not a graduated,
+  per-package review gate with a strict-fail mode.
+- **No `trustPolicy: no-downgrade` equivalent.** Nothing here refuses a package whose trust level
+  dropped since an earlier release.
+
+**The mitigation, since the control itself does not exist:**
+
+- **Lockfile review is not optional here — it is the substitute.** `bun.lock` is committed; read the
+  diff on any dependency bump before merging it, the way you would read a `minimumReleaseAge` delay if
+  Bun had one. A version bumped an hour ago is exactly the case the missing control would have caught.
+- **`bun install --frozen-lockfile` in CI, always.** It refuses to resolve a new tree that disagrees
+  with the committed lockfile, which is the closest thing to a floor Bun offers: nobody's local
+  install can silently drift the tree that ships.
+- **Dependency count discipline.** With no age delay and no per-package build gate, the cheapest
+  remaining control is not adding the dependency in the first place. `bun pm ls --all` prints the full
+  resolved tree; look at what a new package drags in before adding it, the same way section 4 asks you
+  to.
 
 ## 4. How a dependency enters the project
 
@@ -156,23 +124,35 @@ short enough that skipping it is never about time:
 
 1. **Say what it solves and what it replaces.** A dependency that duplicates something already
    present is a second way to do one thing.
-2. **Look at what it drags in.** `pnpm why <name>` after the fact, and the dependency count before.
-   A package with one direct use and forty transitive dependencies is forty packages of exposure.
-3. **Check whether it needs a build script.** If the install fails on `strictDepBuilds`, that is the
-   control working: read the script, then decide. Do not reach for section 3's escape hatch.
+2. **Look at what it drags in.** `bun pm ls --all` after the fact, and the dependency count before. A
+   package with one direct use and forty transitive dependencies is forty packages of exposure —
+   forty packages section 3's mitigations now have to cover, since Bun cannot delay or gate them for
+   you.
+3. **Check whether it needs a script.** After installing, run `bun pm untrusted`. If the new package
+   shows up there, its script did not run; read the script before deciding whether to `bun pm trust`
+   it. Do not reach for `--trust` as a reflex to make the warning go away.
 4. **Give it a real version constraint** — `^7.4`, never `*`. An open constraint resolves against
-   whatever the resolving machine happens to allow, which is how a lock file gets produced that
-   another machine physically cannot install.
-5. **Commit the lockfile in the same commit as the `package.json` change.** They are one fact recorded
-   in two files; separated, the repository states two different trees and CI believes the one you
-   did not review.
+   whatever the resolving machine happens to allow, which is how a lockfile gets produced that another
+   machine physically cannot reproduce.
+5. **Commit `bun.lock` in the same commit as the `package.json` change.** They are one fact recorded
+   in two files; separated, the repository states two different trees and CI believes the one you did
+   not review.
+
+Commands, for reference:
+
+```bash
+bun install --frozen-lockfile  # CI and any clean checkout — never resolves a drifted tree
+bun add <name>                 # add a runtime dependency
+bun add -d <name>               # add a dev dependency
+bunx astro add <integration>    # wire an Astro integration (see section 5 for Tailwind specifically)
+```
 
 ## 5. Tailwind, if the project decides on it
 
-The current path, for Tailwind 4:
+The current path, for Tailwind 4 — and this project already has it installed this way:
 
 ```bash
-pnpm astro add tailwind
+bunx astro add tailwind
 ```
 
 That wires the `@tailwindcss/vite` plugin. Then `@import "tailwindcss";` goes in a stylesheet —
@@ -195,7 +175,7 @@ side by side**: the one it was given and the one that got installed. The second 
 because it is closer to the markup being written.
 
 Whether a value may be a literal at all is [visual-craft.md](../../astro-craft/references/visual-craft.md)'s rule, not this
-document's. What belongs here is narrower: the moment the choice exists is `pnpm astro add`, it is
+document's. What belongs here is narrower: the moment the choice exists is `bunx astro add`, it is
 cheap to make deliberately and expensive to undo once forty components use utilities, and "the
 experienced developers wanted it" is a preference to record rather than a requirement to satisfy.
 
@@ -203,21 +183,18 @@ experienced developers wanted it" is a preference to record rather than a requir
 
 Written down because an unlisted gap gets mistaken for a covered one:
 
-- **A delay is not detection.** `minimumReleaseAge` buys time against a class of attack that is
-  usually caught quickly. Nothing promises the window is long enough, and a compromise nobody notices
-  for a week walks straight through it.
-- **And the delay is only a wall when strictness is on.** Inherited rather than configured, it is
-  non-strict: pnpm installs a too-new version rather than failing when nothing older satisfies the
-  range. Section 3 sets `minimumReleaseAgeStrict` for that reason. A project that assumed the default
-  was enough has been running with the softer behaviour and nothing said so.
-- **`allowBuilds` covers install-time execution only.** A malicious package that you import and call
-  executes at build time no matter what that file says. Blocking install scripts narrows the vector;
-  it does not close it.
+- **There is no age-based delay of any kind.** Section 3 already says this, and it is worth repeating
+  here next to the rest of the list: a compromise published minutes ago is installable now, and
+  nothing in this toolchain buys time against it. Lockfile review is a human doing the job a delay
+  would have automated.
+- **The trusted-dependencies allowlist covers install-time execution only.** A malicious package that
+  you import and call executes at build time no matter what `trustedDependencies` says. Blocking
+  install scripts narrows the vector; it does not close it.
 - **A lockfile proves what was resolved, not that it was safe.** Integrity hashes confirm the bytes
   have not changed since resolution — including when the bytes were already hostile.
-- **The publish time can be missing.** `minimumReleaseAgeIgnoreMissingTime` defaults to `true`, so a
-  registry response with no `time` field skips the age check rather than failing. Convenient, and a
-  hole.
+- **Bun's default-trusted list is Bun's, not this project's.** It changes with the Bun version you
+  have installed, not with a decision anyone on this project made. `bun pm default-trusted` shows the
+  list for whatever Bun you are actually running.
 - **Nothing here reads the code.** No rule in this document has looked at a single line of any
   dependency, and no audit tool in the ecosystem knows about an advisory before it is published.
 
@@ -225,13 +202,13 @@ Written down because an unlisted gap gets mistaken for a covered one:
 
 Before a project is considered set up, and again whenever a dependency is added:
 
-- [ ] Node is v22.12.0 or higher and an even-numbered major
-- [ ] `packageManager` is pinned, and `engines.node` is a **union with a closed upper bound on every
-      clause** — a bare `>=` admits the odd majors the line above rules out
-- [ ] `pnpm-workspace.yaml` exists, with `minimumReleaseAge` set explicitly rather than inherited
-- [ ] `minimumReleaseAgeStrict: true` is written down, not left to the side effect of the line above
-- [ ] every `allowBuilds` entry was added after reading that package's install script
-- [ ] `dangerouslyAllowAllBuilds` appears nowhere
+- [ ] Node is v22.12.0 or higher
+- [ ] `packageManager` is pinned to the Bun version in use, and `engines` names both floors
+- [ ] `bun.lock` exists and is committed
+- [ ] CI installs with `--frozen-lockfile`
+- [ ] `bun pm untrusted` was run after the last dependency change, and its output was read, not just
+      glanced at
+- [ ] `bun pm trust` was used deliberately, package by package, never as a reflex
 - [ ] no dependency carries an open `*` constraint
 - [ ] the lockfile is committed alongside the `package.json` that produced it
 - [ ] if a styling toolkit was installed, the decision is recorded rather than assumed

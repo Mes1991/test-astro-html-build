@@ -18,33 +18,76 @@ them is wrong and nobody knows which.
 | `references/seo-schema.md` | all JSON-LD |
 | `references/seo-offpage.md` | links, mentions, paid traffic — everything outside the files you upload |
 
-## The rule
+The four contracts above are written stack-neutral, for any static output. **This project is built
+with Astro, and the binding below is how the generic rule maps onto this specific repository** — read
+it before opening a contract, because it tells you which real file each rule actually governs here.
 
-**Any pass that adds, removes, renames or translates an `.html` file regenerates `sitemap.xml` and
-runs the check, in the same pass, before you report it as done.**
+## The Astro binding
 
-```text
-node tools/seo.mjs build ./site https://example.com
-node tools/seo.mjs check ./site https://example.com
+| The contract talks about | In this repository, that is |
+|---|---|
+| a page's rendered `<head>`/body | a route file under `src/pages/**` (or `src/pages/[locale]/**`), rendered through its layout |
+| the `<head>` tags themselves — title, description, canonical, OG, hreflang | `src/components/seo/SEO.astro`, which every page-level layout renders |
+| JSON-LD | `src/components/seo/Schema.astro` and `src/components/seo/BreadcrumbsJsonLd.astro`, built from the typed builders in `src/lib/seo/schemas/*.ts` |
+| brand defaults — site name, default title/description, social image | `src/lib/seo/defaults.ts` (`siteSeo`) |
+| the URL shape, locales and the per-route slug map | `src/lib/seo/locale.ts` (`ROUTE_KEYS`, `localizedSlugs`) — **and it must stay in sync with the sitemap `ROUTE_MAP` in `astro.config.mjs`**; the two are one fact recorded in two files, and a rename that updates only one produces a page whose own `<link rel="alternate">` tags disagree with what the sitemap submits |
+| `robots.txt`, `sitemap.xml`, the site origin and i18n routing | `astro.config.mjs` — the `site` field, the `i18n` block, and the `sitemap()` integration's `filter`/`serialize` options |
+| the SEO check the contracts describe | `src/integrations/seo-lint/` (see below) — the repository's real, working, tested validator, not the tool the contracts describe below |
+
+## The rule, and the real mechanism
+
+**Any pass that adds, removes, renames or translates a page runs `bun run build` before you report
+it as done, and reads its output.**
+
+```bash
+bun run build
 ```
 
-> **Gap: `tools/seo.mjs` does not exist yet as a standalone file.** The implementation is embedded
-> in `references/seo-site.md` and has not been extracted into a tested tool. The commands above
-> describe the intended interface, not a file you can run today. Do not claim the tool exists until
-> it is extracted and proven; the repository's current SEO lint is a different integration.
+That single command does everything the generic contracts ask for, because both pieces are already
+wired into this project's `astro.config.mjs`:
 
-`check` exits non-zero and names every finding. **A non-zero exit is not done.** Fix the findings, or
-say plainly which one you are leaving and why. Never report success over a red check.
+- **`sitemap.xml` is regenerated automatically**, by the `@astrojs/sitemap` integration, from
+  whatever routes the build actually produced. There is no separate generation step to remember and
+  no `tools/seo.mjs build` to run — a renamed or removed page is reflected the moment the build runs
+  again.
+- **The SEO check runs automatically**, as the `seo-lint` Astro integration (`src/integrations/seo-lint/`),
+  against every `.html` file the build wrote to `dist/`. It runs at `astro:build:done`, after the
+  sitemap step, so it is checking the same output you are about to upload.
 
-Three things that are easy to get wrong:
+**A non-zero `bun run build` exit is not done.** `seo-lint` throws on any `fail`-severity finding,
+which fails the whole build. Fix the findings, or say plainly which one you are leaving and why the
+build was allowed to fail. Never report success over a build that did not finish.
 
-- **Generate locally, never on the server.** Local generation asks nothing of the host, so it works
-  the same on shared hosting, on a VPS with no PHP, and on a bucket behind a CDN.
-- **Run `check` against the real project directory** you just edited, not a sample. It reads the local
-  tree, which is the point: it checks what is about to be uploaded. It cannot see the live site, so a
-  file that failed to upload is invisible to it.
-- **Regenerate after a rename, not only after an addition.** A renamed page leaves a sitemap entry
-  pointing at nothing, which is a worse signal than a missing entry.
+`seo-lint`'s findings split into two severities — read `src/integrations/seo-lint/lint.ts` yourself
+before relying on this table if either the linter or the project has moved since this was written:
+
+| Severity | Effect | Codes |
+|---|---|---|
+| **`fail`** | throws, and `bun run build` exits non-zero | `TITLE_MISSING`, `DESC_MISSING`, `CANONICAL_MISSING`, `H1_MISSING`, `H1_MULTIPLE`, `IMG_ALT_MISSING`, `LD_PARSE_ERROR`, `OG_IMAGE_404` |
+| **`warn`** | printed to the build log only; the build still succeeds | `TITLE_TOO_SHORT` (<30 chars), `TITLE_TOO_LONG` (>70), `DESC_TOO_SHORT` (<70), `DESC_TOO_LONG` (>160), `OG_IMAGE_MISSING`, `LD_NO_CONTEXT`, `LD_LANG_MISMATCH` |
+
+A clean `warn` list is worth reading anyway — nothing forces you to, and that is exactly why it gets
+skipped. `OG_IMAGE_MISSING` in particular is silent on every category `seo-lint` cannot see for you:
+a page with no social image still builds green.
+
+**`tools/seo.mjs`, mentioned throughout the four generic contracts below, does not exist in this
+repository and is not on any implementation plan.** Where a contract shows a `node tools/seo.mjs …`
+command, read it as describing a stack-neutral reference implementation for a project with no Astro
+integration of its own — never as something to run here. This project's answer to every one of those
+commands is `bun run build`, and its own contract for exactly what that checks is the table above,
+not the generic script.
+
+Three things that are still easy to get wrong, even with the build doing the regeneration for you:
+
+- **Read the build output, not just its exit code.** A `warn` line does not fail the build and is
+  therefore the easiest thing in this workflow to ship past.
+- **`sitemap.xml` only lists what `sitemap()`'s `filter` lets through** — check `astro.config.mjs` if
+  a page you expect is missing or a page you excluded (`/404`, `/coming-soon`, anything under
+  `/og/` or `/api/`) shows up anyway.
+- **A locale added to `i18n.locales` in `astro.config.mjs` with no matching entry in
+  `src/lib/seo/locale.ts`** produces pages that build and lint clean but carry no `hreflang`
+  alternate for the new locale — `seo-lint` cannot see this, because it checks one page at a time and
+  this is a cross-page consistency rule.
 
 ## Which contract to open
 
@@ -69,21 +112,22 @@ Do not read all four. Open the one that owns what you are about to touch:
 same document root. On every other host that material is noise, and following it invents a
 requirement the host does not have.
 
-## What `check` catches, and what it cannot
+## What `seo-lint` catches, and what it cannot
 
-It reports a page missing from the sitemap, a sitemap entry with no file behind it, a missing title,
-description or canonical, a canonical that disagrees with where the file is actually served, a
-duplicated title or description, a `noindex` page listed anyway, a broken `hreflang` set, a raw `&`,
-and a `robots.txt` with no `Sitemap:` line.
-
-The canonical mismatch is the reason this runs locally at all. Any generator that derives URLs from
-file paths never reads the canonical, so a page whose canonical points elsewhere looks perfectly
-correct to it — and the sitemap ends up submitting a URL the page itself disowns.
+The FAIL/WARN table above is the complete list of what actually runs in this repository. It is
+narrower than the generic contracts' own `check` description — `references/seo-site.md` and
+`references/seo-schema.md` describe a `check` that also catches a page missing from the sitemap, a
+sitemap entry with no file behind it, a `noindex` page listed anyway, a broken `hreflang` set, and a
+`robots.txt` with no `Sitemap:` line. **`seo-lint` does none of that.** It reads one built HTML file
+at a time; it has no notion of the sitemap, `robots.txt`, or any other page, so it cannot cross-check
+one page's canonical against another page's, or the sitemap against the file tree. Those checks
+remain read-and-apply here: look at `sitemap.xml` and `robots.txt` yourself when a page is added,
+renamed or removed, using `references/seo-site.md` §3–4 as the checklist.
 
 **It says nothing about most of what the contracts cover.** It cannot see Core Web Vitals, judge
-whether a passage is quotable, validate a schema type's properties, or know anything about a link on
-somebody else's site. Those are read-and-apply, not check-and-fix. A green `check` means the tree is
-coherent — the floor, not the goal.
+whether a passage is quotable, validate a schema type's properties beyond parsing as JSON, or know
+anything about a link on somebody else's site. Those are read-and-apply, not check-and-fix. A green
+`bun run build` means the tree is coherent on the axes in the table above — the floor, not the goal.
 
 ## When a contract is missing something
 

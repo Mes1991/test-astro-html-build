@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+# Read-only: this workflow validates, it never writes to the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+
+    strategy:
+      # Keep failures visible on both legs instead of cancelling the survivor.
+      fail-fast: false
+      matrix:
+        include:
+          # Clean-clone baseline: the path a fresh contributor or deploy host gets.
+          - name: linux-clean-clone
+            os: ubuntu-latest
+            checkout-path: repo
+          # Regression guard for the `astro:build:done` path-resolution defect:
+          # `URL.pathname` stays percent-encoded, so a checkout directory
+          # containing a space broke the seo-lint hook. The default runner
+          # workspace has no spaces, so the space is introduced deliberately —
+          # this leg must keep exercising an encoded path.
+          - name: windows-path-with-spaces
+            os: windows-latest
+            checkout-path: "checkout dir with spaces/repo"
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ matrix.checkout-path }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          path: ${{ matrix.checkout-path }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.13
+
+      - name: Report resolved workspace path
+        run: pwd
+
+      # Bun is the package manager of record for this repository and `bun.lock`
+      # is committed. `--frozen-lockfile` fails rather than resolving new
+      # versions, so CI validates the exact tree a contributor installs.
+      - name: Install dependencies (frozen lockfile)
+        run: bun install --frozen-lockfile
+
+      - name: Tests
+        run: bun run test
+
+      - name: Typecheck
+        run: bun run check
+
+      - name: Build
+        run: bun run build
+
+      # `bun install` must not have rewritten bun.lock, and no competing
+      # lockfile may appear. Either would mean CI validated a different tree
+      # than the one committed.
+      - name: Assert lockfile integrity
+        run: |
+          if [ -n "$(git status --porcelain bun.lock)" ]; then
+            echo "::error::bun.lock changed during install — the committed lockfile is stale."
+            git --no-pager diff --stat bun.lock
+            exit 1
+          fi
+          for stray in pnpm-lock.yaml package-lock.json yarn.lock; do
+            if [ -f "$stray" ]; then
+              echo "::error::Unexpected $stray — Bun is the only supported package manager."
+              exit 1
+            fi
+          done
+          echo "Lockfile integrity OK: bun.lock unchanged, no competing lockfile."

@@ -16,7 +16,7 @@
   "pages": {
     "home": {
       "metaTitle": "",
-      "metaDescription": "Este es un proyecto de plantilla Astro para sitios web rápidos, accesibles y multilingües con sistema de diseño integrado y herramientas de SEO listas para producción."
+      "metaDescription": "Plantilla Astro para sitios web rápidos, accesibles y multilingües, con sistema de diseño integrado y herramientas de SEO listas para producción."
     },
     "blog": {
       "metaTitle": "El Blog — notas e ideas",

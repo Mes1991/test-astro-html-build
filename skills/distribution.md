@@ -1,61 +1,69 @@
 # Distribution — how the skills reach an agent
 
-This document describes how the canonical skills under `skills/` are materialized for the agents
-that consume them. It replaces the per-agent installation guides that shipped with the imported
-packs: those described extraction, global configuration, network approval and auto-discovery
-specific to one agent, and none of that survives here.
+This document describes how the canonical skills under `skills/` reach the agents that consume
+them, today and in a planned future state. It replaces the per-agent installation guides that
+shipped with the imported packs: those described extraction, global configuration, network approval
+and auto-discovery specific to one agent, and none of that survives here.
 
-## The model
+**Current state and future state are two different sections below, on purpose.** Do not read one
+into the other — the commands under "Future: the generator" do not exist as files yet, and claiming
+otherwise is exactly the mistake this document was rewritten to stop making.
 
-- **`skills/` is the single authored source.** Every skill and contract is written once, here.
-- **Adapters are generated copies, not symlinks.** A consumer's directory is materialized from
-  `skills/` by a script, and is excluded from Git. It is never edited by hand.
-- **The canonical source is the only thing a human edits.** A change made in a generated adapter
-  is overwritten on the next run.
+## Current mechanism: read by path
 
-The full contract for this model — the ratified decisions, the acceptance matrix and the known
-risks — is `docs/product/agent-ecosystem-contract.md`.
+**Today, in a clean clone of this repository, there is no generator and no per-agent adapter
+directory.** An agent reaches a skill by reading `skills/<name>/SKILL.md` directly, at its canonical
+path in this repository — the same path [`README.md`](./README.md) lists for every skill. This is
+not a fallback for a mechanism that is temporarily unavailable; it is the current, only mechanism.
 
-## Setup
+- **`skills/` is the single authored source.** Every skill and contract is written once, here, and
+  nothing else in this repository is meant to be a second copy of it.
+- **Nothing here fetches, generates, or installs anything.** Opening a file at its canonical path
+  needs no script, no network access, and no setup step.
+
+The full contract for the model this pack is moving toward — the ratified decisions, the acceptance
+matrix and the known risks — is `docs/product/agent-ecosystem-contract.md`.
+
+## Future: the generator
+
+**`scripts/agent-setup.mjs` and `scripts/agent-check.mjs` do not exist in this repository.** They are
+a planned future unit, not files you can run today, and the paragraphs below describe the *intended*
+interface so that whoever builds it has a target — not an instruction to run something that is not
+there. Do not tell anyone these commands work; check `scripts/` yourself before relying on this
+section, since it is the kind of gap that gets closed without every document being updated the same
+day.
+
+The intended shape, once built:
 
 ```text
 node scripts/agent-setup.mjs <target>
 ```
 
-`<target>` is one of `codex`, `claude`, `opencode`, or `all`. The script copies the canonical
-skills into the consumer's expected location and records what it wrote.
+`<target>` would be one of `codex`, `claude`, `opencode`, or `all`, copying the canonical skills into
+each consumer's expected location:
 
-- `codex` and `opencode` materialize into `.agents/skills/`.
-- `claude` materializes into `.claude/skills/`.
-- `all` runs every target. It is an advanced mode: it writes into every consumer's directory at
-  once, so use it deliberately rather than by default.
-
-The script is the entrypoint. It does not fetch anything over the network, does not install
-packages, and does not discover skills from a remote source. Everything it needs is in the
-repository.
-
-## Check
+- `codex` and `opencode` would materialize into `.agents/skills/`.
+- `claude` would materialize into `.claude/skills/`.
+- `all` would run every target at once — an advanced mode, to be used deliberately rather than by
+  default once it exists.
 
 ```text
 node scripts/agent-check.mjs
 ```
 
-`agent-check` verifies that each generated adapter matches the canonical source by hash. It reports
-drift rather than fixing it; re-run `agent-setup` to regenerate.
+`agent-check` would verify that each generated adapter matches the canonical source by hash, and
+report drift rather than fix it; re-running `agent-setup` would regenerate it.
 
-## What is out of scope
+**Neither generated adapter directory — `.claude/skills/` or `.agents/skills/` — exists in this
+repository today**, and neither is a current operational requirement. Nothing in this project depends
+on them being present; the by-path mechanism above works without them.
 
-- **No network access.** Setup and check read the local repository only.
-- **No global configuration.** The script does not edit `~/.codex`, `~/.claude`, or any other
-  machine-level file.
-- **No auto-discovery.** A consumer is told where its skills are; nothing scans the filesystem for
-  them.
-- **The Orca orchestrator is not part of this contract.** Its profiles are personal machine
-  configuration, not a template consumer, and are excluded from the distribution model.
+## What stays out of scope, in either state
 
-## Status
-
-The scripts `scripts/agent-setup.mjs` and `scripts/agent-check.mjs` are the ratified entrypoints.
-Their implementation is a separate unit from the vendorization of the skill content; until that
-unit is implemented and validated, the commands above describe the intended interface rather than
-files that exist today. Do not claim they exist until their diff and validations are recorded.
+- **No network access.** Reading a file by path today, and the planned setup/check scripts
+  tomorrow, only ever touch the local repository.
+- **No global configuration.** Nothing in this distribution model edits `~/.codex`, `~/.claude`, or
+  any other machine-level file, in the current mechanism or the planned one. An agent's own personal
+  or machine-wide configuration is that agent's own concern, not something this pack writes to.
+- **No auto-discovery.** A consumer is told where its skills are — today, by this catalog's paths;
+  tomorrow, by the generated adapter location — and nothing scans the filesystem for them on its own.

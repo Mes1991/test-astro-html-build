@@ -24,6 +24,58 @@ Save the first two at minimum. A skill pointing at a contract nobody saved is a 
 **This runs after the page is built and before anybody says it is finished.** It applies whatever
 built the page.
 
+## This stack
+
+This project is built with Astro. Two commands stand in for whatever the contracts below assume a
+generic "build and drive a browser" step means here:
+
+| Contract asks for | In this repository, run |
+|---|---|
+| a built page to capture or audit | `bun run build`, then `bun run preview` to serve `dist/` locally |
+| an automated Lighthouse pass — performance, accessibility, best-practices, SEO scores | `bun run audit` (desktop, `lighthouserc.json`) and `bun run audit:mobile` (`lighthouserc.mobile.json`) |
+
+Lighthouse's own accessibility and SEO categories are a **floor**, not a substitute for
+`references/accessibility.md`'s keyboard pass or `../static-site-seo/references/seo-page.md` §10 —
+an automated audit finds a fraction of real accessibility barriers, and this document's own section 3
+already says why a screenshot-based check needs a human loop as well.
+
+**Before trusting `lighthouserc.json`'s URL list, check it against the routes that actually exist.**
+It is a fixed list of paths, not something the build regenerates, and a route named in it that the
+site no longer has (or never had) makes `bun run audit` fail on a 404 rather than on a real
+regression — that failure means "fix the config," not "the page failed Lighthouse."
+
+**No browser-automation harness is installed in this repository.** There is no Playwright, no
+Puppeteer, and no screenshot script in `package.json` or anywhere else — confirm this yourself before
+relying on this note, since it is a fact about the installed dependencies that can change. The
+workflow below still describes the harness `references/visual-fidelity.md` section 3 requires, because
+writing and running one — in whatever actually drives a real browser on the machine doing the work —
+remains the only way to produce the evidence this skill exists to require. What changes is what you do
+when that is not possible in your current environment, and the next section states it plainly.
+
+## When browser automation is not available
+
+**If you have no way to drive a real browser** — no installed automation tool, no permission to add
+one, no environment capable of running one — **say so, and say it as a limitation, not as a pass.**
+
+- **Do not read the markup, the CSS or the component tree and report a visual verdict from that.**
+  Reading code is not a substitute for a capture at any point in this workflow, and a verdict produced
+  that way is indistinguishable, to the next reader, from one produced by an actual comparison. That is
+  the specific failure this document exists to prevent, and it is not excused by the tool being
+  unavailable rather than merely skipped.
+- **Report every category this workflow covers as `NOT EXECUTED`, not `PASS` and not silently
+  omitted.** Say which categories that leaves untouched — Structure, Geometry, Typography, Assets,
+  Reference viewport and Responsive all require a capture; Accessibility's keyboard pass and the SEO
+  checklist (`../static-site-seo/references/seo-page.md` §10) do not, and can still be run and
+  reported honestly on their own.
+- **`prefers-reduced-motion` is one you can still check without a capture harness.** Read the
+  stylesheet for the block `../astro-craft/references/accessibility.md` section 7 requires, and where
+  a real browser is available at all — even without an automation tool — toggle its "emulate CSS
+  prefers-reduced-motion" device setting by hand and watch for anything that still animates. Neither
+  half needs a screenshot, and neither substitutes for one when a capture is possible.
+- **Name what would be needed to run it for real** — the tool, and the approval to install or use it —
+  so the gap is something somebody can decide to close, rather than a fact that quietly stopped being
+  true.
+
 ## The rule this exists to enforce
 
 **You may not claim a page matches anything you did not capture.** Not from the CSS, not from the

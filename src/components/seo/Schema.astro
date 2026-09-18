@@ -1,5 +1,6 @@
 ---
 import type { Thing, WithContext } from 'schema-dts';
+import { serializeJsonLd } from '../../lib/seo/json-ld';
 
 interface Props {
   /** One schema or an array. Falsy entries are skipped (lets callers pass nullable builders inline). */
@@ -19,6 +20,6 @@ const items: WithContext<Thing>[] = item == null
   <script
     type="application/ld+json"
     is:inline
-    set:html={JSON.stringify(entry)}
+    set:html={serializeJsonLd(entry)}
   />
 ))}

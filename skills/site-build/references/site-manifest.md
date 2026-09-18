@@ -105,7 +105,7 @@ The obvious reason to duplicate a form is to know which page it came from. That 
 because there is a field for it.
 
 Add a `hidden` field carrying the origin — `landing_slug`, `campaign`, whatever the reporting needs
-— and have the host page write its value before the visitor submits. [form-schema.md](../../form-slot/references/form-schema.md) section 4
+— and have the host page write its value before the visitor submits. [form-schema.md](../../form-slot/references/form-schema.md) section 3
 owns the field: the adapter's documented default sets it, the host page may overwrite it, and it is
 read at submit time.
 

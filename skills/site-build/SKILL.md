@@ -18,6 +18,16 @@ leaves exactly two questions with no owner, which is what this file is for:
 If you find yourself reading a value, a threshold or a selector here, that is a bug in this file —
 two copies of a rule means one of them is wrong and nobody knows which.
 
+**The split with `astro-craft`, stated once so it does not have to be inferred:** this file owns the
+build **sequence** — the order the skills in this set run in, which one owns which phase, and which
+input wins when they disagree. `astro-craft` owns Astro **implementation** detail — pages, layouts,
+components, styles, islands, and the order those are built in *within* the step this file calls
+"build layout, then sections, then pages." Neither restates the other's ordering, and neither tells
+you to read the other's full reference set — this file names the specific `astro-craft` steps that
+apply at each point (see the table below), and `astro-craft` never mentions this file's ordering at
+all. If a rule about Astro implementation order shows up here, or a rule about cross-skill sequencing
+shows up there, that is the bug to report.
+
 ### A contract's headings are not the contract
 
 This is the one instruction in this file about how to read the others, and it is here because
@@ -198,7 +208,7 @@ against.
 |---|---|
 | Open the design beside the built page. Does every section in the design have a counterpart, and does every section built have a source? | the `visual-gate` skill when there is a reference; otherwise section 1 — and if the answer is "no", say so rather than adjusting the design in your head |
 | Load the page and look at the form with nothing typed into it. Is anything visible that should not be — an empty box, a coloured band, a stray border under a field? | `../form-slot/references/embed-styling.md` sections 5 and 9 |
-| Import the schema through the adapter's documented mechanism. Does it import with no errors? *(only when the form provider is activated)* | `../form-slot/references/form-schema.md` section 14 |
+| Import the schema through the adapter's documented mechanism. Does it import with no errors? *(only when the form provider is activated)* | `../form-slot/references/form-schema.md` section 10 |
 | Has a real submission been sent and received? **A clean import proves the schema, and nothing else.** *(only when the form provider is activated)* | `../form-slot/references/form-slot.md`, the acceptance table |
 | View the page source and read the `<head>` against the checklist. | `../static-site-seo/references/seo-page.md` section 10 |
 | Tab through the page from the address bar. Is the focus ring visible on every stop, and does the first tab reach a skip link? | `../astro-craft/references/accessibility.md` sections 2 and 3 |

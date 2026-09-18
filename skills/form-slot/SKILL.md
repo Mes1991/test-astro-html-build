@@ -74,7 +74,7 @@ labels, and choice lists you have to guess.
 **If the form collects an email address and a reply to the sender is part of the point, and the
 adapter's schema documents a way to flag that field for it, mark it as documented** — `form-schema.md`
 uses `"replyTo": true` as its example key, but the adapter's own documentation is what decides
-whether that key exists and what it is called. `references/form-schema.md` section 4.0.1 owns the
+whether that key exists and what it is called. `references/form-schema.md` section 3.1 owns the
 rule; what belongs here is that this is a decision the design cannot make for you and the provider's
 builder will not make on your behalf.
 What a reply actually does is the adapter's behaviour, not this skill's. **The adapter must document

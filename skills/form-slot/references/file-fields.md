@@ -35,7 +35,7 @@ notification email.
 an email field is not enough and nothing infers it: how a field is marked, what an absent mark does,
 and where an unmarked reply goes are the adapter's behaviour, not this contract's. **The adapter
 must document and validate that mechanism — including whether more than one marked field is rejected
-and what its limit is — before this workaround is relied on.** The rule is section 4.0.1 of
+and what its limit is — before this workaround is relied on.** The rule is section 3.1 of
 [form-schema.md](./form-schema.md); this page only tells you that this workaround depends on it.
 
 ## What this contract does not define

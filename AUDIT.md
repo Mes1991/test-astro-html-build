@@ -20,23 +20,28 @@ finished product.
 - **Build reproducibility**: `bun install`, `bun run build`, `bun run test`
   must be green from a clean checkout (no network access required beyond
   dependency installation).
-- **Skills architecture**: `skills/` (canonical) vs. the per-agent adapters
-  described in `docs/product/agent-ecosystem-contract.md`
-  (`.agents/skills/`, `.claude/skills/`) — both adapters are generated and
-  gitignored; they are intentionally absent from this snapshot.
+- **Skills architecture**: `skills/` (canonical, 7 real skills — see
+  `docs/product/agent-ecosystem-contract.md`) vs. the per-agent adapters
+  (`.agents/skills/`, `.claude/skills/`) documented there as **future work**:
+  the distribution scripts (`scripts/agent-setup.mjs` / `scripts/agent-check.mjs`)
+  do not exist yet, so neither adapter is materialized in this snapshot. Today
+  a clean agent opens a skill directly by its canonical path,
+  `skills/<name>/SKILL.md`.
 - **Dependency surface**: `package.json` / `bun.lock` for known-vulnerable or
   unexpected transitive dependencies.
 
 ## Canonical skills / adapter architecture
 
-`skills/` is the single source of truth for the AI-agent skill library.
-`docs/product/agent-ecosystem-contract.md` documents the ratified distribution
-contract: Codex and OpenCode read `.agents/skills/`, Claude reads
-`.claude/skills/`, both are generated copies (never hand-edited, never a
-second source of truth), and Orca-style personal orchestration tooling is
-explicitly out of the template contract. `scripts/agent-setup.mjs` /
-`scripts/agent-check.mjs` (the sync/verification scripts) are **not yet
-implemented** — this is a known, documented gap, not an oversight.
+`skills/` is the single source of truth for the AI-agent skill library — it
+holds 7 real skills today, opened directly by a clean agent at
+`skills/<name>/SKILL.md`. `docs/product/agent-ecosystem-contract.md`
+documents the ratified **target** distribution contract: Codex and OpenCode
+would read `.agents/skills/`, Claude would read `.claude/skills/`, both
+generated copies (never hand-edited, never a second source of truth), with
+Orca-style personal orchestration tooling explicitly out of the template
+contract. `scripts/agent-setup.mjs` / `scripts/agent-check.mjs` (the
+sync/verification scripts that would materialize those adapters) are **not
+yet implemented** — this is a known, documented gap, not an oversight.
 
 ## Reporting findings
 
@@ -53,9 +58,9 @@ reproducing the value verbatim.
 
 ## Real status: known open items
 
-- **Package manager migration (Bun → pnpm)**: not started in this snapshot;
-  `bun.lock` and `bun run *` scripts are still authoritative. See `AGENTS.md`
-  → "Estado transitorio".
+- **Package manager**: resolved — Bun is the definitive package manager;
+  `bun.lock` is the only permitted lockfile and `bun run *` scripts are
+  authoritative. There is no migration to pnpm, planned or pending.
 - **`src/site.config.ts` single-source site configuration**: not implemented
   yet; site configuration is currently split across
   `src/lib/seo/defaults.ts` and `astro.config.mjs`.
@@ -68,13 +73,12 @@ reproducing the value verbatim.
   `scripts/agent-check.mjs`): documented and ratified, not yet implemented —
   see `docs/product/agent-ecosystem-contract.md` → "Estado de implementación".
 - **`tools/seo.mjs`**: referenced by the `static-site-seo` skill contract as a
-  standalone SEO validation tool; this file does not exist in the repository
-  yet (tracked as gap `tools-seo-mjs` in `skills/registry.yaml` — note that
-  file itself is excluded from this public snapshot because it still contains
-  local machine paths; the gap is reproduced here for visibility).
-- **License**: no `LICENSE` file exists yet. This is a pending decision, not
-  an omission — treat the repository as all-rights-reserved until one is
-  added.
+  standalone SEO validation tool; this file does not exist in the repository.
+  There is no `skills/registry.yaml` yet to track it as a formal gap (see
+  `docs/product/agent-ecosystem-contract.md` → "Estado de implementación");
+  the gap is reproduced here for visibility instead.
+- **License**: **MIT**. See `LICENSE` (repository root) and
+  `THIRD_PARTY_NOTICES.md` for third-party attributions.
 
 ## Reproducible commands
 

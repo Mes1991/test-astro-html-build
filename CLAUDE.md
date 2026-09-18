@@ -7,9 +7,9 @@ It is a **bold, blog-only site**: the home page flow is
 `SiteHeader → Hero → FAQ → BlogTeaser → Footer`. The blog is the only content type;
 there are no project-showcase, pricing, or contact features.
 
-**`AGENTS.md` is the source of truth.** Read it before doing anything — it documents
-the architecture, the rebrand checklist, the component catalog, SEO/OG/i18n/motion
-systems, and recipes.
+**`AGENTS.md` is the source of truth.** Read it before doing anything — it routes to
+the architecture docs, the component catalog, SEO/OG/i18n/motion systems, and
+recipes. For rebranding, use [`docs/product/rebrand-checklist.md`](./docs/product/rebrand-checklist.md).
 
 ## Must-follow rules
 
@@ -27,9 +27,14 @@ systems, and recipes.
 
 ## Agent skills
 
-Skills are canonically sourced from `skills/` and materialized per agent by
-`node scripts/agent-setup.mjs <codex|claude|opencode|all>` (a `pnpm agent:setup`
-alias arrives once the Bun→pnpm migration lands). Claude reads its own copy
-from `.claude/skills/`, generated and gitignored — never edit it by hand, and
-never edit `skills/registry.yaml`'s distribution decisions from a task; see
-`docs/product/agent-ecosystem-contract.md` for the full contract.
+`skills/` is the canonical source — it holds the 7 real skills that exist today.
+**A clean agent opens a skill directly by its canonical path,
+`skills/<name>/SKILL.md`.** That is the operative mechanism today; there is no
+automatic distributor yet.
+
+Future work (not implemented — see `docs/product/agent-ecosystem-contract.md`
+→ "Estado de implementación"): `node scripts/agent-setup.mjs
+<codex|claude|opencode|all>` would materialize per-agent adapters, with Claude
+reading its own copy from `.claude/skills/` (generated, gitignored — never
+edit it by hand). `skills/registry.yaml` does not exist yet either; never
+describe it or the setup/check scripts as already working.

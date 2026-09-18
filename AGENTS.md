@@ -2,6 +2,8 @@
 
 Este archivo debe mantenerse corto. Los detalles viven en `docs/product/` y en skills cargadas bajo demanda.
 
+Para editar identidad/marca, ver el checklist canónico: [`docs/product/rebrand-checklist.md`](./docs/product/rebrand-checklist.md).
+
 ## Objetivo
 
 Construir y mantener una plantilla Astro estática, robusta, accesible, SEO-ready y barata de operar con agentes. El núcleo es monolingüe, neutral respecto a CMS y hosting, y funciona sin JavaScript para contenido y navegación esenciales.
@@ -21,7 +23,7 @@ Registra conflictos de nivel inferior, aplica la fuente superior y continúa si 
 ## Invariantes del núcleo
 
 - Astro estático y TypeScript estricto.
-- pnpm y versión de Node explícitos; no Bun, npm ni yarn.
+- **Bun** es el gestor de paquetes definitivo (`bun.lock` es el único lockfile permitido); no pnpm, npm ni yarn. Node con rango explícito (`engines` en `package.json`).
 - `src/site.config.ts` es la única configuración pública del sitio.
 - Monolingüe por defecto; i18n es una extensión real, nunca rutas vacías o contenido falso.
 - Contrato de contenido vendor-neutral; el adaptador local es el default.
@@ -44,14 +46,13 @@ Detente si falta una decisión que cambie el producto, se requiere acceso extern
 ## Estado transitorio
 
 - `docs/product/template-contract.md` describe el **producto objetivo**. Los "Invariantes del núcleo" de arriba son esa meta, no un reporte de lo que ya existe.
-- El repositorio todavía puede contener Bun, rutas bilingües obligatorias y dependencias legacy (GSAP, Lenis, React, Three.js) hasta que sus unidades de migración correspondientes queden implementadas y validadas.
+- El repositorio todavía puede contener rutas bilingües obligatorias y dependencias legacy (GSAP, Lenis, React, Three.js) hasta que sus unidades de migración correspondientes queden implementadas y validadas. Bun **no** es parte de esta lista: es la decisión final del gestor de paquetes, no una migración pendiente.
 - Antes de ejecutar cualquier comando, cada tarea debe inspeccionar `package.json` y el estado real del repositorio — no asumas los scripts objetivo de la sección "Validación" sin confirmarlos.
-- No afirmes que pnpm, la configuración única `src/site.config.ts` o cualquier otra migración ya existen hasta que su diff y sus validaciones estén completados y registrados.
+- No afirmes que la configuración única `src/site.config.ts` o cualquier otra migración pendiente ya existen hasta que su diff y sus validaciones estén completados y registrados.
 - Para el estado actual verificado (comandos reales, estructura, Content Collections, seo-lint, OG, variables de entorno, rutas/i18n vigentes, accesibilidad/reduced-motion/performance), consulta `docs/product/current-repository-map.md`.
 
 | Tema | Estado actual del repositorio | Producto objetivo | Unidad que lo cierra |
 |---|---|---|---|
-| Package manager | Bun (`bun.lock`, scripts `bun run *`) | pnpm, sin Bun/npm/yarn | Unidad 1 |
 | Configuración pública | Dispersa (`siteSeo` en `src/lib/seo/defaults.ts`, `astro.config.mjs`, wordmark hardcodeado) | `src/site.config.ts` única | Pendiente, posterior a Unidad 1 |
 | Idiomas | en/es obligatorio con paridad de claves | Monolingüe por defecto; i18n extensión opt-in real | Pendiente |
 | Stack visual (GSAP, Lenis, React, Three.js) | Obligatorio y cableado en `BaseLayout.astro`, 404, coming-soon | Opt-in, extraíble | Pendiente |
@@ -59,9 +60,14 @@ Detente si falta una decisión que cambie el producto, se requiere acceso extern
 | CMS / scheduling / uploads | No existen hoy | Extensiones opt-in explícitas, deny-by-default | Pendiente |
 | JavaScript | Motion y WebGL obligatorios en varias páginas | Opt-in y progresivo | Pendiente |
 | SEO / seo-lint / OG | Parcialmente implementado; gaps conocidos, incluyendo configuración/origen y materialización de `tools/seo.mjs` (ver `current-repository-map.md` §4) | Config-driven, verificable, sin origen hard-coded | Pendiente de cierre |
-| Distribución de skills | Solo `skills/registry.yaml` en la raíz; sin sincronización a `.agents/` ni `.claude/` | `skills/` canónico; Codex/OpenCode consumen `.agents/skills/`; Claude consume `.claude/skills/`; Orca queda fuera del contrato como configuración personal | Unidad 0 |
+| Distribución de skills | `skills/` contiene las 7 skills reales con contenido completo; no existe `skills/registry.yaml` ni sincronización a `.agents/`/`.claude/`. Un agente limpio abre cada skill directamente por ruta canónica: `skills/<nombre>/SKILL.md` | `skills/` canónico + distribución automática; Codex/OpenCode consumirían `.agents/skills/`; Claude consumiría `.claude/skills/`; Orca queda fuera del contrato como configuración personal | Trabajo futuro, ver `docs/product/agent-ecosystem-contract.md` |
 
 ## Router de skills
+
+Un agente limpio abre la skill **directamente por su ruta canónica**:
+`skills/<nombre>/SKILL.md`. No hay hoy un distribuidor automático ni un
+`skills/registry.yaml`; ese mecanismo es trabajo futuro (ver
+`docs/product/agent-ecosystem-contract.md`).
 
 | Situación | Skill |
 |---|---|
@@ -72,7 +78,13 @@ Detente si falta una decisión que cambie el producto, se requiere acceso extern
 | Figma, screenshot o diseño externo | `design-ingestion` |
 | Formulario sin integración existente | `form-slot` |
 | Comparación visual o cierre responsive | `visual-gate` |
-| Auditoría explícita de seguridad/release | `security-audit` |
+
+Estas 7 son las únicas skills que existen hoy en `skills/`.
+
+> **Futuro / no instalado:** un skill de auditoría de seguridad (`security-audit`,
+> basado en el proyecto de Cloudflare) está evaluado como gate de release
+> opt-in, pero no está instalado ni forma parte del catálogo anterior. Ver
+> `docs/product/template-contract.md` → "Adopción futura opcional".
 
 Una skill es una ruta de trabajo, no permiso adicional. Las reglas del repositorio y del sandbox prevalecen.
 
@@ -81,7 +93,7 @@ Una skill es una ruta de trabajo, no permiso adicional. Las reglas del repositor
 - No leas directorios completos para una edición local.
 - No pegues contratos extensos en prompts o reportes.
 - Si una tarea ordinaria supera 35k tokens antes del primer diff relevante, detente y diagnostica el desvío.
-- Un worker que entra en Gentle/review, SDD u otro workflow no solicitado está contaminado: deténlo; no intentes convencerlo con nudges repetidos.
+- Un worker que entra en un workflow de revisión, SDD u otro protocolo no solicitado está contaminado: deténlo; no intentes convencerlo con nudges repetidos.
 
 ## Cambios y dependencias
 
@@ -93,15 +105,17 @@ Una skill es una ruta de trabajo, no permiso adicional. Las reglas del repositor
 
 ## Validación
 
-Usa los scripts reales de `package.json` — verifícalos, no los asumas. El estado objetivo (ver "Estado transitorio") incluye:
+Usa los scripts reales de `package.json` — verifícalos, no los asumas. Comandos vigentes hoy:
 
 ```text
-pnpm install --frozen-lockfile
-pnpm run check
-pnpm run test
-pnpm run build
-pnpm run seo:check
+bun install --frozen-lockfile
+bun run dev
+bun run test
+bun run check
+bun run build
 ```
+
+No existe `seo:check`, `lint`, `agent:setup` ni `agent:check` como script de `package.json`. `bun run build` ya incluye la validación SEO (`seo-lint`) y puede fallar el build.
 
 No inventes éxito. Si un comando todavía no existe, registra el gap en vez de sustituirlo silenciosamente.
 
@@ -109,7 +123,7 @@ No inventes éxito. Si un comando todavía no existe, registra el gap en vez de 
 
 - Nunca leas o escribas credenciales.
 - Red deshabilitada durante builds y tests salvo fase explícita.
-- El skill de Cloudflare se ejecuta como gate separado con sandbox y presupuesto propios; no en cada cambio.
+- El skill de auditoría de Cloudflare (`security-audit`), cuando se adopte, debe ejecutarse como gate separado con sandbox y presupuesto propios, no en cada cambio; hoy no está instalado (ver "Router de skills").
 - Un hallazgo solo es confirmado con traza de fuente, reproducción acotada e impacto. Lo no verificado queda como `needs_validation`.
 
 ## Terminado significa
