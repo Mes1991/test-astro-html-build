@@ -1,6 +1,6 @@
 import type { BlogPosting, WithContext } from 'schema-dts';
 import { siteSeo, localeTag } from '../defaults';
-import { absoluteUrl } from '../url';
+import { absoluteUrl, routeUrl } from '../url';
 import type { LocaleCode } from '../types';
 
 export interface BlogPostingInput {
@@ -25,7 +25,7 @@ export function buildBlogPosting(input: BlogPostingInput): WithContext<BlogPosti
     headline: input.headline,
     description: input.description,
     image: input.imageUrl.startsWith('http') ? input.imageUrl : absoluteUrl(input.imageUrl),
-    url: input.pageUrl ?? absoluteUrl(`/blog/${input.slug}`),
+    url: input.pageUrl ?? routeUrl(`/blog/${input.slug}`),
     datePublished: input.datePublished,
     dateModified: input.dateModified ?? input.datePublished,
     author: { '@type': 'Person', name: input.authorName },

@@ -7,7 +7,7 @@ import BlogArchive from "../../components/blog/BlogArchive.astro";
 import BreadcrumbsJsonLd from "../../components/seo/BreadcrumbsJsonLd.astro";
 import { buildCollectionPage } from "../../lib/seo/schemas/page";
 import { siteSeo } from "../../lib/seo/defaults";
-import { absoluteUrl } from "../../lib/seo/url";
+import { routeUrl } from "../../lib/seo/url";
 import { t } from "../../i18n/t";
 
 const locale = "en";
@@ -23,12 +23,12 @@ const description = t("pages.blog.metaDescription", locale);
 
 const collectionSchema = buildCollectionPage({
   name: `${title} — ${siteSeo.brand}`,
-  url: absoluteUrl("/blog"),
+  url: routeUrl("/blog"),
   description,
   locale,
   items: all.map((entry) => ({
     name: entry.data.title,
-    url: absoluteUrl(`/blog/${entry.data.slug}`),
+    url: routeUrl(`/blog/${entry.data.slug}`),
   })),
 });
 ---

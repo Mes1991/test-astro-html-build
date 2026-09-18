@@ -178,7 +178,7 @@ export function lintHtml(html: string): Finding[] {
  * `'en'` matches `'en-US'`; `'es'` matches `'es-MX'`; `'en-US'` does not match
  * `'es-MX'`. Empty strings never match.
  */
-function langMatches(a: string, b: string): boolean {
+export function langMatches(a: string, b: string): boolean {
   const left = a.split('-')[0]?.toLowerCase() ?? '';
   const right = b.split('-')[0]?.toLowerCase() ?? '';
   if (!left || !right) return false;

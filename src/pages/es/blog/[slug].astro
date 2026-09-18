@@ -6,7 +6,7 @@ import SiteHeader from "../../../components/shared/SiteHeader.astro";
 import Footer from "../../../components/home/Footer.astro";
 import BreadcrumbsJsonLd from "../../../components/seo/BreadcrumbsJsonLd.astro";
 import { buildBlogPosting } from "../../../lib/seo/schemas/article";
-import { absoluteUrl } from "../../../lib/seo/url";
+import { routeUrl } from "../../../lib/seo/url";
 import { readingTime } from "../../../lib/blog/reading-time";
 import NextRead from "../../../components/blog/NextRead.astro";
 
@@ -33,9 +33,9 @@ const displayCategory = es?.category ?? data.category;
 const imageAlt = es?.imageAlt ?? data.imageAlt;
 
 const explicitAlternates = {
-  en: absoluteUrl(`/blog/${data.slug}`),
-  es: absoluteUrl(`/es/blog/${data.slug}`),
-  "x-default": absoluteUrl(`/blog/${data.slug}`),
+  en: routeUrl(`/blog/${data.slug}`),
+  es: routeUrl(`/es/blog/${data.slug}`),
+  "x-default": routeUrl(`/blog/${data.slug}`),
 };
 
 const articleSchema = buildBlogPosting({
@@ -49,7 +49,7 @@ const articleSchema = buildBlogPosting({
   section: displayCategory,
   keywords: data.keywords,
   locale,
-  pageUrl: absoluteUrl(`/es/blog/${data.slug}`),
+  pageUrl: routeUrl(`/es/blog/${data.slug}`),
 });
 ---
 
@@ -68,9 +68,9 @@ const articleSchema = buildBlogPosting({
   <Fragment slot="head">
     <BreadcrumbsJsonLd
       crumbs={[
-        { name: "Inicio", url: absoluteUrl("/es/") },
-        { name: "Blog", url: absoluteUrl("/es/blog") },
-        { name: displayTitle, url: absoluteUrl(`/es/blog/${data.slug}`) },
+        { name: "Inicio", url: routeUrl("/es/") },
+        { name: "Blog", url: routeUrl("/es/blog") },
+        { name: displayTitle, url: routeUrl(`/es/blog/${data.slug}`) },
       ]}
     />
   </Fragment>

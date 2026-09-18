@@ -2,6 +2,7 @@
 import { Image } from "astro:assets";
 import { getCollection, type CollectionEntry } from "astro:content";
 import { pickNextReads } from "../../lib/blog/next-read";
+import { postPathFor } from "../../lib/seo/locale";
 import type { LocaleCode } from "../../lib/seo/types";
 
 interface Props {
@@ -47,8 +48,7 @@ const dateFormatter = new Intl.DateTimeFormat(
 const fmtDate = (iso: string) =>
   dateFormatter.format(new Date(iso)).replace(/\.$/, "");
 
-const postHref = (slug: string) =>
-  locale === "es" ? `/es/blog/${slug}` : `/blog/${slug}`;
+const postHref = (slug: string) => postPathFor(slug, locale);
 ---
 
 {

@@ -1,7 +1,7 @@
 import type { BreadcrumbList, ListItem, WithContext } from 'schema-dts';
 import type { BreadcrumbInput, LocaleCode } from '../types';
 import { DEFAULT_LOCALE, LOCALES } from '../types';
-import { absoluteUrl } from '../url';
+import { routeUrl } from '../url';
 import { t } from '../../../i18n/t';
 
 /** schema.org BreadcrumbList. Returns null for empty input — callers should not emit. */
@@ -59,7 +59,7 @@ export function breadcrumbsFromPath(
     segments.shift();
   }
 
-  const homeUrl = absoluteUrl(`${urlLocalePrefix}/`);
+  const homeUrl = routeUrl(`${urlLocalePrefix}/`);
   const home: BreadcrumbInput = { name: t('nav.home', locale), url: homeUrl };
   if (segments.length === 0) return [home];
 
@@ -67,7 +67,7 @@ export function breadcrumbsFromPath(
   let cumulative = urlLocalePrefix;
   for (const seg of segments) {
     cumulative += `/${seg}`;
-    crumbs.push({ name: humanize(seg), url: absoluteUrl(cumulative) });
+    crumbs.push({ name: humanize(seg), url: routeUrl(cumulative) });
   }
   return crumbs;
 }

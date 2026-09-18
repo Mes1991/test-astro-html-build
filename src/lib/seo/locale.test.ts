@@ -5,6 +5,7 @@ import {
   oppositeLocale,
   ROUTE_KEYS,
   localizedSlugs,
+  localeOfRoute,
 } from './locale';
 
 describe('pathFor', () => {
@@ -17,16 +18,16 @@ describe('pathFor', () => {
   });
 
   it('keeps "blog" URL slug English in both locales (brand label is in i18n dict)', () => {
-    expect(pathFor('blog', 'en')).toBe('/blog');
-    expect(pathFor('blog', 'es')).toBe('/es/blog');
+    expect(pathFor('blog', 'en')).toBe('/blog/');
+    expect(pathFor('blog', 'es')).toBe('/es/blog/');
   });
 });
 
 describe('alternateUrls', () => {
   it('returns en/es URLs for blog with shared "blog" slug', () => {
     const urls = alternateUrls('blog');
-    expect(urls.en).toBe('https://example.com/blog');
-    expect(urls.es).toBe('https://example.com/es/blog');
+    expect(urls.en).toBe('https://example.com/blog/');
+    expect(urls.es).toBe('https://example.com/es/blog/');
   });
 });
 
@@ -51,5 +52,21 @@ describe('localizedSlugs', () => {
       expect(localizedSlugs[key].en).toBeDefined();
       expect(localizedSlugs[key].es).toBeDefined();
     }
+  });
+});
+
+describe('localeOfRoute', () => {
+  it('reads the locale from a prefixed path', () => {
+    expect(localeOfRoute('/es/')).toBe('es');
+    expect(localeOfRoute('/es/blog/')).toBe('es');
+  });
+
+  it('treats an unprefixed path as the default locale', () => {
+    expect(localeOfRoute('/')).toBe('en');
+    expect(localeOfRoute('/blog/')).toBe('en');
+  });
+
+  it('does not mistake a slug that merely starts with a locale code', () => {
+    expect(localeOfRoute('/espanol/')).toBe('en');
   });
 });

@@ -5,7 +5,7 @@ describe('buildBreadcrumbList', () => {
   it('builds positions starting at 1', () => {
     const out = buildBreadcrumbList([
       { name: 'Home', url: 'https://example.com/' },
-      { name: 'Work', url: 'https://example.com/work' },
+      { name: 'Work', url: 'https://example.com/work/' },
     ]);
     if (out === null) throw new Error('expected non-null');
     expect(out['@type']).toBe('BreadcrumbList');
@@ -33,8 +33,8 @@ describe('breadcrumbsFromPath', () => {
   it('builds nested crumbs from segments', () => {
     expect(breadcrumbsFromPath('/work/example-project')).toEqual([
       { name: 'Home', url: 'https://example.com/' },
-      { name: 'Work', url: 'https://example.com/work' },
-      { name: 'Example Project', url: 'https://example.com/work/example-project' },
+      { name: 'Work', url: 'https://example.com/work/' },
+      { name: 'Example Project', url: 'https://example.com/work/example-project/' },
     ]);
   });
 
@@ -58,7 +58,7 @@ describe('breadcrumbsFromPath', () => {
   it('preserves locale prefix in crumb URLs', () => {
     expect(breadcrumbsFromPath('/es/sobre-nosotros', 'es')).toEqual([
       { name: 'Inicio', url: 'https://example.com/es/' },
-      { name: 'Sobre Nosotros', url: 'https://example.com/es/sobre-nosotros' },
+      { name: 'Sobre Nosotros', url: 'https://example.com/es/sobre-nosotros/' },
     ]);
   });
 });

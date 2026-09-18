@@ -5,10 +5,21 @@ import sitemap from '@astrojs/sitemap';
 import partytown from '@astrojs/partytown';
 import react from '@astrojs/react';
 import seoLint from './src/integrations/seo-lint/index.ts';
+import { hreflangLinksFor } from './src/lib/seo/sitemap.ts';
 
 // https://astro.build/config
 export default defineConfig({
   site: 'https://example.com',
+  /* Canonical public URL form: directory routes always end in a trailing slash
+     (`/blog/`, `/es/blog/`), the root stays `/`. Google treats `/blog` and
+     `/blog/` as distinct URLs and asks for one to be chosen, linked
+     consistently and published alone in the sitemap.
+
+     Deployment note: this does NOT make a host redirect `/blog` to `/blog/` for
+     prerendered pages — Astro leaves that to the host. Configure that redirect
+     on the target hosting. */
+  trailingSlash: 'always',
+  build: { format: 'directory' },
   i18n: {
     defaultLocale: 'en',
     locales: ['en', 'es'],
@@ -37,25 +48,13 @@ export default defineConfig({
           item.changefreq = 'monthly';
         }
 
-        // hreflang — derived per known route. Drop the dynamic blog posts
-        // here; their per-page <link rel="alternate"> tags in HTML cover
-        // hreflang, and Google reads either source.
-        const ROUTE_MAP = [
-          { en: '/', es: '/es/' },
-          { en: '/blog', es: '/es/blog' },
-        ];
-        const SITE = 'https://example.com';
-        const path = item.url.replace(SITE, '').replace(/\/+$/, '') || '/';
-        const route = ROUTE_MAP.find(
-          (r) => r.en === path || r.es === path || `${r.en}/` === path || `${r.es}/` === path,
-        );
-        if (route) {
-          item.links = [
-            { lang: 'en', url: `${SITE}${route.en}` },
-            { lang: 'es', url: `${SITE}${route.es}` },
-            { lang: 'x-default', url: `${SITE}${route.en}` },
-          ];
-        }
+        // hreflang — derived from the single source of truth in
+        // `src/lib/seo/locale.ts` rather than a second route map maintained by
+        // hand here. Dynamic blog posts resolve to null and are skipped; their
+        // per-page <link rel="alternate"> tags in HTML cover hreflang, and
+        // Google reads either source.
+        const links = hreflangLinksFor(item.url);
+        if (links) item.links = links;
 
         return item;
       },
@@ -67,6 +66,7 @@ export default defineConfig({
       },
     }),
     react(),
+    // Must run after sitemap(): its build-done hook validates emitted XML.
     seoLint(),
   ],
   vite: {

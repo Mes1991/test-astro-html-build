@@ -3,6 +3,14 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { lintHtml, type Finding } from './lint';
+import {
+  lintLocaleRoutes,
+  lintLocalizedRouteCoverage,
+  lintSitemapRoutes,
+  parseSitemap,
+  routeFromDistFile,
+  type GeneratedPage,
+} from './routes';
 
 const SITE_ORIGIN = 'https://example.com';
 
@@ -81,6 +89,42 @@ export async function walkHtml(dir: string): Promise<string[]> {
   return out;
 }
 
+/**
+ * Every non-HTML file the build emitted, as the path it is served at
+ * (`/og/home.png`, `/draco/draco_decoder.wasm`). This is what lets the route
+ * gates classify a link or a sitemap entry by what actually exists rather than
+ * by guessing from the last path segment. Exported for tests.
+ */
+export async function walkAssets(dir: string, root: string = dir): Promise<string[]> {
+  const out: string[] = [];
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) {
+      out.push(...(await walkAssets(full, root)));
+    } else if (e.isFile() && !e.name.endsWith('.html')) {
+      out.push(`/${path.relative(root, full).split(path.sep).join('/')}`);
+    }
+  }
+  return out;
+}
+
+/**
+ * Collect the URL-set sitemaps `@astrojs/sitemap` wrote at the root of `dist`.
+ * The index file only points at these, so it carries no `<url>` entries itself.
+ * Exported for tests.
+ */
+export async function findSitemaps(distPath: string): Promise<string[]> {
+  const out: string[] = [];
+  for (const e of await readdir(distPath, { withFileTypes: true })) {
+    if (!e.isFile() || !e.name.endsWith('.xml')) continue;
+    // Discover by emitted URL-set content, not a configurable filenameBase.
+    if (/<urlset\b/.test(await readFile(path.join(distPath, e.name), 'utf8'))) {
+      out.push(path.join(distPath, e.name));
+    }
+  }
+  return out.sort();
+}
+
 export interface SeoLintOptions {
   /** Throw on `fail`-severity findings. Defaults to true. */
   failOnError?: boolean;
@@ -88,20 +132,49 @@ export interface SeoLintOptions {
 
 export default function seoLint(options: SeoLintOptions = {}): AstroIntegration {
   const failOnError = options.failOnError ?? true;
+  let sitemapExpected = false;
   return {
     name: 'seo-lint',
     hooks: {
+      'astro:config:done': ({ config }) => {
+        sitemapExpected = config.integrations.some((integration) => integration.name === '@astrojs/sitemap');
+      },
       'astro:build:done': async ({ dir, logger }) => {
         const distPath = resolveDistPath(dir);
         const htmlFiles = await walkHtml(distPath);
+        const emittedFiles = new Set(await walkAssets(distPath));
 
         const reports: PageReport[] = [];
+        const pages: GeneratedPage[] = [];
         for (const file of htmlFiles) {
           const html = await readFile(file, 'utf8');
+          const rel = path.relative(distPath, file);
+          pages.push({ route: routeFromDistFile(rel), html });
           const findings = lintHtml(html);
           findings.push(...(await checkOgImage404(html, distPath)));
           if (findings.length > 0) {
-            reports.push({ page: path.relative(distPath, file), findings });
+            reports.push({ page: rel, findings });
+          }
+        }
+
+        // Route-level gates: these need the whole build output, not one page.
+        for (const f of [...lintLocaleRoutes(pages, emittedFiles), ...lintLocalizedRouteCoverage(pages)]) {
+          reports.push({ page: f.route, findings: [f] });
+        }
+        const sitemapFiles = await findSitemaps(distPath);
+        // A sitemap-free site is legitimate. When configured, however, missing
+        // output (including wrong hook order) must not silently bypass gates.
+        if (sitemapFiles.length === 0) reports.push({ page: 'sitemap', findings: [{
+          code: 'SITEMAP_OUTPUT_MISSING',
+          severity: sitemapExpected ? 'fail' : 'warn',
+          message: sitemapExpected
+            ? '@astrojs/sitemap is configured but no URL-set sitemap was emitted. Place seoLint() after sitemap() and check sitemap generation.'
+            : 'No URL-set sitemap emitted; sitemap integration is not configured.',
+        }] });
+        for (const sitemapFile of sitemapFiles) {
+          const entries = parseSitemap(await readFile(sitemapFile, 'utf8'));
+          for (const f of lintSitemapRoutes(entries, pages, SITE_ORIGIN, emittedFiles)) {
+            reports.push({ page: `${path.relative(distPath, sitemapFile)} → ${f.route}`, findings: [f] });
           }
         }
 

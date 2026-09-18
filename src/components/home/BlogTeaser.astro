@@ -2,7 +2,7 @@
 import { Image } from "astro:assets";
 import { getCollection } from "astro:content";
 import { t } from "../../i18n/t";
-import { pathFor } from "../../lib/seo/locale";
+import { pathFor, postPathFor } from "../../lib/seo/locale";
 import type { LocaleCode } from "../../lib/seo/types";
 import { DEFAULT_LOCALE } from "../../lib/seo/types";
 
@@ -26,8 +26,7 @@ const featured = all[0];
 const list = all.slice(1, 4);
 
 const blogHref = pathFor("blog", locale);
-const postHref = (slug: string) =>
-	locale === "es" ? `/es/blog/${slug}` : `/blog/${slug}`;
+const postHref = (slug: string) => postPathFor(slug, locale);
 
 type Entry = (typeof all)[number];
 function fields(entry: Entry) {
