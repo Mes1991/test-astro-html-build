@@ -24,8 +24,11 @@ recipes. For rebranding, use [`docs/product/rebrand-checklist.md`](./docs/produc
    be green. Use `bun run test`, **not** `bun test` (that runs the wrong runner).
 2. **Brand identity** lives in `src/lib/seo/defaults.ts` (`siteSeo`). Also set `site`
    in `astro.config.mjs` to match `siteSeo.siteUrl`.
-3. **Keep the route map in sync** between `astro.config.mjs` (sitemap `ROUTE_MAP`) and
-   `src/lib/seo/locale.ts` (`localizedSlugs` / `ROUTE_KEYS`).
+3. **`src/lib/seo/locale.ts` (`ROUTE_KEYS` / `localizedSlugs`) is the only route map** —
+   `astro.config.mjs` derives the sitemap's hreflang links from it via `hreflangLinksFor`,
+   so add or rename a top-level route there and nowhere else. What still has to be kept in
+   sync by hand is the locale set: `i18n.locales` / `defaultLocale` in `astro.config.mjs`
+   must match `LOCALES` / `DEFAULT_LOCALE` in `src/lib/seo/types.ts`.
 4. **Preserve i18n key parity:** `src/i18n/en.json` and `es.json` must share identical
    keys; only the values differ.
 5. **`src/content/**/example-*`** files (and their `src/assets` images) are deletable

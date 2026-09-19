@@ -55,10 +55,13 @@ esos archivos deben enlazar aquí, no repetir la lista.
   exactamente** con `site` de `astro.config.mjs` (regla ya exigida en
   `CLAUDE.md` #2).
 - `astro.config.mjs` → dentro de la integración `sitemap({ serialize(item)
-  {...} })`, la constante local `SITE = 'https://example.com'` se usa para
-  construir las URLs de `hreflang` del `ROUTE_MAP` — es una tercera
-  ocurrencia de la misma URL, sepárala manualmente si cambias las dos
-  anteriores.
+  {...} })` hay una tercera ocurrencia literal de la URL: la comparación
+  `item.url === 'https://example.com/'`, que sube la prioridad de la home.
+  Actualízala junto con las dos anteriores. Las URLs de `hreflang` del
+  sitemap ya **no** se construyen con una constante local: `serialize` llama a
+  `hreflangLinksFor` (`src/lib/seo/sitemap.ts`, importado en la línea 8), que
+  por defecto toma `siteSeo.siteUrl` — corregir `siteSeo.siteUrl` basta para
+  ellas.
 
 ## 3. Valores por defecto de SEO
 
@@ -99,9 +102,11 @@ esos archivos deben enlazar aquí, no repetir la lista.
   mismas claves** (`CLAUDE.md` regla 4) — solo cambian los valores. Grupos
   reales hoy: `nav`, `languageSwitcher`, `common`, `pages`, `footer`,
   `header`, `home.{hero,faq,blog}`.
-- `src/lib/seo/locale.ts` (`ROUTE_KEYS` / `localizedSlugs`) y el `ROUTE_MAP`
-  de `astro.config.mjs` describen las mismas rutas desde dos ángulos y deben
-  mantenerse sincronizados (`CLAUDE.md` regla 3).
+- `src/lib/seo/locale.ts` (`ROUTE_KEYS` / `localizedSlugs`) es hoy la **única**
+  fuente de verdad de las rutas: `astro.config.mjs` ya no mantiene un segundo
+  mapa propio, deriva los `hreflang` del sitemap de ahí vía `hreflangLinksFor`.
+  Lo que sí debe mantenerse en paridad con `locale.ts` son los locales
+  declarados en `i18n.locales` de `astro.config.mjs` (`CLAUDE.md` regla 3).
 - El bilingüe en/es es hoy **obligatorio en el núcleo**, no una extensión
   opt-in (ver `docs/product/current-repository-map.md` §7 y `AGENTS.md` →
   "Estado transitorio"). No quites un locale sin actualizar
@@ -142,14 +147,57 @@ bun run build
 ```
 
 `bun run build` ejecuta el linter SEO de build-time
-(`src/integrations/seo-lint/lint.ts`), que distingue dos severidades:
+(`src/integrations/seo-lint/`: `lint.ts` sobre cada página, `index.ts` y
+`routes.ts` sobre toda la salida de `dist/` y sobre el sitemap generado), que
+distingue dos severidades:
 
-- **FAIL (rompe el build):** `TITLE_MISSING`, `DESC_MISSING`,
+**FAIL (rompe el build):**
+
+<!-- seo-lint-codes:fail -->
+- Una página a la vez (`lint.ts`): `TITLE_MISSING`, `DESC_MISSING`,
   `CANONICAL_MISSING`, `H1_MISSING`, `H1_MULTIPLE`, `IMG_ALT_MISSING`,
-  `LD_PARSE_ERROR`, `OG_IMAGE_404`.
-- **WARN (se imprime, no rompe el build):** `TITLE_TOO_SHORT` (<30),
-  `TITLE_TOO_LONG` (>70), `DESC_TOO_SHORT` (<70), `DESC_TOO_LONG` (>160),
-  `OG_IMAGE_MISSING`, `LD_NO_CONTEXT`, `LD_LANG_MISMATCH`.
+  `LD_PARSE_ERROR`.
+- Salida de build completa (`index.ts`): `OG_IMAGE_404`.
+- Rutas (`routes.ts`): `HTML_LANG_MISSING`, `LOCALE_CONTENT_MISMATCH`,
+  `CANONICAL_NOT_CANONICAL_FORM`, `OG_URL_CANONICAL_MISMATCH`,
+  `INTERNAL_LINK_NOT_CANONICAL_FORM`, `LOCALIZED_ROUTE_WITHOUT_ALTERNATES`.
+- Sitemap generado (`routes.ts`): `SITEMAP_URL_NOT_CANONICAL_FORM`,
+  `SITEMAP_NON_HTML_ENTRY`, `SITEMAP_ALTERNATES_MISSING`,
+  `SITEMAP_LOC_DANGLING`, `SITEMAP_LOC_NOT_CANONICAL`,
+  `SITEMAP_ALTERNATE_DANGLING`.
+<!-- /seo-lint-codes:fail -->
+
+**WARN (se imprime, no rompe el build):**
+
+<!-- seo-lint-codes:warn -->
+`TITLE_TOO_SHORT` (<30), `TITLE_TOO_LONG` (>70), `DESC_TOO_SHORT` (<70),
+`DESC_TOO_LONG` (>160), `OG_IMAGE_MISSING`, `LD_NO_CONTEXT`,
+`LD_LANG_MISMATCH`
+<!-- /seo-lint-codes:warn -->
+
+**CONDICIONAL (la severidad la decide el build):**
+
+<!-- seo-lint-codes:conditional -->
+- `SITEMAP_OUTPUT_MISSING` — `fail` cuando `@astrojs/sitemap` está configurado,
+  como en este repositorio, y aun así el build no emitió ningún sitemap;
+  `warn` en un sitio que no configura sitemap alguno, donde no tenerlo es el
+  resultado correcto. La integración lee la condición en `astro:config:done`,
+  buscando la integración de sitemap en la configuración resuelta, y aplica la
+  severidad en `astro:build:done`.
+<!-- /seo-lint-codes:conditional -->
+
+Ese código es el que impide que un orden de integraciones equivocado apague en
+silencio todos los demás gates de sitemap: con `seoLint()` antes de
+`sitemap()` todavía no existe sitemap cuando corren los gates, y sin este
+código el build terminaría en verde sin haber verificado nada.
+
+Las tres listas están verificadas por
+`src/integrations/seo-lint/documented-codes.test.ts`, que las compara en las
+dos direcciones contra los códigos que la integración declara de verdad y
+rompe `bun run test` si divergen. También exige que la lista condicional
+declare las dos severidades posibles, así que un código que deje de ser
+condicional no puede quedarse acá en silencio. Los marcadores HTML que rodean
+las tres listas son los anclajes de ese test — no los quites.
 
 Un rebrand solo cuenta como terminado cuando ambos comandos (`bun run build`
 y `bun run test`) terminan en verde desde un checkout limpio.
