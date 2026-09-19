@@ -71,8 +71,10 @@ export function localeOfRoute(pathname: string): LocaleCode {
 
 /**
  * Best-effort: given a pathname, infer the RouteKey. Used by <SEO> when no
- * explicit alternates are passed. Returns null if the path doesn't match
- * a known static route (e.g. case study pages, which pass alternates explicitly).
+ * explicit alternates are passed. Returns null if the path doesn't match a
+ * known static route — today that means blog posts, whose dynamic routes
+ * (`src/pages/blog/[slug].astro`, `src/pages/es/blog/[slug].astro`) pass their
+ * alternates explicitly instead.
  */
 export function routeKeyFromPath(pathname: string): RouteKey | null {
   // strip leading /es/, leading slash, trailing slash
