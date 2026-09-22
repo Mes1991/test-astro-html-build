@@ -29,8 +29,8 @@ recipes. For rebranding, use [`docs/product/rebrand-checklist.md`](./docs/produc
 1. **Verify before claiming done:** run **`bun run build`** (includes the seo-lint
    integration — it can fail the build) **and** **`bun run test`** (vitest). Both must
    be green. Use `bun run test`, **not** `bun test` (that runs the wrong runner).
-2. **Brand identity** lives in `src/lib/seo/defaults.ts` (`siteSeo`). Also set `site`
-   in `astro.config.mjs` to match `siteSeo.siteUrl`.
+2. **Brand identity** lives in `src/lib/seo/defaults.ts` (`siteSeo`); Astro config `site`
+   derives from `siteSeo.siteUrl`.
 3. **`src/lib/seo/locale.ts` (`ROUTE_KEYS` / `localizedSlugs`) is the only route map** —
    `astro.config.mjs` derives the sitemap's hreflang links from it via `hreflangLinksFor`,
    so add or rename a top-level route there and nowhere else. What still has to be kept in

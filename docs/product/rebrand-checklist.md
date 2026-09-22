@@ -49,19 +49,15 @@ esos archivos deben enlazar aquí, no repetir la lista.
 
 ## 2. URL del sitio
 
-- `astro.config.mjs` → `site: 'https://example.com'` (propiedad top-level de
-  `defineConfig`).
-- `src/lib/seo/defaults.ts` → `siteSeo.siteUrl` — **debe coincidir
-  exactamente** con `site` de `astro.config.mjs` (regla ya exigida en
-  `CLAUDE.md` #2).
-- `astro.config.mjs` → dentro de la integración `sitemap({ serialize(item)
-  {...} })` hay una tercera ocurrencia literal de la URL: la comparación
-  `item.url === 'https://example.com/'`, que sube la prioridad de la home.
-  Actualízala junto con las dos anteriores. Las URLs de `hreflang` del
-  sitemap ya **no** se construyen con una constante local: `serialize` llama a
-  `hreflangLinksFor` (`src/lib/seo/sitemap.ts`, importado en la línea 8), que
-  por defecto toma `siteSeo.siteUrl` — corregir `siteSeo.siteUrl` basta para
-  ellas.
+- Cambia **solo** `src/lib/seo/defaults.ts` → `siteSeo.siteUrl`. Es la fuente
+  única del origen público.
+- `astro.config.mjs` deriva tanto la propiedad top-level `site` como la
+  comparación de la home en `sitemap({ serialize(item) {...} })` desde ese
+  valor. Las URLs `hreflang` del sitemap también lo toman mediante
+  `hreflangLinksFor` (`src/lib/seo/sitemap.ts`). No dupliques el origen.
+- Si `site` vuelve a separarse de `siteSeo.siteUrl`, o deja de ser un origen
+  sin ruta, query ni hash, el build falla de inmediato con un diagnóstico
+  `seo-lint:` en vez de producir errores engañosos del sitemap.
 
 ## 3. Valores por defecto de SEO
 

@@ -29,7 +29,7 @@ export const siteSeo = {
   /** Brand color used for theme-color meta and OG card backgrounds. */
   themeColor: '#1f2937',
 
-  /** Site URL — must match Astro config `site`. */
+  /** Single source of truth for the public site origin; Astro config derives `site` from it. */
   siteUrl: 'https://example.com',
 
   /** OG card tagline (English). */

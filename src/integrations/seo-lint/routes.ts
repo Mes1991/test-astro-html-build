@@ -215,6 +215,7 @@ function localeAgnosticKey(route: string): string {
 export function lintLocaleRoutes(
   pages: GeneratedPage[],
   emittedFiles: ReadonlySet<string> = new Set(),
+  site?: string,
 ): RouteFinding[] {
   const findings: RouteFinding[] = [];
   const emittedRoutes = new Set(pages.map((p) => publicPath(routePath(p.route))));
@@ -222,10 +223,10 @@ export function lintLocaleRoutes(
   for (const page of pages) {
     const canonical = declaredCanonical(page.html);
     const canonicalIsEmittedRoute =
-      canonical !== null && emittedRoutes.has(routePath(exactPath(canonical)));
+      canonical !== null && emittedRoutes.has(routePath(exactPath(canonical, site)));
     const canonicalWrongForm = canonicalIsEmittedRoute
-      ? exactPath(canonical!) !== routePath(exactPath(canonical!))
-      : canonical !== null && !isCanonicalForm(canonical);
+      ? exactPath(canonical!, site) !== routePath(exactPath(canonical!, site))
+      : canonical !== null && !isCanonicalForm(canonical, site);
     if (canonical && canonicalWrongForm) {
       findings.push({
         route: page.route,
@@ -236,7 +237,7 @@ export function lintLocaleRoutes(
     }
 
     const ogUrl = declaredOgUrl(page.html);
-    if (canonical && ogUrl && exactPath(ogUrl) !== exactPath(canonical)) {
+    if (canonical && ogUrl && exactPath(ogUrl, site) !== exactPath(canonical, site)) {
       findings.push({
         route: page.route,
         code: 'OG_URL_CANONICAL_MISMATCH',
@@ -297,7 +298,7 @@ export function lintLocaleRoutes(
  * because a test that only walks the registry cannot catch a page someone forgot
  * to register: the generator and the validator would agree on the same omission.
  */
-export function lintLocalizedRouteCoverage(pages: GeneratedPage[]): RouteFinding[] {
+export function lintLocalizedRouteCoverage(pages: GeneratedPage[], site?: string): RouteFinding[] {
   const emitted = new Set(pages.map((p) => publicPath(routePath(p.route))));
 
   const groups = new Map<string, GeneratedPage[]>();
@@ -317,10 +318,10 @@ export function lintLocalizedRouteCoverage(pages: GeneratedPage[]): RouteFinding
       const expected = new Map<string, string>(routeByLocale);
       // Registered routes and emitted bilingual pages require the same full set.
       const alternates = declaredAlternates(page.html);
-      if (routeKeyForUrl(page.route) || alternates.some((a) => a.lang === 'x-default')) {
+      if (routeKeyForUrl(page.route, site) || alternates.some((a) => a.lang === 'x-default')) {
         expected.set('x-default', routeByLocale.get(DEFAULT_LOCALE)!);
       }
-      const problems = alternateProblems(alternates, expected, emitted);
+      const problems = alternateProblems(alternates, expected, emitted, site);
 
       if (problems.length > 0) {
         findings.push({

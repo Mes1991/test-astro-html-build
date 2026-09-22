@@ -5,11 +5,14 @@ import sitemap from '@astrojs/sitemap';
 import partytown from '@astrojs/partytown';
 import react from '@astrojs/react';
 import seoLint from './src/integrations/seo-lint/index.ts';
+import { siteSeo } from './src/lib/seo/defaults.ts';
 import { hreflangLinksFor } from './src/lib/seo/sitemap.ts';
+
+const homeUrl = new URL('/', siteSeo.siteUrl).href;
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://example.com',
+  site: siteSeo.siteUrl,
   /* Canonical public URL form: directory routes always end in a trailing slash
      (`/blog/`, `/es/blog/`), the root stays `/`. Google treats `/blog` and
      `/blog/` as distinct URLs and asks for one to be chosen, linked
@@ -43,7 +46,7 @@ export default defineConfig({
       priority: 0.7,
       serialize(item) {
         // Priorities
-        if (item.url === 'https://example.com/') {
+        if (item.url === homeUrl) {
           item.priority = 1.0;
           item.changefreq = 'monthly';
         }
