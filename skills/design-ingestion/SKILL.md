@@ -5,6 +5,13 @@ description: "Use the moment a design arrives and before any markup is written �
 
 # Design ingestion
 
+> **Adoption gate.** Before a confirmed contract, steps 1–2 below and the asset-class check in
+> step 3 run READ-ONLY, as the adoption wizard's design inventory and asset preflight — nothing is
+> exported or saved to disk. Step 1's "write the answer down" and step 6's record wait for
+> confirmation and land in `DESIGN.md` under the contract. An asset or font that cannot be obtained
+> becomes a Round 2 G question in `../site-build/references/adoption-wizard.md`, decided by the
+> human — never a silent substitute.
+
 ## What this is
 
 A workflow for the moment a design arrives and the page does not exist. It tells you what to DO and
@@ -63,7 +70,9 @@ arrives in the same breath as everything else.
 ### 3. Export the assets
 
 Every icon and image, from the design's own asset. Not the closest match in an icon library the
-project already installs.
+project already installs. **Exporting to disk happens only after the adoption contract is
+confirmed** — before that, an asset class is only checked non-persistently (see the gate above and
+`../site-build/references/adoption-wizard.md` §5).
 
 **If an asset cannot be obtained, stop and say so.** `references/design-source.md` section 2 is the argument
 for why substituting is worse than blocking: a lookalike passes every automated check that exists

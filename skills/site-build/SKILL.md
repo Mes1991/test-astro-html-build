@@ -1,6 +1,6 @@
 ---
 name: site-build
-description: "Use at the START of any request to build, rebuild or extend a website — 'build me a landing page', 'here is the Figma, make the site', 'add a contact page'. Owns the order the other workflows run in, and which input wins when a design file, an exported page and a screenshot disagree. Also use it for what to do first, many pages from one design file, a build stalled between workflows, an existing repository with its own build system, a Tag Manager container to install, or a finished site missing search engine, tracking or form work."
+description: "Use at the START of any request to build, rebuild or extend a website — 'build me a landing page', 'here is the Figma, make the site', 'add a contact page', 'use this template to build the site'. Runs the adoption gate first, before any write. Owns the order the other workflows run in, and which input wins when a design file, an exported page and a screenshot disagree. Also use it for what to do first, many pages from one design file, a build stalled between workflows, an existing repository with its own build system, a Tag Manager container to install, or a finished site missing search engine, tracking or form work."
 ---
 
 # Site build
@@ -13,6 +13,10 @@ leaves exactly two questions with no owner, which is what this file is for:
 
 1. **What order do the workflows run in**, and which ones apply at all.
 2. **Which input wins** when a design file, an exported page and a screenshot disagree.
+
+A third question has no owner either, and it comes before the other two: **whether work may start
+at all.** That is the adoption gate, and its rules live in `references/adoption-wizard.md` — this
+file only points at it and runs it first; see §0.
 
 **It states no other rule.** Everything below names the document that owns the answer and stops.
 If you find yourself reading a value, a threshold or a selector here, that is a bug in this file —
@@ -43,6 +47,21 @@ silently is, by definition, one you will not go back for.
 So before each step below, open the sections that step names and **read them, not their titles**.
 The steps name sections rather than whole documents for exactly this reason: it is a small,
 bounded read every time, and there is no step here that requires an 80-kilobyte file end to end.
+
+## 0. The adoption gate
+
+Every request that builds, rebuilds, adopts or materially extends a site with this template enters
+`references/adoption-wizard.md` first — before section 1 below, before any other skill in this set,
+and before any file in the repository is touched. That document owns the states, the preflight, the
+questions and the contract; this file only routes to it.
+
+**No write of any kind happens before the contract is confirmed.** `references/adoption-wizard.md` §3
+defines what counts as a write; every other skill's route in this set is subordinate to that gate
+until a contract exists.
+
+**Skip it only when `DESIGN.md` already holds a valid confirmed contract** (that reference's §9)
+covering the current request **and the human reaffirms it in this session** (its §1). A request that changes scope, languages, rendering, features or Git
+policy reopens the wizard for those fields only.
 
 ## 1. What wins when the inputs disagree
 
@@ -101,8 +120,9 @@ it out of order means redoing work that already looked finished.
 
 | # | Step | Owned by | Skip when |
 |---|---|---|---|
+| −1 | Adoption gate: wizard, preflight, confirmed contract | `references/adoption-wizard.md` | `DESIGN.md` already holds a valid confirmed contract covering this request, reaffirmed by the human this session |
 | 0 | Rank the inputs, provenance first | section 1 above | you were handed exactly one thing |
-| 1 | Settle build step, styling toolkit, languages | the `project-setup` skill | never |
+| 1 | Settle build step, styling toolkit, languages — `project-setup` now consumes the contract's fields rather than asking from scratch | the `project-setup` skill | never |
 | 2 | Pin the toolchain before installing anything | `../project-setup/references/toolchain.md` sections 1 and 3 | there is no build step, or the repository already has one — it came with its own |
 | 3 | Decide the URL shape and the site-wide files | `../static-site-seo/references/seo-site.md` §1–7 | never — see section 3 |
 | 4 | Extract values and assets from the design | the `design-ingestion` skill | there is no design source, only a brief |
@@ -174,9 +194,9 @@ never mentions, so nothing triggers it, and its absence looks exactly like compl
   canonical and no `sitemap.xml` renders perfectly. Steps 3, 7 and 10 are not optional extras
   awaiting a request; they are part of delivering a site. Do them and say you did.
 - **Tracking.** `references/gtm-injection.md` is a contract with no skill in front of it, which means
-  **nothing will ever activate it by inference.** If you do not ask, no container is installed and
-  no one finds out until the first month with no data. Ask at step 1, once: is there a Tag Manager
-  container, and what is its id. A no is a fine answer and it is a recorded one.
+  **nothing will ever activate it by inference.** The question — is there a Tag Manager container,
+  and what is its id — is asked inside the adoption wizard's Round 2, item F, when a tag manager is
+  evidenced; see `references/adoption-wizard.md` §6. A no is a fine answer and it is a recorded one.
 - **Forms.** A form on a design is a form, not a picture of one. The `form-slot` skill covers the
   case where no embed snippet exists yet — which is the normal case, not an exception — and the
   cost of missing it is a page that looks live and silently discards every lead.
@@ -187,9 +207,10 @@ JavaScript and without unsolicited network traffic. A form depicted in a design,
 would benefit from measurement, is **not** authorization to activate a provider: activation is an
 explicit decision recorded in `DESIGN.md`, and until it is made the default is absent.
 
-**Record all three answers in `DESIGN.md`** beside the project-setup answers, with the date. Not
-because the file is important, but because "we decided no tracking" and "nobody asked" are
-indistinguishable six weeks later, and only one of them is a decision.
+**These answers are fields of the adoption contract**, not a separate `DESIGN.md` block — see
+`references/adoption-wizard.md` §9. "We decided no tracking" and "nobody asked" are
+indistinguishable six weeks later, and only one of them is a decision; the contract is what keeps
+them apart.
 
 ## 4. The closing pass
 
@@ -212,7 +233,7 @@ against.
 | Has a real submission been sent and received? **A clean import proves the schema, and nothing else.** *(only when the form provider is activated)* | `../form-slot/references/form-slot.md`, the acceptance table |
 | View the page source and read the `<head>` against the checklist. | `../static-site-seo/references/seo-page.md` section 10 |
 | Tab through the page from the address bar. Is the focus ring visible on every stop, and does the first tab reach a skip link? | `../astro-craft/references/accessibility.md` sections 2 and 3 |
-| Are the three project-setup answers, the browser floor and the tracking answer all written in `DESIGN.md`? | the `project-setup` skill, and section 3 above |
+| Are the project-setup answers, the browser floor and the tracking answer all present, either as adoption-contract fields or as the browser floor recorded in `DESIGN.md`? | `references/adoption-wizard.md` §9, and the `project-setup` skill |
 
 **Say what you decided without being asked.** Several questions in this workflow are answered from
 a table rather than by asking — whether there is a build step is the usual one, and for a
@@ -240,10 +261,13 @@ Everything above is written for one page. Run it thirty-nine times and it produc
 pieces of work that were each correct and that nobody can review as a set — which is the failure
 this section exists for, and the only one in this file that is about cost rather than correctness.
 
-**The order for a batch**, which is the order above with three things inserted and one moved:
+**The order for a batch**, which is the order above with three things inserted and one moved. The
+adoption gate still precedes step 1 — one confirmed contract covers the whole batch, not one per
+page:
 
 | # | Step | Owned by |
 |---|---|---|
+| 0 | Adoption gate: wizard, preflight, confirmed contract | `references/adoption-wizard.md` |
 | 1 | Rank the inputs and establish provenance | section 1, and `../design-ingestion/references/design-source.md` section 0 |
 | 2 | Settle build step, styling toolkit, languages | the `project-setup` skill |
 | 3 | Inventory the routes and group them into families | `references/site-manifest.md` |

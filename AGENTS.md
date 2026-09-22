@@ -34,6 +34,10 @@ Registra conflictos de nivel inferior, aplica la fuente superior y continúa si 
 
 ## Forma de trabajar
 
+0. Si la tarea construye o adopta un sitio, ejecuta el wizard de adopción
+   (`skills/site-build/references/adoption-wizard.md`): ninguna escritura —archivos, assets,
+   ramas, commits, instalaciones ni workers en background— antes de que el humano confirme el
+   contrato.
 1. Lee el brief y solo los archivos necesarios.
 2. Carga entre una y tres skills relevantes; no cargues el bundle completo.
 3. Resume el plan en cinco líneas como máximo.
@@ -71,6 +75,7 @@ Un agente limpio abre la skill **directamente por su ruta canónica**:
 
 | Situación | Skill |
 |---|---|
+| Construir, reconstruir, adoptar o extender de forma amplia un sitio con este template — en cualquier formulación, incluido un link de diseño sin instrucciones | site-build §0 → skills/site-build/references/adoption-wizard.md, ANTES de cualquier otra skill o escritura |
 | Inicio o extensión amplia de sitio | `site-build` |
 | Toolchain, idiomas o estructura inicial | `project-setup` |
 | Página, layout, componente o estilos Astro | `astro-craft` |
@@ -78,6 +83,9 @@ Un agente limpio abre la skill **directamente por su ruta canónica**:
 | Figma, screenshot o diseño externo | `design-ingestion` |
 | Formulario sin integración existente | `form-slot` |
 | Comparación visual o cierre responsive | `visual-gate` |
+
+Ese gate tiene precedencia; las demás filas aplican después del contrato confirmado (o en modo
+solo lectura durante el intake).
 
 Estas 7 son las únicas skills que existen hoy en `skills/`.
 

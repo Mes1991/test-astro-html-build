@@ -19,6 +19,11 @@ recipes. For rebranding, use [`docs/product/rebrand-checklist.md`](./docs/produc
 
 ## Must-follow rules
 
+0. **Adoption gate first:** any request to build, rebuild or adopt a site with this template —
+   however it is phrased, including a bare design link — runs
+   `skills/site-build/references/adoption-wizard.md` before anything else. No write of any kind
+   (files, DESIGN.md, assets, installs, branches, commits, background workers) until the human
+   confirms the adoption contract.
 1. **Verify before claiming done:** run **`bun run build`** (includes the seo-lint
    integration — it can fail the build) **and** **`bun run test`** (vitest). Both must
    be green. Use `bun run test`, **not** `bun test` (that runs the wrong runner).
@@ -28,9 +33,11 @@ recipes. For rebranding, use [`docs/product/rebrand-checklist.md`](./docs/produc
    `astro.config.mjs` derives the sitemap's hreflang links from it via `hreflangLinksFor`,
    so add or rename a top-level route there and nowhere else. What still has to be kept in
    sync by hand is the locale set: `i18n.locales` / `defaultLocale` in `astro.config.mjs`
-   must match `LOCALES` / `DEFAULT_LOCALE` in `src/lib/seo/types.ts`.
+   must match `LOCALES` / `DEFAULT_LOCALE` in `src/lib/seo/types.ts`. That locale sync holds
+   while the site keeps more than one locale; a confirmed monolingual contract settles it through
+   the migration in `skills/site-build/references/adoption-wizard.md` §7.
 4. **Preserve i18n key parity:** `src/i18n/en.json` and `es.json` must share identical
-   keys; only the values differ.
+   keys; only the values differ — while the site is bilingual.
 5. **`src/content/**/example-*`** files (and their `src/assets` images) are deletable
    demos — remove them for a real site.
 

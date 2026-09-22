@@ -5,6 +5,11 @@ description: "Use at the START of building any web page or site — a landing pa
 
 # Project setup
 
+> **Adoption gate.** When the request builds, rebuilds or adopts a site, this skill runs only
+> inside or after `../site-build/references/adoption-wizard.md`. Its questions are asked in that
+> wizard's Round 1, not separately; after confirmation it consumes the contract fields and asks
+> only what the contract left unresolved. Before confirmation it may only read the repository.
+
 ## What this is
 
 Three questions, asked before any markup exists, plus the criterion for answering each one
@@ -97,6 +102,9 @@ with different costs — surface it rather than quietly picking one.
 
 English only, Spanish only, both, or another set. Ask whenever the request does not say. A site
 built monolingual and translated later is not a translation job; it is a re-plan of its URLs.
+**The language paths themselves — bilingual, a monolingual migration, or bilingual with
+translations pending — are owned by `../site-build/references/adoption-wizard.md` §7**; this
+question only surfaces which path applies.
 
 This decides the `lang` attribute, whether `hreflang` annotations are needed, and whether
 `sitemap.xml` carries `xhtml:link` blocks. **All three of those rules belong to `../static-site-seo/references/seo-site.md` and
@@ -123,9 +131,12 @@ that gets skipped at the end of a long session, which is precisely when it is ne
   is now a separate file — that is what makes the count mean anything. It is a signal to
   re-examine the answer, not a cap to trim to.
 
-**Record the answers.** Write the three, with their reasons, into `DESIGN.md` at the project root
-next to whatever the visual and browser-floor decisions were. A decision nobody wrote down gets
-re-made differently by the next person, and neither of them knows the other decided.
+**Record the answers.** When this skill runs under the adoption wizard, the three answers are
+fields of the adoption contract (`../site-build/references/adoption-wizard.md` §9), not a separate
+`DESIGN.md` block. Outside that flow — a genuinely separate, non-Astro one-pager with no adoption
+in play — write the three, with their reasons, into `DESIGN.md` at the project root next to
+whatever the visual and browser-floor decisions were. A decision nobody wrote down gets re-made
+differently by the next person, and neither of them knows the other decided.
 
 ## Reporting
 
