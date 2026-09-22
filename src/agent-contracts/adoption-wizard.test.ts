@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { LOCALES } from '../lib/seo/types';
 
 /**
  * Wiring gate for the adoption wizard.
@@ -22,7 +23,10 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 // `src/agent-contracts` -> repository root.
 const REPO_ROOT = path.resolve(HERE, '..', '..');
 
-const read = (relative: string): string => readFileSync(path.join(REPO_ROOT, relative), 'utf8');
+// Normalized to LF: a Windows checkout with core.autocrlf=true yields CRLF, and the
+// structural matches below are written against LF.
+const read = (relative: string): string =>
+  readFileSync(path.join(REPO_ROOT, relative), 'utf8').replace(/\r\n/g, '\n');
 
 const WIZARD_PATH = path.join('skills', 'site-build', 'references', 'adoption-wizard.md');
 const SITE_BUILD_PATH = path.join('skills', 'site-build', 'SKILL.md');
@@ -207,6 +211,76 @@ describe('the wizard is referenced from every file that must route to it', () =>
     expect(zero, '"## 0. The adoption gate" heading not found').toBeGreaterThan(-1);
     expect(one, '"## 1. What wins" heading not found').toBeGreaterThan(-1);
     expect(zero).toBeLessThan(one);
+  });
+});
+
+describe('skill descriptions route a site build to the adoption gate first', () => {
+  const ROUTING_SENTENCE =
+    'For a site build or adoption, invoke the site-build skill first; this skill runs only inside or after its adoption gate.';
+
+  /** The frontmatter `description:` value — what a description-based skill loader routes on. */
+  function description(markdown: string): string {
+    const match = markdown.match(/^---\n[\s\S]*?^description:\s*"([^\n]*)"\s*$[\s\S]*?^---$/m);
+    return match ? match[1] : '';
+  }
+
+  it.each([
+    ['project-setup', PROJECT_SETUP_PATH],
+    ['design-ingestion', DESIGN_INGESTION_PATH],
+  ])('%s description states the routing sentence', (_name, file) => {
+    const text = description(read(file));
+    expect(text, `no frontmatter description found in ${file}`).not.toBe('');
+    expect(text).toContain(ROUTING_SENTENCE);
+  });
+});
+
+/**
+ * Wizard §7 inventories the files a monolingual migration touches. That inventory is
+ * evidence the contract relies on, so it must stay true. Entries that exist only
+ * because a second locale does (`/es/` routes, the switcher, the es→en fallback) are
+ * checked only while `LOCALES` still has `es` — a converted single-locale repository
+ * is not expected to keep them.
+ */
+describe('adoption-wizard.md §7 inventory matches the repository', () => {
+  const section = wizard.match(/^## §7[^\n]*\n([\s\S]*?)^## §8/m);
+  const text = section ? section[1] : '';
+  const hasSpanish = (LOCALES as readonly string[]).includes('es');
+  const isSpanishOnly = (p: string) => p.includes('/es/') || p.endsWith('LanguageSwitcher.astro');
+
+  const paths = [...new Set([...text.matchAll(/`((?:src\/|astro\.config)[^`]*)`/g)].map((m) => m[1]))];
+
+  it('finds the §7 section and its inventory', () => {
+    expect(section, 'no "## §7" section found before "## §8"').not.toBeNull();
+    expect(paths.length).toBeGreaterThan(0);
+  });
+
+  it.each(paths)('%s exists', (entry) => {
+    if (isSpanishOnly(entry) && !hasSpanish) return;
+    if (entry.includes('*')) {
+      // `dir/**` or `dir/*.test.ts`: only the directory part is checked.
+      const dir = entry.slice(0, entry.indexOf('*')).replace(/\/$/, '');
+      expect(existsSync(path.join(REPO_ROOT, dir)), `${dir} does not exist`).toBe(true);
+      return;
+    }
+    expect(existsSync(path.join(REPO_ROOT, entry)), `${entry} does not exist`).toBe(true);
+  });
+
+  it.each([
+    ['src/lib/seo/types.ts', ['LOCALES', 'DEFAULT_LOCALE']],
+    ['src/lib/seo/locale.ts', ['ROUTE_KEYS', 'localizedSlugs']],
+  ])('%s still exports the symbols §7 names', (file, symbols) => {
+    const source = read(file);
+    for (const symbol of symbols) {
+      expect(text, `§7 no longer names ${symbol}`).toContain(symbol);
+      expect(source, `${file} no longer exports ${symbol}`).toMatch(
+        new RegExp(`export const ${symbol}\\b`),
+      );
+    }
+  });
+
+  it.runIf(hasSpanish)('the es→en fallback §7 warns about is still configured', () => {
+    expect(text).toContain("fallback: { es: 'en' }");
+    expect(read('astro.config.mjs')).toContain("fallback: { es: 'en' }");
   });
 });
 

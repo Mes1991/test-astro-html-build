@@ -1,6 +1,6 @@
 ---
 name: design-ingestion
-description: "Use the moment a design arrives and before any markup is written — a Figma link or node id, a design file, an exported page, a component-library layout, a mockup or a screenshot. Trigger it on 'here is the Figma, build this', 'implement this node', 'pull the tokens out of the design', 'use these assets', or a design URL pasted with no instructions. Also use it for icons that are close but are not the design's, a design that was generated or imported rather than drawn, which of several inputs is authoritative, or a design tool that hands back generated code."
+description: "Use the moment a design arrives and before any markup is written — a Figma link or node id, a design file, an exported page, a component-library layout, a mockup or a screenshot. Trigger it on 'here is the Figma, build this', 'implement this node', 'pull the tokens out of the design', 'use these assets', or a design URL pasted with no instructions. Also use it for icons that are close but are not the design's, a design that was generated or imported rather than drawn, which of several inputs is authoritative, or a design tool that hands back generated code. For a site build or adoption, invoke the site-build skill first; this skill runs only inside or after its adoption gate."
 ---
 
 # Design ingestion

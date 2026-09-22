@@ -1,6 +1,6 @@
 ---
 name: project-setup
-description: "Use at the START of building any web page or site — a landing page, a homepage, a marketing site, a one-pager, a static site — and especially from a design: a mockup, a Figma file, a canvas, a screenshot. Ask its questions BEFORE any markup: whether the project has a build step, whether a styling toolkit is installed, which languages it serves. Trigger it even when the request says only 'build the HTML' or 'code this design', and even for a single page. Also use it for why a page became one enormous file, or whether an existing plain-HTML project should move to a build tool."
+description: "Use at the START of building any web page or site — a landing page, a homepage, a marketing site, a one-pager, a static site — and especially from a design: a mockup, a Figma file, a canvas, a screenshot. Ask its questions BEFORE any markup: whether the project has a build step, whether a styling toolkit is installed, which languages it serves. Trigger it even when the request says only 'build the HTML' or 'code this design', and even for a single page. Also use it for why a page became one enormous file, or whether an existing plain-HTML project should move to a build tool. For a site build or adoption, invoke the site-build skill first; this skill runs only inside or after its adoption gate."
 ---
 
 # Project setup
