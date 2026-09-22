@@ -10,7 +10,7 @@ describe('t()', () => {
     expect(t('nav.home', 'es')).toBe('Inicio');
   });
 
-  it('falls back to English on missing Spanish key', () => {
+  it('returns the literal key when no dictionary has it', () => {
     // Dictionaries are symmetric (enforced by parity.test.ts), so exercise the
     // literal-key fallback path instead of a key present only in English.
     expect(t('does.not.exist')).toBe('does.not.exist');

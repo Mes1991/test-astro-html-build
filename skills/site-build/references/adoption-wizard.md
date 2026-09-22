@@ -54,11 +54,13 @@ Forbidden in READ_ONLY_INTAKE, WIZARD_PENDING, CONTRACT_REVIEW and PREFLIGHT_REA
 - installing or updating any package;
 - any mutating Git operation — branch, worktree, commit, stash, tag, remote, reset, clean, a
   checkout that touches other files, push, or opening a PR;
-- launching any background worker, or any subagent that holds write tools.
+- launching any background worker, or delegating to any subagent at all. A shell is a write tool,
+  so a subagent without edit tools is still not read-only by construction — and a clean-agent run
+  showed a delegated explorer inheriting the wrong working directory. Intake reads are done
+  directly.
 
 Allowed: reading files; read-only commands (`git status`, `git log`, reading `package.json`);
-design-tool reads — metadata, a screenshot viewed in memory, never saved; and a foreground
-read-only helper that returns within the same turn.
+design-tool reads — metadata, a screenshot viewed in memory, never saved.
 
 **Why so wide a ban.** A stopped background worker is not guaranteed to have left the tree
 untouched — it may have written half a file, half-installed a package, or left a branch behind
@@ -312,7 +314,7 @@ as one.
 
 | ID | Situation | Expected outcome |
 |---|---|---|
-| S1 | Figma URL + "Use this template to build the site," non-technical user | read-only inspection first, with no write-capable subagent; the §5 preflight results (assets, fonts) are reported with Round 1; Round 1 asks language, scope, rendering and Git; Round 2, in its own message, asks every detected feature; no round exceeds five questions; no `DESIGN.md`, code, branch or background worker exists before confirmation |
+| S1 | Figma URL + "Use this template to build the site," non-technical user | read-only inspection first, done directly with no subagent; the §5 preflight results (assets, fonts) are reported with Round 1; Round 1 asks language, scope, rendering and Git; Round 2, in its own message, asks every detected feature; no round exceeds five questions; no `DESIGN.md`, code, branch or background worker exists before confirmation |
 | S2 | "Static landing, but I want animations and a carousel" | stays static; only the needed islands/`client:*` directives are added; no adapter; browser JS is never treated as a backend need |
 | S3 | "Pages are static, but the form must post to our own API" | asks whether the API is external or an Astro endpoint; if Astro, adds an adapter and marks only that route on-demand — never the whole site; errors, spam handling, data handling and secrets are defined before implementing |
 | S4 | "It has login, sessions and different pages per user" | recommends server-first/on-demand with reasons; asks the runtime/deploy target and the identity/data source; promises nothing without an adapter and real persistence |

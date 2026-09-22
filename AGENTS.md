@@ -37,8 +37,9 @@ Registra conflictos de nivel inferior, aplica la fuente superior y continúa si 
 0. Si la tarea construye o adopta un sitio, ejecuta el wizard de adopción
    (`skills/site-build/references/adoption-wizard.md`), leyéndolo antes de cualquier otra
    llamada o delegación: ninguna escritura —archivos, assets, ramas, commits, instalaciones,
-   workers en background ni subagentes con herramientas de escritura; solo se delega
-   exploración de solo lectura— antes de que el humano confirme el
+   workers en background— y ninguna delegación a subagentes —una shell es una herramienta de
+   escritura, así que ningún subagente es de solo lectura por construcción; el intake lee
+   directamente— antes de que el humano confirme el
    contrato.
 1. Lee el brief y solo los archivos necesarios.
 2. Carga entre una y tres skills relevantes; no cargues el bundle completo.

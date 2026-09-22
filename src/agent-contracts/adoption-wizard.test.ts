@@ -193,12 +193,23 @@ describe('the wizard is referenced from every file that must route to it', () =>
   });
 
   // CLAUDE.md is loaded on every request, so its rule 0 is what a clean agent sees before
-  // it opens any skill. A clean-agent run delegated a write-capable mapper before reading
-  // the wizard; the always-loaded rule has to name that case.
-  it('CLAUDE.md rule 0 bans write-capable subagents before confirmation', () => {
+  // it opens any skill. Clean-agent runs delegated mappers — one with edit tools, one with
+  // only a shell — before reading the wizard; the always-loaded rule has to name both.
+  it('CLAUDE.md rule 0 orders the wizard first and bans all delegation before confirmation', () => {
     const rule0 = read(CLAUDE_PATH).match(/^0\. \*\*Adoption gate first:\*\*[\s\S]*?(?=^1\. )/m);
     expect(rule0, 'CLAUDE.md rule 0 not found').not.toBeNull();
-    expect(rule0![0].replace(/\s+/g, ' ')).toContain('any subagent that holds write tools');
+    const text = rule0![0].replace(/\s+/g, ' ');
+    expect(text).toContain('read it before any other tool call or delegation');
+    expect(text).toContain('no delegation to any subagent');
+    expect(text).toContain('a shell is a write tool');
+  });
+
+  it('adoption-wizard.md pins the round and preflight-reporting rules', () => {
+    const text = wizard.replace(/\s+/g, ' ');
+    expect(text).toContain('One round per message:');
+    expect(text).toContain('never folded into a Round 1 option');
+    expect(tableRow(wizard, 'READ_ONLY_INTAKE')![2]).toContain('§5 preflight results');
+    expect(text).toContain('delegating to any subagent at all');
   });
 
   it('project-setup/SKILL.md references the wizard by its relative path', () => {
