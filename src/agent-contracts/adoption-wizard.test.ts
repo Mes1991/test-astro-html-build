@@ -192,6 +192,15 @@ describe('the wizard is referenced from every file that must route to it', () =>
     expect(read(CLAUDE_PATH)).toContain(WIZARD_REFERENCE);
   });
 
+  // CLAUDE.md is loaded on every request, so its rule 0 is what a clean agent sees before
+  // it opens any skill. A clean-agent run delegated a write-capable mapper before reading
+  // the wizard; the always-loaded rule has to name that case.
+  it('CLAUDE.md rule 0 bans write-capable subagents before confirmation', () => {
+    const rule0 = read(CLAUDE_PATH).match(/^0\. \*\*Adoption gate first:\*\*[\s\S]*?(?=^1\. )/m);
+    expect(rule0, 'CLAUDE.md rule 0 not found').not.toBeNull();
+    expect(rule0![0].replace(/\s+/g, ' ')).toContain('any subagent that holds write tools');
+  });
+
   it('project-setup/SKILL.md references the wizard by its relative path', () => {
     expect(read(PROJECT_SETUP_PATH)).toContain('../site-build/references/adoption-wizard.md');
   });

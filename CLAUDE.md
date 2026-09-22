@@ -21,9 +21,10 @@ recipes. For rebranding, use [`docs/product/rebrand-checklist.md`](./docs/produc
 
 0. **Adoption gate first:** any request to build, rebuild or adopt a site with this template —
    however it is phrased, including a bare design link — runs
-   `skills/site-build/references/adoption-wizard.md` before anything else. No write of any kind
-   (files, DESIGN.md, assets, installs, branches, commits, background workers) until the human
-   confirms the adoption contract.
+   `skills/site-build/references/adoption-wizard.md` before anything else — read it before any
+   other tool call or delegation. No write of any kind (files, DESIGN.md, assets, installs,
+   branches, commits, background workers, or any subagent that holds write tools — delegate only
+   read-only exploration) until the human confirms the adoption contract.
 1. **Verify before claiming done:** run **`bun run build`** (includes the seo-lint
    integration — it can fail the build) **and** **`bun run test`** (vitest). Both must
    be green. Use `bun run test`, **not** `bun test` (that runs the wrong runner).

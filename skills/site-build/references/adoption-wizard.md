@@ -33,7 +33,7 @@ answers stays as written.
 
 | State | Writes allowed | Leaves with |
 |---|---|---|
-| READ_ONLY_INTAKE | No | short inventory + checked capabilities |
+| READ_ONLY_INTAKE | No | short inventory + the §5 preflight results, shown to the human with Round 1 |
 | WIZARD_PENDING | No | the human questions still open |
 | CONTRACT_REVIEW | No | contract shown in chat, awaiting explicit confirmation |
 | PREFLIGHT_READY | No | plan, available assets, blockers resolved |
@@ -111,7 +111,10 @@ Ask outcomes in plain language. The person is never expected to know what `outpu
 adapter, an island, SSR, prerendering or a content collection is — explain the technical
 consequence **after** they answer, not as a precondition for answering. At most 5 questions per
 round — Round 1 holds the base decisions, Round 2 the conditional ones, and a round that would
-exceed five carries the rest into the next.
+exceed five carries the rest into the next. **One round per message:** Round 2 is asked after
+Round 1 is answered, because those answers change which Round 2 topics exist. Say in one line
+which Round 2 topics are pending, so nothing detected is silently dropped — a visible feature is
+asked in Round 2 on its own terms, never folded into a Round 1 option.
 
 **Only the human's own words skip a human decision.** A question may be skipped when the prompt, or
 a contract the human reaffirmed (§1), already answers it — say in one line which ones were skipped
@@ -309,7 +312,7 @@ as one.
 
 | ID | Situation | Expected outcome |
 |---|---|---|
-| S1 | Figma URL + "Use this template to build the site," non-technical user | read-only inspection first; Round 1 asks language, scope, rendering and Git; Round 2 asks every detected feature; no round exceeds five questions; asset preflight runs before any write; no `DESIGN.md`, code, branch or background worker exists before confirmation |
+| S1 | Figma URL + "Use this template to build the site," non-technical user | read-only inspection first, with no write-capable subagent; the §5 preflight results (assets, fonts) are reported with Round 1; Round 1 asks language, scope, rendering and Git; Round 2, in its own message, asks every detected feature; no round exceeds five questions; no `DESIGN.md`, code, branch or background worker exists before confirmation |
 | S2 | "Static landing, but I want animations and a carousel" | stays static; only the needed islands/`client:*` directives are added; no adapter; browser JS is never treated as a backend need |
 | S3 | "Pages are static, but the form must post to our own API" | asks whether the API is external or an Astro endpoint; if Astro, adds an adapter and marks only that route on-demand — never the whole site; errors, spam handling, data handling and secrets are defined before implementing |
 | S4 | "It has login, sessions and different pages per user" | recommends server-first/on-demand with reasons; asks the runtime/deploy target and the identity/data source; promises nothing without an adapter and real persistence |
