@@ -11,8 +11,8 @@ describe('t()', () => {
   });
 
   it('falls back to English on missing Spanish key', () => {
-    // Pretend a key is in en but not es by checking a known-only-en path
-    // (we know dictionaries are symmetric, so use the literal-key fallback path)
+    // Dictionaries are symmetric (enforced by parity.test.ts), so exercise the
+    // literal-key fallback path instead of a key present only in English.
     expect(t('does.not.exist')).toBe('does.not.exist');
   });
 
