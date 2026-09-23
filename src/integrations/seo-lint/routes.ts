@@ -521,3 +521,43 @@ export function lintSitemapRoutes(
 
   return findings;
 }
+
+/**
+ * Reverse sitemap discovery gates. Indexable HTML belongs in the sitemap;
+ * noindex is the explicit page-level opt-out and must remain absent from it.
+ */
+export function lintSitemapDiscovery(
+  entries: SitemapEntry[],
+  pages: GeneratedPage[],
+  site: string,
+): RouteFinding[] {
+  const findings: RouteFinding[] = [];
+  const sitemapPaths = new Set(entries.map((entry) => routePath(exactPath(entry.loc, site))));
+
+  for (const page of pages) {
+    const published = sitemapPaths.has(publicPath(routePath(page.route)));
+    if (!isIndexable(page.html)) {
+      if (published) {
+        findings.push({
+          route: page.route,
+          code: 'SITEMAP_OPTED_OUT_PAGE',
+          severity: 'fail',
+          message: 'Page declares noindex but is still published in the sitemap.',
+        });
+      }
+      continue;
+    }
+    if (!published) {
+      findings.push({
+        route: page.route,
+        code: 'SITEMAP_PAGE_MISSING',
+        severity: 'fail',
+        message:
+          'Indexable page is missing from the generated sitemap. Include it or declare an ' +
+          'explicit noindex sitemap opt-out.',
+      });
+    }
+  }
+
+  return findings;
+}

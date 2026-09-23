@@ -25,6 +25,8 @@ const blog = defineCollection({
       imageAlt: z.string(),
       keywords: z.array(z.string()).default([]),
       draft: z.boolean().default(false),
+      /** Exclude this post from discovery and mark both locale pages noindex. */
+      sitemap: z.boolean().default(true),
 
       /** Optional per-locale overrides. */
       translations: z

@@ -5,6 +5,7 @@ import sitemap from '@astrojs/sitemap';
 import partytown from '@astrojs/partytown';
 import react from '@astrojs/react';
 import seoLint from './src/integrations/seo-lint/index.ts';
+import sitemapOptOut from './src/integrations/sitemap-opt-out/index.ts';
 import { siteSeo } from './src/lib/seo/defaults.ts';
 import { hreflangLinksFor } from './src/lib/seo/sitemap.ts';
 
@@ -69,7 +70,9 @@ export default defineConfig({
       },
     }),
     react(),
-    // Must run after sitemap(): its build-done hook validates emitted XML.
+    // Must run after sitemap(): removes pages that explicitly render noindex.
+    sitemapOptOut(),
+    // Must run after sitemapOptOut(): its build-done hook validates final XML.
     seoLint(),
   ],
   vite: {

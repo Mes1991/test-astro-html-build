@@ -115,6 +115,10 @@ esos archivos deben enlazar aquí, no repetir la lista.
   `image`, `imageAlt`; opcionales documentados en
   `docs/product/current-repository-map.md` §3.
 
+- Para excluir una entrada del descubrimiento, declara `sitemap: false` en su
+  frontmatter. Eso omite las rutas en/es del sitemap y emite `noindex` en ambas;
+  no mantengas una segunda lista de slugs en `astro.config.mjs`.
+
 ## 8. Analytics opcional
 
 - `src/components/seo/GoogleAnalytics.astro` solo emite en producción y solo
@@ -157,7 +161,8 @@ distingue dos severidades:
 - Sitemap generado (`routes.ts`): `SITEMAP_URL_NOT_CANONICAL_FORM`,
   `SITEMAP_NON_HTML_ENTRY`, `SITEMAP_ALTERNATES_MISSING`,
   `SITEMAP_LOC_DANGLING`, `SITEMAP_LOC_NOT_CANONICAL`,
-  `SITEMAP_ALTERNATE_DANGLING`.
+  `SITEMAP_ALTERNATE_DANGLING`, `SITEMAP_PAGE_MISSING`,
+  `SITEMAP_OPTED_OUT_PAGE`.
 <!-- /seo-lint-codes:fail -->
 
 **WARN (se imprime, no rompe el build):**

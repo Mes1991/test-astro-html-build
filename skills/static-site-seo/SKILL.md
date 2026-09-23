@@ -73,7 +73,8 @@ output as a whole) and `routes.ts` (routes and the generated sitemap).
   `INTERNAL_LINK_NOT_CANONICAL_FORM`, `LOCALIZED_ROUTE_WITHOUT_ALTERNATES`
 - the generated sitemap, from `routes.ts`: `SITEMAP_URL_NOT_CANONICAL_FORM`,
   `SITEMAP_NON_HTML_ENTRY`, `SITEMAP_ALTERNATES_MISSING`, `SITEMAP_LOC_DANGLING`,
-  `SITEMAP_LOC_NOT_CANONICAL`, `SITEMAP_ALTERNATE_DANGLING`
+  `SITEMAP_LOC_NOT_CANONICAL`, `SITEMAP_ALTERNATE_DANGLING`,
+  `SITEMAP_PAGE_MISSING`, `SITEMAP_OPTED_OUT_PAGE`
 <!-- /seo-lint-codes:fail -->
 
 **`warn` — printed to the build log only; the build still succeeds:**
@@ -118,9 +119,11 @@ Three things that are still easy to get wrong, even with the build doing the reg
 
 - **Read the build output, not just its exit code.** A `warn` line does not fail the build and is
   therefore the easiest thing in this workflow to ship past.
-- **`sitemap.xml` only lists what `sitemap()`'s `filter` lets through** — check `astro.config.mjs` if
-  a page you expect is missing or a page you excluded (`/404`, `/coming-soon`, anything under
-  `/og/` or `/api/`) shows up anyway.
+- **Blog posts opt out through frontmatter, not a config allowlist.** Set `sitemap: false` on an
+  entry to mark both locale pages `noindex` and omit both generated URLs. Static holding/resource
+  routes remain excluded by `sitemap()`'s `filter`. The route gates fail if an indexable page is
+  missing (`SITEMAP_PAGE_MISSING`) or a noindex opt-out is published anyway
+  (`SITEMAP_OPTED_OUT_PAGE`).
 - **A locale added to `i18n.locales` in `astro.config.mjs` with no matching entry in
   `src/lib/seo/locale.ts`** no longer builds clean. Astro's `fallback` still emits the new locale's
   pages, and `lintLocalizedRouteCoverage` (`routes.ts`) then sees a route emitted in more than one
@@ -170,14 +173,12 @@ sitemap `<loc>` against the page set (`SITEMAP_LOC_DANGLING`) and against the em
 (`SITEMAP_LOC_NOT_CANONICAL`), and it does validate complete reciprocal `hreflang` sets across
 pages and in the sitemap.
 
-Three of those it still does not do. **`robots.txt` is never read** — nothing checks for a
+One of those it still does not do. **`robots.txt` is never read** — nothing checks for a
 `Sitemap:` line or for crawler access, so that one stays read-and-apply, using
-`references/seo-site.md` §2 as the checklist. **A page missing from the sitemap is not caught
-either**: the sitemap gates walk the sitemap's entries and check each one against the build output,
-never the other way round, so an emitted page the `filter` silently dropped raises nothing — check
-`sitemap.xml` yourself when you add a page. And a `noindex` page published in the sitemap anyway is
-not flagged as such; the locale and alternate gates deliberately skip non-indexable pages, and the
-`filter` in `astro.config.mjs` is what keeps `/404` and `/coming-soon` out.
+`references/seo-site.md` §2 as the checklist. Sitemap discovery is checked in both directions:
+`SITEMAP_PAGE_MISSING` catches an indexable emitted page that was dropped, while
+`SITEMAP_OPTED_OUT_PAGE` catches a noindex page that was included. For blog content,
+`sitemap: false` is the single declaration that drives both noindex HTML and sitemap omission.
 
 **It says nothing about most of what the contracts cover.** It cannot see Core Web Vitals, judge
 whether a passage is quotable, validate a schema type's properties beyond parsing as JSON, or know

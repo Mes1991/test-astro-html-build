@@ -9,6 +9,7 @@ import {
   isIndexable,
   lintLocaleRoutes,
   lintLocalizedRouteCoverage,
+  lintSitemapDiscovery,
   lintSitemapRoutes,
   parseSitemap,
   routeFromDistFile,
@@ -444,6 +445,42 @@ describe('lintSitemapRoutes', () => {
       { loc: `${SITE}/es/`, alternates },
     ];
     expect(lintSitemapRoutes(entries, pages, SITE)).toEqual([]);
+  });
+
+  it('does not require an explicitly noindex page in the sitemap', () => {
+    const optedOut = page('/private/', {
+      lang: 'en',
+      canonical: `${SITE}/private/`,
+      robots: 'noindex, nofollow',
+    });
+    expect(lintSitemapDiscovery([], [optedOut], SITE)).toEqual([]);
+  });
+
+  it('flags an indexable page missing from the sitemap', () => {
+    const findings = lintSitemapDiscovery([], [pages[2]], SITE);
+    expect(findings).toContainEqual(expect.objectContaining({
+      route: '/blog/',
+      code: 'SITEMAP_PAGE_MISSING',
+      message: expect.stringContaining('missing from the generated sitemap'),
+    }));
+  });
+
+  it('flags a noindex opt-out that remains in the sitemap', () => {
+    const optedOut = page('/private/', {
+      lang: 'en',
+      canonical: `${SITE}/private/`,
+      robots: 'noindex, nofollow',
+    });
+    const findings = lintSitemapDiscovery(
+      [{ loc: `${SITE}/private/`, alternates: [] }],
+      [optedOut],
+      SITE,
+    );
+    expect(findings).toContainEqual(expect.objectContaining({
+      route: '/private/',
+      code: 'SITEMAP_OPTED_OUT_PAGE',
+      message: expect.stringContaining('declares noindex'),
+    }));
   });
 
   it('flags a known static route published without alternates — the A1 defect', () => {
