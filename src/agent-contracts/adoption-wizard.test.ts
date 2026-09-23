@@ -212,6 +212,14 @@ describe('the wizard is referenced from every file that must route to it', () =>
     expect(text).toContain('delegating to any subagent at all');
   });
 
+  // Clean-agent runs folded a detected cart into Round 1 B ("does the cart need to work?"),
+  // which pre-empts the Round 2 feature decision. B's wording is pinned feature-free.
+  it('adoption-wizard.md keeps Round 1 B free of detected features', () => {
+    const text = wizard.replace(/\s+/g, ' ');
+    expect(text).toContain('Ask B with this wording and these options only; name no feature detected in the design');
+    expect(tableRow(wizard, 'S1')![2]).toContain('names no detected feature in any of them');
+  });
+
   it('project-setup/SKILL.md references the wizard by its relative path', () => {
     expect(read(PROJECT_SETUP_PATH)).toContain('../site-build/references/adoption-wizard.md');
   });
