@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { siteSeo } from '../../lib/seo/defaults';
 import {
+  alternateProblems,
+  declaredAlternates,
   declaredCanonical,
   declaredLang,
+  declaredOgUrl,
   isIndexable,
   lintLocaleRoutes,
   lintLocalizedRouteCoverage,
@@ -47,6 +50,26 @@ describe('page attribute readers', () => {
     expect(declaredCanonical(p.html)).toBe(`${SITE}/es/`);
   });
 
+  it('extracts canonical links with reordered uppercase attributes, single quotes and entities', () => {
+    const html = `<LINK HREF='${SITE}/search/?a=1&amp;b=2' REL='CANONICAL'>`;
+    expect(declaredCanonical(html)).toBe(`${SITE}/search/?a=1&b=2`);
+  });
+
+  it('extracts og:url with reordered uppercase attributes, an unquoted value and entities', () => {
+    const html = `<META CONTENT=${SITE}/blog/?a&amp;b PROPERTY=OG:URL>`;
+    expect(declaredOgUrl(html)).toBe(`${SITE}/blog/?a&b`);
+  });
+
+  it('extracts hreflang alternates across quoting, order and case variants', () => {
+    const html =
+      `<LINK HREF='${SITE}/services/?a=1&amp;b=2' HREFLANG=EN-us REL=ALTERNATE>` +
+      `<link HREF=${SITE}/es/services/ REL='alternate' HREFLANG='es-MX'>`;
+    expect(declaredAlternates(html)).toEqual([
+      { lang: 'EN-us', href: `${SITE}/services/?a=1&b=2` },
+      { lang: 'es-MX', href: `${SITE}/es/services/` },
+    ]);
+  });
+
   it('treats a page with no robots meta as indexable', () => {
     expect(isIndexable(page('/x/', { lang: 'en' }).html)).toBe(true);
   });
@@ -55,6 +78,11 @@ describe('page attribute readers', () => {
     const conflicting =
       '<html lang="en"><meta name="robots" content="index, follow"><meta name="robots" content="noindex"></html>';
     expect(isIndexable(conflicting)).toBe(false);
+  });
+
+  it('extracts robots directives with reordered uppercase attributes and mixed quoting', () => {
+    const html = "<META CONTENT='index, follow' NAME=ROBOTS><meta CONTENT=noindex NAME='robots'>";
+    expect(isIndexable(html)).toBe(false);
   });
 });
 
@@ -223,6 +251,34 @@ describe('lintLocalizedRouteCoverage', () => {
     expect(lintLocalizedRouteCoverage(pair(goodAlts), SITE)).toEqual([]);
   });
 
+  it('accepts regional hreflang variants by primary language subtag', () => {
+    const alts =
+      `<link rel="alternate" hreflang="en-US" href="${SITE}/services/" />` +
+      `<link rel="alternate" hreflang="es-mx" href="${SITE}/es/services/" />`;
+    expect(lintLocalizedRouteCoverage(pair(alts), SITE)).toEqual([]);
+  });
+
+  it('keeps configured regional locales of one language distinct', () => {
+    const expected = new Map([['es-ES', '/es/'], ['es-MX', '/mx/']]);
+    const emitted = new Set(['/es/', '/mx/']);
+    const both = [
+      { lang: 'es-ES', href: '/es/' },
+      { lang: 'es-mx', href: '/mx/' },
+    ];
+    expect(alternateProblems(both, expected, emitted)).toEqual([]);
+    // One regional alternate must not stand in for its missing sibling.
+    expect(alternateProblems([both[0]], expected, emitted)).toEqual(['no hreflang="es-MX"']);
+  });
+
+  it('still reports a genuinely missing locale when another locale is regional', () => {
+    const alts = `<link rel="alternate" hreflang="en-US" href="${SITE}/services/" />`;
+    const findings = lintLocalizedRouteCoverage(pair(alts), SITE);
+    expect(findings.map((finding) => finding.code)).toContain(
+      'LOCALIZED_ROUTE_WITHOUT_ALTERNATES',
+    );
+    expect(findings[0].message).toContain('no hreflang="es"');
+  });
+
   it('is not satisfied by an hreflang tag with no href', () => {
     // Counting tags is not evidence of coverage — this used to switch the gate off.
     const alts =
@@ -348,6 +404,23 @@ describe('parseSitemap', () => {
       { lang: 'es', href: `${SITE}/es/` },
     ]);
     expect(entries[1].alternates).toEqual([]);
+  });
+
+  it('extracts sitemap values across order, quoting, case and entity variants', () => {
+    const xml =
+      `<URL><LOC>${SITE}/search/?a=1&amp;b=2</LOC>` +
+      `<XHTML:LINK HREF='${SITE}/?a=1&amp;b=2' HREFLANG=EN REL=ALTERNATE/>` +
+      `<xhtml:link HREF=${SITE}/es/ REL='alternate' HREFLANG='es-MX'/>` +
+      '</URL>';
+    expect(parseSitemap(xml)).toEqual([
+      {
+        loc: `${SITE}/search/?a=1&b=2`,
+        alternates: [
+          { lang: 'EN', href: `${SITE}/?a=1&b=2` },
+          { lang: 'es-MX', href: `${SITE}/es/` },
+        ],
+      },
+    ]);
   });
 });
 

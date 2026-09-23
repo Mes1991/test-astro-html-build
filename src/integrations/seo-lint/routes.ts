@@ -48,6 +48,53 @@ export interface RouteFinding extends Finding {
   route: string;
 }
 
+interface ParsedTag {
+  attributes: ReadonlyMap<string, string>;
+  content: string;
+}
+
+function decodeMarkupValue(value: string): string {
+  const named: Record<string, string> = {
+    amp: '&',
+    apos: "'",
+    gt: '>',
+    lt: '<',
+    nbsp: '\u00a0',
+    quot: '"',
+  };
+  return value.replace(/&(?:#(\d+)|#x([\da-f]+)|([a-z]+));/gi, (entity, decimal, hex, name) => {
+    if (decimal) return String.fromCodePoint(Number.parseInt(decimal, 10));
+    if (hex) return String.fromCodePoint(Number.parseInt(hex, 16));
+    return named[name.toLowerCase()] ?? entity;
+  });
+}
+
+function extractTags(markup: string, tagName: string): ParsedTag[] {
+  const escapedName = tagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const startTag = new RegExp(`<\\s*${escapedName}(?=[\\s/>])([^>]*)>`, 'gi');
+  const closeTag = new RegExp(`<\\/\\s*${escapedName}\\s*>`, 'i');
+  const tags: ParsedTag[] = [];
+
+  for (const match of markup.matchAll(startTag)) {
+    const attributes = new Map<string, string>();
+    for (const attribute of match[1].matchAll(
+      /([^\s"'<>\/=]+)\s*(?:=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g,
+    )) {
+      attributes.set(
+        attribute[1].toLowerCase(),
+        decodeMarkupValue(attribute[2] ?? attribute[3] ?? attribute[4] ?? ''),
+      );
+    }
+
+    const afterStart = (match.index ?? 0) + match[0].length;
+    const close = closeTag.exec(markup.slice(afterStart));
+    const content = close ? decodeMarkupValue(markup.slice(afterStart, afterStart + close.index)) : '';
+    tags.push({ attributes, content });
+  }
+
+  return tags;
+}
+
 /**
  * Turn a `dist`-relative file path into the route it is served at.
  * Accepts either path separator, so Windows build output resolves the same way.
@@ -66,12 +113,18 @@ export function declaredLang(html: string): string | null {
 
 /** The `href` of `<link rel="canonical">`, or null when absent. */
 export function declaredCanonical(html: string): string | null {
-  return html.match(/<link\s+rel="canonical"\s+href="([^"]+)"/i)?.[1]?.trim() ?? null;
+  const tag = extractTags(html, 'link').find(
+    ({ attributes }) => attributes.get('rel')?.toLowerCase() === 'canonical',
+  );
+  return tag?.attributes.get('href')?.trim() ?? null;
 }
 
 /** The `content` of `<meta property="og:url">`, or null when absent. */
 export function declaredOgUrl(html: string): string | null {
-  return html.match(/<meta\s+property="og:url"\s+content="([^"]+)"/i)?.[1]?.trim() ?? null;
+  const tag = extractTags(html, 'meta').find(
+    ({ attributes }) => attributes.get('property')?.toLowerCase() === 'og:url',
+  );
+  return tag?.attributes.get('content')?.trim() ?? null;
 }
 
 /**
@@ -131,31 +184,40 @@ export interface PageAlternate {
  */
 export function declaredAlternates(html: string): PageAlternate[] {
   const out: PageAlternate[] = [];
-  for (const m of html.matchAll(/<link\b[^>]*\brel="alternate"[^>]*>/gi)) {
-    const tag = m[0];
-    if (!/\bhreflang=/i.test(tag)) continue;
+  for (const { attributes } of extractTags(html, 'link')) {
+    if (attributes.get('rel')?.toLowerCase() !== 'alternate' || !attributes.has('hreflang')) continue;
     out.push({
-      lang: tag.match(/\bhreflang="([^"]*)"/i)?.[1]?.trim() ?? '',
-      href: tag.match(/\bhref="([^"]*)"/i)?.[1]?.trim() ?? '',
+      lang: attributes.get('hreflang')?.trim() ?? '',
+      href: attributes.get('href')?.trim() ?? '',
     });
   }
   return out;
 }
 
 /** Validate every declaration, never just a count or the first matching link. */
-function alternateProblems(
+export function alternateProblems(
   alternates: PageAlternate[],
   expected: ReadonlyMap<string, string>,
   emitted: ReadonlySet<string>,
   site?: string,
 ): string[] {
   const problems: string[] = [];
+  const locales = [...expected.keys()];
+  const exact = (tag: string, locale: string) => tag.toLowerCase() === locale.toLowerCase();
+  // A regional tag (`es-MX`) covers a bare locale (`es`) only when no configured
+  // locale names it exactly, so `es-ES` and `es-MX` stay distinct locales.
+  const covers = (tag: string, locale: string) =>
+    exact(tag, locale) ||
+    (locale !== 'x-default' && !locale.includes('-') && langMatches(tag, locale) &&
+      !locales.some((other) => exact(tag, other)));
   for (const alt of alternates) {
     if (!alt.lang) problems.push('alternate declares no hreflang');
-    else if (!expected.has(alt.lang)) problems.push(`unexpected hreflang="${alt.lang}"`);
+    else if (!locales.some((locale) => covers(alt.lang, locale))) {
+      problems.push(`unexpected hreflang="${alt.lang}"`);
+    }
   }
   for (const [locale, expectedRoute] of expected) {
-    const matches = alternates.filter((a) => a.lang === locale);
+    const matches = alternates.filter((a) => covers(a.lang, locale));
     if (matches.length === 0) { problems.push(`no hreflang="${locale}"`); continue; }
     if (matches.length > 1) { problems.push(`${matches.length} hreflang="${locale}" entries — exactly one is required`); continue; }
     const alt = matches[0];
@@ -172,23 +234,26 @@ function alternateProblems(
  * to the most restrictive value, which is how search engines read them too.
  */
 export function isIndexable(html: string): boolean {
-  const metas = [...html.matchAll(/<meta\s+name="robots"[^>]*content="([^"]*)"/gi)];
-  return !metas.some((m) => /\bnoindex\b/i.test(m[1]));
+  const directives = extractTags(html, 'meta')
+    .filter(({ attributes }) => attributes.get('name')?.toLowerCase() === 'robots')
+    .map(({ attributes }) => attributes.get('content') ?? '');
+  return !directives.some((content) => /\bnoindex\b/i.test(content));
 }
 
 /** Parse the `<url>` entries — loc plus hreflang alternates — out of a sitemap. */
 export function parseSitemap(xml: string): SitemapEntry[] {
   const entries: SitemapEntry[] = [];
-  for (const block of xml.matchAll(/<url>([\s\S]*?)<\/url>/g)) {
-    const body = block[1];
-    const loc = body.match(/<loc>(.*?)<\/loc>/)?.[1];
+  for (const { content: body } of extractTags(xml, 'url')) {
+    const loc = extractTags(body, 'loc')[0]?.content.trim();
     if (!loc) continue;
-    const alternates = [...body.matchAll(/<xhtml:link\b([^>]*?)\/?>/g)].flatMap((l) => {
-      if (!/hreflang=/.test(l[1])) return [];
-      const lang = l[1].match(/hreflang="([^"]*)"/)?.[1]?.trim() ?? '';
-      const href = l[1].match(/href="([^"]*)"/)?.[1]?.trim() ?? '';
-      return [{ lang, href }];
-    });
+    const alternates = extractTags(body, 'xhtml:link').flatMap(({ attributes }) =>
+      attributes.has('hreflang')
+        ? [{
+            lang: attributes.get('hreflang')?.trim() ?? '',
+            href: attributes.get('href')?.trim() ?? '',
+          }]
+        : [],
+    );
     entries.push({ loc, alternates });
   }
   return entries;
