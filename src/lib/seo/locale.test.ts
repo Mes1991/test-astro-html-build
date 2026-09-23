@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { siteSeo } from './defaults';
 import {
   pathFor,
   alternateUrls,
@@ -7,6 +8,8 @@ import {
   localizedSlugs,
   localeOfRoute,
 } from './locale';
+
+const SITE = siteSeo.siteUrl;
 
 describe('pathFor', () => {
   it('returns / for home in English', () => {
@@ -26,8 +29,8 @@ describe('pathFor', () => {
 describe('alternateUrls', () => {
   it('returns en/es URLs for blog with shared "blog" slug', () => {
     const urls = alternateUrls('blog');
-    expect(urls.en).toBe('https://example.com/blog/');
-    expect(urls.es).toBe('https://example.com/es/blog/');
+    expect(urls.en).toBe(`${SITE}/blog/`);
+    expect(urls.es).toBe(`${SITE}/es/blog/`);
   });
 });
 

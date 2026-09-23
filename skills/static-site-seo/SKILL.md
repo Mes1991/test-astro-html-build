@@ -31,7 +31,7 @@ it before opening a contract, because it tells you which real file each rule act
 | JSON-LD | `src/components/seo/Schema.astro` and `src/components/seo/BreadcrumbsJsonLd.astro`, built from the typed builders in `src/lib/seo/schemas/*.ts` |
 | brand defaults — site name, default title/description, social image | `src/lib/seo/defaults.ts` (`siteSeo`) |
 | the URL shape, locales and the per-route slug map | `src/lib/seo/locale.ts` (`ROUTE_KEYS`, `localizedSlugs`) — **the single source of truth**; `astro.config.mjs` no longer keeps a second route map of its own, it derives the sitemap's `hreflang` links from this one through `hreflangLinksFor` (`src/lib/seo/sitemap.ts`), so a rename here reaches the pages and the sitemap together |
-| `robots.txt`, `sitemap.xml`, the site origin and i18n routing | `astro.config.mjs` — the `site` field, the `i18n` block, and the `sitemap()` integration's `filter`/`serialize` options |
+| `robots.txt`, `sitemap.xml`, the site origin and i18n routing | `astro.config.mjs` owns the `i18n` block and the `sitemap()` integration's `filter`/`serialize` options; its `site` value and the sitemap home URL are derived from `siteSeo.siteUrl` (`src/lib/seo/defaults.ts`), the single origin source — never write an origin literal in `astro.config.mjs` |
 | the SEO check the contracts describe | `src/integrations/seo-lint/` (see below) — the repository's real, working, tested validator, not the tool the contracts describe below |
 
 ## The rule, and the real mechanism

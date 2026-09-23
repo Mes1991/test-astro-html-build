@@ -3,6 +3,7 @@ import type { LocaleCode } from "../../lib/seo/types";
 import { DEFAULT_LOCALE } from "../../lib/seo/types";
 import { t } from "../../i18n/t";
 import { getFaqEntries } from "../../lib/seo/data/faq";
+import { siteSeo } from "../../lib/seo/defaults";
 
 interface Props {
   locale?: LocaleCode;
@@ -25,7 +26,7 @@ const entries = getFaqEntries(locale);
       <p class="faq-lede text-base text-ui-700 mt-[18px] max-w-[320px] leading-[1.55]">{t("home.faq.lede", locale)}</p>
       <div class="faq-card mt-8 p-5 border-[1.5px] border-dashed border-brand-surface-dark/15 rounded-[14px]">
         <span class="font-mono text-[10px] tracking-caps-3 uppercase text-ui-500">{t("home.faq.cardLabel", locale)}</span>
-        <a href="mailto:hello@example.com" data-mood="loving" class="block font-display font-extrabold text-lg text-brand-surface-dark no-underline mt-1 tracking-display hover:text-brand-primary">{t("home.faq.cardEmail", locale)}</a>
+        <a href={`mailto:${siteSeo.organization.email}`} data-mood="loving" class="block font-display font-extrabold text-lg text-brand-surface-dark no-underline mt-1 tracking-display hover:text-brand-primary">{t("home.faq.cardEmail", locale, { email: siteSeo.organization.email })}</a>
       </div>
     </div>
 

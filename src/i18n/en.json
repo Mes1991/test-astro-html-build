@@ -52,7 +52,7 @@
       "titleB": "questions.",
       "lede": "The questions we get every week, on record.",
       "cardLabel": "Still have questions? Ask us directly",
-      "cardEmail": "hello@example.com →"
+      "cardEmail": "{email} →"
     },
     "blog": {
       "eyebrow": "— Latest from the blog",
