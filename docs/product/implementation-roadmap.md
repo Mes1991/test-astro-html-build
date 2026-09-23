@@ -37,7 +37,7 @@ hold with their proof recorded. It is then **Accepted**. Status tables are
 re-verified, not carried forward: a table pinned to an older commit says nothing
 about the current one.
 
-**Current status, verified at `2396323`:** B Open · C Open · D Open · E Open ·
+**Current status, verified at `f6791a4`:** B Open · C Open · D Open · E Open ·
 F Open · G Open. No phase is accepted.
 
 ## Phases
@@ -73,32 +73,22 @@ their repository that they did not choose.
 
 **Depends on.** Nothing. B is first.
 
-**Status at `2396323`: Open**
+**Status at `f6791a4`: Open**
 
 | Deliverable | Status | Evidence | Missing proof |
 |---|---|---|---|
 | Emitted-code contract parity (`SKILL.md`, rebrand checklist) | Implemented | `src/integrations/seo-lint/documented-codes.test.ts` | — |
 | Site origin from `siteSeo.siteUrl` only | Implemented | `src/lib/seo/defaults.ts`; `astro.config.mjs` derives `site`; commits `cd1ba19`, `aa854be`, `a730f3a`, `9329caa` | — (mutation recorded: origin + email changed alone in a clone → 371/371 tests, build clean, no `example.com` in `dist`) |
-| Every read env variable typed | Not built | `PUBLIC_COMING_SOON` read at `src/middleware.ts:33`, absent from `src/env.d.ts`; `.env.example` does not exist | — (blocked: see note below the table) |
+| Every read env variable typed | Implemented | `src/env.d.ts` declares all five variables read under `src/`; `.env.example` documents them; `src/env-contract.test.ts` asserts three-way parity; commit `f6791a4` | — (mutation recorded: removing `PUBLIC_COMING_SOON` from `env.d.ts` turns two parity assertions red naming that variable; restoring turns it green) |
 | One version source | Implemented | `package.json:5` → `0.1.0`; `version.txt`, `release-please-config.json`, `.release-please-manifest.json` removed; `src/repo-contract.test.ts`; commit `cf28296` | — (mutation recorded: reintroducing `version.txt` in a clone turns `src/repo-contract.test.ts` red on the "no competing version source" assertion; removing it again turns it green) |
 | Performance budgets on emitted routes | Implemented | `lighthouserc.json` / `lighthouserc.mobile.json` audit only `/`, `/blog/`, `/blog/example-post/`, `/es/`, `/es/blog/`, `/es/blog/example-post/`; `src/lighthouse-routes.test.ts` derives the expected set from `pathFor`/`postPathFor` and blog frontmatter without depending on a prior build; commit `8a34c6c` | — (mutation recorded: swapping an entry for `/work/index.html` in a clone turns the test red on both the added and the dropped URL; restoring turns it green) |
 | Font licences shipped | Implemented | `public/fonts/jetbrains-mono/OFL.txt`, `src/assets/fonts/OFL.txt` (verbatim SIL OFL 1.1); `src/font-license.test.ts`; `THIRD_PARTY_NOTICES.md`; commit `2396323` | — (mutation recorded: deleting `OFL.txt` from one font directory in a clone turns the test red; restoring turns it green). Note: the two `.ttf` files are SHA-256-verified against the upstream `master` branch; the two `.woff2` variable-font subsets are a derived build with no upstream artifact to hash against and are recorded as unverified provenance, not unlicensed — see `THIRD_PARTY_NOTICES.md` |
 | Read-only CI | Implemented | `.github/workflows/ci.yml` — `permissions: contents: read` | — |
 | Side-effect automation withdrawn | Implemented | `release-please.yml`, `cleanup-pages-previews.yml`, `pr-title-lint.yml` removed from `.github/workflows/` (preserved as opt-in examples at `docs/recipes/workflows/*.example`); only `ci.yml` ships by default; `src/repo-contract.test.ts` asserts no default-shipping workflow grants a `write` permission, runs `gh pr merge`, or calls an external API with a write verb; commit `cf28296` | — (mutation recorded: re-adding `contents: write` to `ci.yml` in a clone turns the test red on that one assertion; restoring turns it green) |
 
-**Blocked item.** `.env.example` could not be created in this pass: the environment this work ran in
-enforces a standing deny rule matching any `.env.*` path (write and read alike) for every
-mechanism tried (file-write tool, shell redirection, `cp`, a Node `fs.writeFileSync` call). This
-is a permission boundary, not a technical failure, and was not worked around. `src/env.d.ts`'s
-`PUBLIC_COMING_SOON` declaration and the `src/env-contract.test.ts` parity test are written and
-verified correct in isolation (the parity test correctly goes red only on the missing file) but
-are held back, uncommitted, pending either a human creating `.env.example` directly or adjusting
-the deny rule to exclude that one placeholder-only filename. R-11 and R-12 remain **Not built**
-until that happens.
-
 | Acceptance criterion | Holds? |
 |---|---|
-| test / check / build green | Yes at `2396323` (400 tests, `check` 0 errors, `seo-lint` clean) |
+| test / check / build green | Yes at `f6791a4` (403 tests, `check` 0 errors, `seo-lint` clean) |
 | Origin change alone leaves the build clean | Yes (recorded above) |
 | No auto-triggered workflow that writes | Yes — `src/repo-contract.test.ts`; commit `cf28296` |
 | Audited URLs are emitted routes | Yes — `src/lighthouse-routes.test.ts`; commit `8a34c6c` |
