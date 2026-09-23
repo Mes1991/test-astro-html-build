@@ -1,5 +1,6 @@
 import { defineCollection, z } from "astro:content";
 import { glob } from "astro/loaders";
+import { routerSafeSlugSchema } from "./lib/content/slug";
 
 /**
  * Blog entries. MD files with body content.
@@ -14,7 +15,7 @@ const blog = defineCollection({
   schema: ({ image }) =>
     z.object({
       title: z.string(),
-      slug: z.string(),
+      slug: routerSafeSlugSchema,
       description: z.string(),
       datePublished: z.string(), // ISO 8601
       dateModified: z.string().optional(),
