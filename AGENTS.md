@@ -130,6 +130,9 @@ No existe `seo:check`, `lint`, `agent:setup` ni `agent:check` como script de `pa
 
 No inventes éxito. Si un comando todavía no existe, registra el gap en vez de sustituirlo silenciosamente.
 
+`bun run audit` / `audit:mobile` (Lighthouse) son manuales/opt-in: ningún workflow en
+`.github/workflows/` los ejecuta (decisión R-15).
+
 ## Seguridad
 
 - Nunca leas o escribas credenciales.

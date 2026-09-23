@@ -6,8 +6,9 @@
         "http://localhost:4321/index.html",
         "http://localhost:4321/blog/index.html",
         "http://localhost:4321/blog/example-post/index.html",
-        "http://localhost:4321/work/index.html",
-        "http://localhost:4321/work/example-project-one/index.html"
+        "http://localhost:4321/es/index.html",
+        "http://localhost:4321/es/blog/index.html",
+        "http://localhost:4321/es/blog/example-post/index.html"
       ],
       "numberOfRuns": 3,
       "settings": {
