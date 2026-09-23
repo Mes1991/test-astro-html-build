@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LOCALES } from '../lib/seo/types';
+import { DEFAULT_LOCALE, LOCALES } from '../lib/seo/types';
 
 /**
  * Wiring gate for the adoption wizard.
@@ -258,16 +258,80 @@ describe('skill descriptions route a site build to the adoption gate first', () 
  * Wizard §7 inventories the files a monolingual migration touches. That inventory is
  * evidence the contract relies on, so it must stay true. Entries that exist only
  * because a second locale does (`/es/` routes, the switcher, the es→en fallback) are
- * checked only while `LOCALES` still has `es` — a converted single-locale repository
- * is not expected to keep them.
+ * checked only while that locale is still in `LOCALES` — a converted single-locale
+ * repository is not expected to keep them. The classification is derived from
+ * `LOCALES`/`DEFAULT_LOCALE` rather than hardcoded to `es`, so this suite keeps
+ * working after a real monolingual conversion instead of describing one repository
+ * shape forever.
  */
 describe('adoption-wizard.md §7 inventory matches the repository', () => {
   const section = wizard.match(/^## §7[^\n]*\n([\s\S]*?)^## §8/m);
   const text = section ? section[1] : '';
   const hasSpanish = (LOCALES as readonly string[]).includes('es');
-  const isSpanishOnly = (p: string) => p.includes('/es/') || p.endsWith('LanguageSwitcher.astro');
 
   const paths = [...new Set([...text.matchAll(/`((?:src\/|astro\.config)[^`]*)`/g)].map((m) => m[1]))];
+
+  /**
+   * The locale code a §7 entry is specific to, if any: a path segment `/xx/`
+   * (e.g. `src/pages/es/**`) or a bare dictionary file `xx.json`, for a
+   * two-letter code that isn't the default locale. Such an entry is only
+   * expected to exist while that code is still served.
+   */
+  function localeSpecificCode(entry: string): string | null {
+    const segment = entry.match(/\/([a-z]{2})\//);
+    if (segment && segment[1] !== DEFAULT_LOCALE) return segment[1];
+    const file = entry.match(/(?:^|\/)([a-z]{2})\.json$/);
+    if (file && file[1] !== DEFAULT_LOCALE) return file[1];
+    return null;
+  }
+
+  /** Whether a §7 entry is expected to exist given the repository's current `LOCALES`. */
+  function isEntryApplicable(entry: string): boolean {
+    const code = localeSpecificCode(entry);
+    if (code) return (LOCALES as readonly string[]).includes(code);
+    // The switcher only exists to switch between locales.
+    if (entry.endsWith('LanguageSwitcher.astro')) return LOCALES.length > 1;
+    return true;
+  }
+
+  /** Escapes every regex-special character in a glob's literal (non-`*`) portions. */
+  function escapeRegExpChars(literal: string): string {
+    return literal.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /** Converts a §7 glob (`**` = any depth, `*` = no slash) to a RegExp anchored on a full repo-relative path. */
+  function globToRegExp(glob: string): RegExp {
+    const pattern = glob
+      .split(/(\*\*|\*)/)
+      .map((part) => (part === '**' ? '.*' : part === '*' ? '[^/]*' : escapeRegExpChars(part)))
+      .join('');
+    return new RegExp(`^${pattern}$`);
+  }
+
+  /** Every file under `dir` (an absolute path), as repo-root-relative POSIX paths. */
+  function listFilesRecursive(dir: string): string[] {
+    if (!existsSync(dir)) return [];
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) return listFilesRecursive(full);
+      return [path.relative(REPO_ROOT, full).split(path.sep).join('/')];
+    });
+  }
+
+  /** True when at least one real file under the repo matches a §7 glob entry. */
+  function globMatchesAFile(globEntry: string): boolean {
+    const dir = globEntry.slice(0, globEntry.indexOf('*')).replace(/\/$/, '');
+    const regex = globToRegExp(globEntry);
+    return listFilesRecursive(path.join(REPO_ROOT, dir)).some((file) => regex.test(file));
+  }
+
+  /** True when a repo-relative path is named exactly or matched by a glob in the §7 inventory. */
+  function coveredByInventory(relativePath: string): boolean {
+    const posixPath = relativePath.split(path.sep).join('/');
+    return paths.some((entry) =>
+      entry.includes('*') ? globToRegExp(entry).test(posixPath) : entry === posixPath,
+    );
+  }
 
   it('finds the §7 section and its inventory', () => {
     expect(section, 'no "## §7" section found before "## §8"').not.toBeNull();
@@ -275,11 +339,9 @@ describe('adoption-wizard.md §7 inventory matches the repository', () => {
   });
 
   it.each(paths)('%s exists', (entry) => {
-    if (isSpanishOnly(entry) && !hasSpanish) return;
+    if (!isEntryApplicable(entry)) return;
     if (entry.includes('*')) {
-      // `dir/**` or `dir/*.test.ts`: only the directory part is checked.
-      const dir = entry.slice(0, entry.indexOf('*')).replace(/\/$/, '');
-      expect(existsSync(path.join(REPO_ROOT, dir)), `${dir} does not exist`).toBe(true);
+      expect(globMatchesAFile(entry), `no file matches glob ${entry}`).toBe(true);
       return;
     }
     expect(existsSync(path.join(REPO_ROOT, entry)), `${entry} does not exist`).toBe(true);
@@ -301,6 +363,67 @@ describe('adoption-wizard.md §7 inventory matches the repository', () => {
   it.runIf(hasSpanish)('the es→en fallback §7 warns about is still configured', () => {
     expect(text).toContain("fallback: { es: 'en' }");
     expect(read('astro.config.mjs')).toContain("fallback: { es: 'en' }");
+  });
+
+  /**
+   * The forward check above proves every §7 entry points at something real; it says
+   * nothing about entries §7 never mentions. A structural locale surface — a
+   * dictionary, a locale's page tree, a `LanguageSwitcher` importer — that isn't named
+   * or glob-matched by §7 is exactly the kind of gap the wizard would silently miss
+   * when scoping a monolingual migration, so this is the reverse direction: real files
+   * checked against the inventory, not the inventory checked against real files.
+   */
+  describe('reverse: structural locale surfaces are covered by the inventory', () => {
+    it.each(readdirSync(path.join(REPO_ROOT, 'src', 'i18n')).filter((f) => f.endsWith('.json')))(
+      'src/i18n/%s is named or matched by a §7 entry',
+      (file) => {
+        const rel = `src/i18n/${file}`;
+        expect(coveredByInventory(rel), `${rel} is not named or matched by any §7 entry`).toBe(
+          true,
+        );
+      },
+    );
+
+    const nonDefaultLocales = (LOCALES as readonly string[]).filter((l) => l !== DEFAULT_LOCALE);
+    const localePageFiles = nonDefaultLocales.flatMap((locale) =>
+      listFilesRecursive(path.join(REPO_ROOT, 'src', 'pages', locale)),
+    );
+
+    it.each(localePageFiles.length > 0 ? localePageFiles : ['(none)'])(
+      '%s is named or matched by a §7 entry',
+      (rel) => {
+        if (rel === '(none)') return;
+        expect(coveredByInventory(rel), `${rel} is not named or matched by any §7 entry`).toBe(
+          true,
+        );
+      },
+    );
+
+    /** Matches a real `import X from "…LanguageSwitcher[.astro]"` statement, not a comment mentioning it. */
+    function importsLanguageSwitcher(content: string): boolean {
+      return /^\s*import\s+\w+\s+from\s+["'][^"']*LanguageSwitcher(?:\.astro)?["']/m.test(content);
+    }
+
+    const astroFiles = listFilesRecursive(path.join(REPO_ROOT, 'src')).filter(
+      (f) => f.endsWith('.astro') && !f.endsWith('LanguageSwitcher.astro') && !f.includes('.test.'),
+    );
+    const importers = astroFiles.filter((f) => importsLanguageSwitcher(read(f)));
+
+    it.each(importers.length > 0 ? importers : ['(none)'])(
+      '%s (imports LanguageSwitcher) is covered by the §7 inventory',
+      (rel) => {
+        if (rel === '(none)') return;
+        // Either the file itself is named/matched, or — since §7 covers importers in
+        // prose ("its use in `SiteHeader`") rather than as a file entry — its basename
+        // is mentioned somewhere in the §7 text.
+        const basename = path.basename(rel, '.astro');
+        const covered = coveredByInventory(rel) || text.includes(basename);
+        expect(
+          covered,
+          `${rel} imports LanguageSwitcher but is neither named/matched by §7 nor is "${basename}" mentioned in §7 text`,
+        ).toBe(true);
+      },
+    );
   });
 });
 

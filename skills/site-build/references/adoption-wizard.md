@@ -211,9 +211,9 @@ what it changes, and does not restate those rules.
 **Monolingual.** This is a **migration** the contract must spell out, not a toggle. Evidence to
 inventory before promising it: the `i18n` block in `astro.config.mjs` (locales, the `es`→`en`
 fallback, `fallbackType: 'rewrite'`); `LOCALES`/`DEFAULT_LOCALE` in `src/lib/seo/types.ts`;
-`ROUTE_KEYS`/`localizedSlugs` in `src/lib/seo/locale.ts`; `src/i18n/en.json` and `es.json`;
-`src/pages/es/**`; `src/components/shared/LanguageSwitcher.astro` and its use in `SiteHeader`;
-locale-aware home components; hreflang in `src/lib/seo/sitemap.ts`; alternates in
+`ROUTE_KEYS`/`localizedSlugs` in `src/lib/seo/locale.ts`; `src/i18n/en.json` and `src/i18n/es.json`;
+`src/pages/es/**`; `src/components/shared/LanguageSwitcher.astro` and its use in `SiteHeader`,
+`MobileMenu`, and `Footer`; locale-aware home components; hreflang in `src/lib/seo/sitemap.ts`; alternates in
 `src/components/seo/SEO.astro`; the route checks in `src/integrations/seo-lint/`; and the tests
 under `src/lib/seo/*.test.ts` that assume two locales. End state: no `/es/` routes, no
 hreflang/alternate/fallback pointing at a removed locale, no empty Spanish dictionary kept only for
