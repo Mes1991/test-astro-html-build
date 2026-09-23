@@ -25,20 +25,24 @@ bundled license file. Nothing here was inferred from a package name.
 | Files | `public/fonts/jetbrains-mono/*.woff2`, `src/assets/fonts/JetBrainsMono-{Regular,Bold}.ttf` |
 | License | SIL Open Font License, Version 1.1 |
 | Upstream | <https://github.com/JetBrains/JetBrainsMono> |
-| License text | <https://github.com/JetBrains/JetBrainsMono/blob/master/OFL.txt> |
+| License text | vendored verbatim at `public/fonts/jetbrains-mono/OFL.txt` and `src/assets/fonts/OFL.txt` (fetched from `https://raw.githubusercontent.com/JetBrains/JetBrainsMono/master/OFL.txt`, SHA-256 `a76abf002c49097d146e86740a3105a5d00450b1592e820a1109a8c5680cd697`) |
 
-> **⚠ OPEN ITEM — not resolved.** The OFL 1.1 requires its full text to be distributed with the
-> font files. That text is **not** vendored in this repository yet, and it could not be retrieved
-> while these notices were written (no network access in that environment). Linking is a
-> stopgap, not compliance.
+> **Resolved (R-16).** The OFL 1.1 text now ships verbatim next to both copies of the font.
 >
-> **To close this:** copy the verbatim `OFL.txt` from the upstream release into both
-> `public/fonts/jetbrains-mono/OFL.txt` and `src/assets/fonts/OFL.txt`.
->
-> **Provenance is also only circumstantial.** These files are identified as JetBrains Mono by
-> their filenames and by the `@font-face` declarations in `src/styles/global.css`. The upstream
-> release they came from is unknown, and no checksum ties them to one. Treat the identification
-> as probable, not verified.
+> **Provenance — verified for the two TTFs, unverified for the two woff2 variable subsets.**
+> `src/assets/fonts/JetBrainsMono-Regular.ttf` and `JetBrainsMono-Bold.ttf` are byte-for-byte
+> identical (SHA-256 match) to `fonts/ttf/JetBrainsMono-{Regular,Bold}.ttf` on the
+> `JetBrains/JetBrainsMono` GitHub repository's `master` branch at the time of this check. Both
+> files' internal `name` table reports `Version 2.305` — newer than the latest tagged release,
+> `v2.304` (`releases` page checked the same session) — so these were pulled from an unreleased
+> commit on `master`, not from a tagged release archive. `public/fonts/jetbrains-mono/*.woff2`
+> are a subsetted (latin / latin-ext), woff2-compressed variable-font build; the upstream
+> repository and its release zips do not ship pre-built woff2 in that form, and no woff2
+> decompression tool was available in the environment this check ran in, so their bytes could not
+> be traced to a specific upstream artifact. They are still identified as JetBrains Mono by
+> filename and by the `@font-face` declarations in `src/styles/global.css`, and the OFL text
+> above covers them regardless of which repackaging tool produced them — only the exact
+> build/tool provenance is unverified, not the license coverage.
 
 ### Draco 3D Data Compression — Apache License 2.0
 
@@ -148,8 +152,9 @@ if any of them was imported from elsewhere, its provenance needs recording befor
 
 | Item | Status |
 |---|---|
-| JetBrains Mono OFL 1.1 verbatim text | **Not resolved** — linked only; must be vendored |
-| JetBrains Mono upstream version | **Unverified** — identified by filename and `@font-face` only |
+| JetBrains Mono OFL 1.1 verbatim text | **Resolved** — vendored at `public/fonts/jetbrains-mono/OFL.txt` and `src/assets/fonts/OFL.txt` |
+| JetBrains Mono TTF provenance (`src/assets/fonts/*.ttf`) | **Verified** — SHA-256 match against `JetBrains/JetBrainsMono` `master` branch, internal version `2.305` |
+| JetBrains Mono woff2 provenance (`public/fonts/jetbrains-mono/*.woff2`) | **Unverified** — subsetted/compressed derivative, no upstream artifact to hash against; identified by filename and `@font-face` only |
 | Draco build version | **Unverified** — does not match the installed `three` copy |
 | Draco upstream `NOTICE` file | **Unverified** — none accompanied the binaries |
 | Transitive dependency licenses | **Not reviewed** |
