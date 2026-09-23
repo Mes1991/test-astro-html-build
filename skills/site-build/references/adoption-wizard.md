@@ -143,7 +143,11 @@ authority.
 few server functions — forms, login, an API — or is it mainly a dynamic application with
 personalised data?" Options: static; mostly static with a few dynamic functions; server-first;
 static frontend with an external backend; "I don't know" (the agent recommends once it has learned
-the needed features). See §8.
+the needed features). See §8. **Ask B with this wording and these options only.** Its generic
+examples (forms, login, an API) stay as written; add no feature detected in the design — no cart,
+checkout, map, search or specific form from the design appears in the question, its options or
+its examples. Those are Round 2 topics; when a Round 2 answer changes the site type, the contract
+records the adjusted B without asking an extra round.
 
 **C. Git.** "How should I handle Git during the build?" Options: branch or worktree with local
 commits, no push; branch/worktree with commits and push to an authorized remote; no commits, leave
@@ -211,9 +215,9 @@ what it changes, and does not restate those rules.
 **Monolingual.** This is a **migration** the contract must spell out, not a toggle. Evidence to
 inventory before promising it: the `i18n` block in `astro.config.mjs` (locales, the `es`→`en`
 fallback, `fallbackType: 'rewrite'`); `LOCALES`/`DEFAULT_LOCALE` in `src/lib/seo/types.ts`;
-`ROUTE_KEYS`/`localizedSlugs` in `src/lib/seo/locale.ts`; `src/i18n/en.json` and `es.json`;
-`src/pages/es/**`; `src/components/shared/LanguageSwitcher.astro` and its use in `SiteHeader`;
-locale-aware home components; hreflang in `src/lib/seo/sitemap.ts`; alternates in
+`ROUTE_KEYS`/`localizedSlugs` in `src/lib/seo/locale.ts`; `src/i18n/en.json` and `src/i18n/es.json`;
+`src/pages/es/**`; `src/components/shared/LanguageSwitcher.astro` and its use in `SiteHeader`,
+`MobileMenu`, and `Footer`; locale-aware home components; hreflang in `src/lib/seo/sitemap.ts`; alternates in
 `src/components/seo/SEO.astro`; the route checks in `src/integrations/seo-lint/`; and the tests
 under `src/lib/seo/*.test.ts` that assume two locales. End state: no `/es/` routes, no
 hreflang/alternate/fallback pointing at a removed locale, no empty Spanish dictionary kept only for
@@ -314,7 +318,7 @@ as one.
 
 | ID | Situation | Expected outcome |
 |---|---|---|
-| S1 | Figma URL + "Use this template to build the site," non-technical user | read-only inspection first, done directly with no subagent; the §5 preflight results (assets, fonts) are reported with Round 1; Round 1 asks language, scope, rendering and Git; Round 2, in its own message, asks every detected feature; no round exceeds five questions; no `DESIGN.md`, code, branch or background worker exists before confirmation |
+| S1 | Figma URL + "Use this template to build the site," non-technical user | read-only inspection first, done directly with no subagent; the §5 preflight results (assets, fonts) are reported with Round 1; Round 1 asks language, scope, rendering and Git, and names no detected feature in any of them; Round 2, in its own message, asks every detected feature; no round exceeds five questions; no `DESIGN.md`, code, branch or background worker exists before confirmation |
 | S2 | "Static landing, but I want animations and a carousel" | stays static; only the needed islands/`client:*` directives are added; no adapter; browser JS is never treated as a backend need |
 | S3 | "Pages are static, but the form must post to our own API" | asks whether the API is external or an Astro endpoint; if Astro, adds an adapter and marks only that route on-demand — never the whole site; errors, spam handling, data handling and secrets are defined before implementing |
 | S4 | "It has login, sessions and different pages per user" | recommends server-first/on-demand with reasons; asks the runtime/deploy target and the identity/data source; promises nothing without an adapter and real persistence |
