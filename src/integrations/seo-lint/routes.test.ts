@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { siteSeo } from '../../lib/seo/defaults';
 import {
   declaredCanonical,
   declaredLang,
@@ -11,7 +12,7 @@ import {
   type GeneratedPage,
 } from './routes';
 
-const SITE = 'https://example.com';
+const SITE = siteSeo.siteUrl;
 
 /** Minimal page shell — only the bits the route gates read. */
 function page(route: string, opts: { lang: string; canonical?: string; robots?: string }): GeneratedPage {
@@ -64,13 +65,13 @@ describe('lintLocaleRoutes', () => {
       page('/es/', { lang: 'es' }),
       page('/es/blog/', { lang: 'es-ES' }),
     ];
-    expect(lintLocaleRoutes(pages)).toEqual([]);
+    expect(lintLocaleRoutes(pages, new Set(), SITE)).toEqual([]);
   });
 
   it('flags an indexable i18n fallback page — English content at a Spanish URL', () => {
     // This is the A2 defect, reproduced: with `fallbackType: 'rewrite'`, an
     // English-only page is also emitted at /es/<slug>/ holding English content.
-    const findings = lintLocaleRoutes([page('/es/services/', { lang: 'en' })]);
+    const findings = lintLocaleRoutes([page('/es/services/', { lang: 'en' })], new Set(), SITE);
     expect(findings).toHaveLength(1);
     expect(findings[0].code).toBe('LOCALE_CONTENT_MISMATCH');
     expect(findings[0].severity).toBe('fail');
@@ -78,7 +79,13 @@ describe('lintLocaleRoutes', () => {
   });
 
   it('accepts the same fallback page once it is marked noindex', () => {
-    expect(lintLocaleRoutes([page('/es/services/', { lang: 'en', robots: 'noindex,follow' })])).toEqual([]);
+    expect(
+      lintLocaleRoutes(
+        [page('/es/services/', { lang: 'en', robots: 'noindex,follow' })],
+        new Set(),
+        SITE,
+      ),
+    ).toEqual([]);
   });
 
   it('flags an internal link that is not in the canonical URL form', () => {
@@ -86,7 +93,7 @@ describe('lintLocaleRoutes', () => {
       route: '/',
       html: '<html lang="en"><head></head><body><a href="/blog">Blog</a></body></html>',
     };
-    const findings = lintLocaleRoutes([withLink]);
+    const findings = lintLocaleRoutes([withLink], new Set(), SITE);
     expect(findings.map((f) => f.code)).toContain('INTERNAL_LINK_NOT_CANONICAL_FORM');
   });
 
@@ -100,7 +107,7 @@ describe('lintLocaleRoutes', () => {
         '<a href="mailto:hello@example.com">mail</a>' +
         '</body></html>',
     };
-    expect(lintLocaleRoutes([mixed])).toEqual([]);
+    expect(lintLocaleRoutes([mixed], new Set(), SITE)).toEqual([]);
   });
 
   it('checks internal links to a file-shaped page route, instead of skipping them', () => {
@@ -113,7 +120,7 @@ describe('lintLocaleRoutes', () => {
       },
       page('/blog/whitepaper.pdf/', { lang: 'en' }),
     ];
-    const codes = lintLocaleRoutes(pages).map((f) => f.code);
+    const codes = lintLocaleRoutes(pages, new Set(), SITE).map((f) => f.code);
     expect(codes).toContain('INTERNAL_LINK_NOT_CANONICAL_FORM');
   });
 
@@ -125,7 +132,7 @@ describe('lintLocaleRoutes', () => {
       },
       page('/blog/whitepaper.pdf/', { lang: 'en' }),
     ];
-    expect(lintLocaleRoutes(pages).map((f) => f.code)).not.toContain(
+    expect(lintLocaleRoutes(pages, new Set(), SITE).map((f) => f.code)).not.toContain(
       'INTERNAL_LINK_NOT_CANONICAL_FORM',
     );
   });
@@ -138,18 +145,24 @@ describe('lintLocaleRoutes', () => {
       },
     ];
     const emittedFiles = new Set(['/docs/whitepaper.pdf']);
-    expect(lintLocaleRoutes(pages, emittedFiles)).toEqual([]);
+    expect(lintLocaleRoutes(pages, emittedFiles, SITE)).toEqual([]);
   });
 
   it('flags a canonical on a file-shaped page route that is missing its slash', () => {
     const pages: GeneratedPage[] = [
       page('/blog/whitepaper.pdf/', { lang: 'en', canonical: `${SITE}/blog/whitepaper.pdf` }),
     ];
-    expect(lintLocaleRoutes(pages).map((f) => f.code)).toContain('CANONICAL_NOT_CANONICAL_FORM');
+    expect(lintLocaleRoutes(pages, new Set(), SITE).map((f) => f.code)).toContain(
+      'CANONICAL_NOT_CANONICAL_FORM',
+    );
   });
 
   it('flags a canonical that is not in the canonical URL form', () => {
-    const findings = lintLocaleRoutes([page('/blog/', { lang: 'en', canonical: `${SITE}/blog` })]);
+    const findings = lintLocaleRoutes(
+      [page('/blog/', { lang: 'en', canonical: `${SITE}/blog` })],
+      new Set(),
+      SITE,
+    );
     expect(findings.map((f) => f.code)).toContain('CANONICAL_NOT_CANONICAL_FORM');
   });
 
@@ -162,13 +175,17 @@ describe('lintLocaleRoutes', () => {
         `<meta property="og:url" content="${SITE}/blog" />` +
         '</head><body></body></html>',
     };
-    expect(lintLocaleRoutes([mismatched]).map((f) => f.code)).toContain(
+    expect(lintLocaleRoutes([mismatched], new Set(), SITE).map((f) => f.code)).toContain(
       'OG_URL_CANONICAL_MISMATCH',
     );
   });
 
   it('flags a page with no lang attribute', () => {
-    const findings = lintLocaleRoutes([{ route: '/', html: '<html><head></head></html>' }]);
+    const findings = lintLocaleRoutes(
+      [{ route: '/', html: '<html><head></head></html>' }],
+      new Set(),
+      SITE,
+    );
     expect(findings[0].code).toBe('HTML_LANG_MISSING');
   });
 });
@@ -198,26 +215,26 @@ describe('lintLocalizedRouteCoverage', () => {
     const findings = lintLocalizedRouteCoverage([
       page('/services/', { lang: 'en' }),
       page('/es/services/', { lang: 'es' }),
-    ]);
+    ], SITE);
     expect(findings.map((f) => f.code)).toContain('LOCALIZED_ROUTE_WITHOUT_ALTERNATES');
   });
 
   it('accepts a bilingual route whose alternates are complete and reciprocal', () => {
-    expect(lintLocalizedRouteCoverage(pair(goodAlts))).toEqual([]);
+    expect(lintLocalizedRouteCoverage(pair(goodAlts), SITE)).toEqual([]);
   });
 
   it('is not satisfied by an hreflang tag with no href', () => {
     // Counting tags is not evidence of coverage — this used to switch the gate off.
     const alts =
       '<link rel="alternate" hreflang="en" />' + '<link rel="alternate" hreflang="es" />';
-    const findings = lintLocalizedRouteCoverage(pair(alts));
+    const findings = lintLocalizedRouteCoverage(pair(alts), SITE);
     expect(findings.map((f) => f.code)).toContain('LOCALIZED_ROUTE_WITHOUT_ALTERNATES');
     expect(findings[0].message).toContain('declares no href');
   });
 
   it('is not satisfied by an hreflang tag with an empty lang', () => {
     const alts = `<link rel="alternate" hreflang="" href="${SITE}/services/" />`;
-    expect(lintLocalizedRouteCoverage(pair(alts)).map((f) => f.code)).toContain(
+    expect(lintLocalizedRouteCoverage(pair(alts), SITE).map((f) => f.code)).toContain(
       'LOCALIZED_ROUTE_WITHOUT_ALTERNATES',
     );
   });
@@ -226,7 +243,7 @@ describe('lintLocalizedRouteCoverage', () => {
     const alts =
       `<link rel="alternate" hreflang="en" href="${SITE}/services/" />` +
       `<link rel="alternate" hreflang="es" href="${SITE}/es/servicios/" />`;
-    const findings = lintLocalizedRouteCoverage(pair(alts));
+    const findings = lintLocalizedRouteCoverage(pair(alts), SITE);
     expect(findings.map((f) => f.code)).toContain('LOCALIZED_ROUTE_WITHOUT_ALTERNATES');
     expect(findings[0].message).toContain('never emitted');
   });
@@ -240,7 +257,7 @@ describe('lintLocalizedRouteCoverage', () => {
       ...pair(wrong),
       page('/es/other/', { lang: 'es' }),
       page('/other/', { lang: 'en' }),
-    ]);
+    ], SITE);
     const own = findings.filter((f) => f.route === '/services/');
     expect(own).toHaveLength(1);
     expect(own[0].message).toContain('instead of /es/services/');
@@ -248,7 +265,7 @@ describe('lintLocalizedRouteCoverage', () => {
 
   it('is not satisfied when only one locale is covered', () => {
     const alts = `<link rel="alternate" hreflang="en" href="${SITE}/services/" />`;
-    const findings = lintLocalizedRouteCoverage(pair(alts));
+    const findings = lintLocalizedRouteCoverage(pair(alts), SITE);
     expect(findings[0].message).toContain('no hreflang="es"');
   });
 
@@ -256,7 +273,7 @@ describe('lintLocalizedRouteCoverage', () => {
     // Array.find would stop at the good one and never see the broken duplicate.
     const alts =
       goodAlts + `<link rel="alternate" hreflang="es" href="${SITE}/es/wrong/" />`;
-    const findings = lintLocalizedRouteCoverage(pair(alts));
+    const findings = lintLocalizedRouteCoverage(pair(alts), SITE);
     expect(findings.map((f) => f.code)).toContain('LOCALIZED_ROUTE_WITHOUT_ALTERNATES');
     expect(findings[0].message).toContain('2 hreflang="es" entries');
   });
@@ -266,44 +283,50 @@ describe('lintLocalizedRouteCoverage', () => {
       `<link rel="alternate" hreflang="en" href="${SITE}/services/" />` +
       '<link rel="alternate" hreflang="es" href="" />' +
       `<link rel="alternate" hreflang="es" href="${SITE}/es/services/" />`;
-    const findings = lintLocalizedRouteCoverage(pair(alts));
+    const findings = lintLocalizedRouteCoverage(pair(alts), SITE);
     expect(findings.map((f) => f.code)).toContain('LOCALIZED_ROUTE_WITHOUT_ALTERNATES');
     expect(findings[0].message).toContain('2 hreflang="es" entries');
   });
 
   it('rejects duplicates even when both entries are identical and correct', () => {
     const alts = goodAlts + `<link rel="alternate" hreflang="en" href="${SITE}/services/" />`;
-    expect(lintLocalizedRouteCoverage(pair(alts)).map((f) => f.code)).toContain(
+    expect(lintLocalizedRouteCoverage(pair(alts), SITE).map((f) => f.code)).toContain(
       'LOCALIZED_ROUTE_WITHOUT_ALTERNATES',
     );
   });
 
   it('does not treat x-default as a duplicate of the default locale', () => {
     const alts = goodAlts + `<link rel="alternate" hreflang="x-default" href="${SITE}/services/" />`;
-    expect(lintLocalizedRouteCoverage(pair(alts))).toEqual([]);
+    expect(lintLocalizedRouteCoverage(pair(alts), SITE)).toEqual([]);
   });
 
   it('ignores rel="alternate" links that are not hreflang, such as an RSS feed', () => {
     const alts = goodAlts + '<link rel="alternate" type="application/rss+xml" href="/rss.xml" />';
-    expect(lintLocalizedRouteCoverage(pair(alts))).toEqual([]);
+    expect(lintLocalizedRouteCoverage(pair(alts), SITE)).toEqual([]);
   });
 
   it('rejects registered routes without alternates', () => {
     expect(
-      lintLocalizedRouteCoverage([page('/blog/', { lang: 'en' }), page('/es/blog/', { lang: 'es' })]).map((f) => f.code),
+      lintLocalizedRouteCoverage(
+        [page('/blog/', { lang: 'en' }), page('/es/blog/', { lang: 'es' })],
+        SITE,
+      ).map((f) => f.code),
     ).toContain('LOCALIZED_ROUTE_WITHOUT_ALTERNATES');
   });
 
   it('ignores a route that exists in only one locale', () => {
-    expect(lintLocalizedRouteCoverage([page('/services/', { lang: 'en' })])).toEqual([]);
+    expect(lintLocalizedRouteCoverage([page('/services/', { lang: 'en' })], SITE)).toEqual([]);
   });
 
   it('ignores a noindex fallback twin, which is not a real translation', () => {
     expect(
-      lintLocalizedRouteCoverage([
-        page('/coming-soon/', { lang: 'en' }),
-        page('/es/coming-soon/', { lang: 'en', robots: 'noindex,follow' }),
-      ]),
+      lintLocalizedRouteCoverage(
+        [
+          page('/coming-soon/', { lang: 'en' }),
+          page('/es/coming-soon/', { lang: 'en', robots: 'noindex,follow' }),
+        ],
+        SITE,
+      ),
     ).toEqual([]);
   });
 });
@@ -522,7 +545,7 @@ describe('Phase A alternate set regressions', () => {
   const urls = [{ lang: 'en', href: `${SITE}/blog/` }, { lang: 'es', href: `${SITE}/es/blog/` }, { lang: 'x-default', href: `${SITE}/blog/` }];
   const pages = [page('/blog/', { lang: 'en', canonical: `${SITE}/blog/` }), page('/es/blog/', { lang: 'es', canonical: `${SITE}/es/blog/` })];
   const htmlPages = (alternates: typeof urls) => pages.map((p) => ({ ...p, html: p.html.replace('</head>', alternates.map((a) => `<link rel="alternate" hreflang="${a.lang}" href="${a.href}" />`).join('') + '</head>') }));
-  it('accepts a complete registered HTML set', () => { expect(lintLocalizedRouteCoverage(htmlPages(urls))).toEqual([]); });
+  it('accepts a complete registered HTML set', () => { expect(lintLocalizedRouteCoverage(htmlPages(urls), SITE)).toEqual([]); });
   const cases = [
     ['missing es', urls.filter((a) => a.lang !== 'es')],
     ['duplicate es valid first', [...urls, urls[1]]],
@@ -534,7 +557,7 @@ describe('Phase A alternate set regressions', () => {
     ['missing x-default', urls.filter((a) => a.lang !== 'x-default')],
     ['wrong x-default', urls.map((a) => a.lang === 'x-default' ? { ...a, href: `${SITE}/es/blog/` } : a)],
   ] as const;
-  it.each(cases)('rejects registered HTML %s', (_, alts) => { expect(lintLocalizedRouteCoverage(htmlPages([...alts])).map((f) => f.code)).toContain('LOCALIZED_ROUTE_WITHOUT_ALTERNATES'); });
+  it.each(cases)('rejects registered HTML %s', (_, alts) => { expect(lintLocalizedRouteCoverage(htmlPages([...alts]), SITE).map((f) => f.code)).toContain('LOCALIZED_ROUTE_WITHOUT_ALTERNATES'); });
   it.each(cases)('rejects registered sitemap %s', (_, alts) => { expect(lintSitemapRoutes([{ loc: `${SITE}/blog/`, alternates: [...alts] }], pages, SITE).map((f) => f.code)).toContain('SITEMAP_ALTERNATES_MISSING'); });
   it('preserves empty sitemap attributes for set validation', () => { expect(parseSitemap(`<url><loc>${SITE}/blog/</loc><xhtml:link hreflang="" href=""/></url>`)[0].alternates).toEqual([{lang: '', href: ''}]); });
 });
@@ -564,6 +587,6 @@ describe('Unicode resource membership', () => {
   it('recognizes a slashless encoded file-shaped page link as a route', () => {
     const p = page('/blog/dise\u00f1o.pdf/', {lang: 'en'});
     p.html += '<a href="/blog/dise%C3%B1o.pdf">Read</a>';
-    expect(lintLocaleRoutes([p]).map((f) => f.code)).toContain('INTERNAL_LINK_NOT_CANONICAL_FORM');
+    expect(lintLocaleRoutes([p], new Set(), SITE).map((f) => f.code)).toContain('INTERNAL_LINK_NOT_CANONICAL_FORM');
   });
 });

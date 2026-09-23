@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { siteSeo } from './defaults';
 import { absoluteUrl, canonicalUrl, routePath, routeUrl, withTrailingSlash } from './url';
+
+const SITE = siteSeo.siteUrl;
 
 describe('withTrailingSlash', () => {
   it('adds a trailing slash to a directory route', () => {
@@ -115,32 +118,32 @@ describe('absoluteUrl', () => {
 describe('canonicalUrl', () => {
   it('strips query strings', () => {
     expect(canonicalUrl(new URL('https://example.com/about?utm_source=x'))).toBe(
-      'https://example.com/about/',
+      `${SITE}/about/`,
     );
   });
 
   it('strips fragments', () => {
     expect(canonicalUrl(new URL('https://example.com/about#team'))).toBe(
-      'https://example.com/about/',
+      `${SITE}/about/`,
     );
   });
 
   it('strips both query and fragment together', () => {
     expect(canonicalUrl(new URL('https://example.com/about?utm=x#team'))).toBe(
-      'https://example.com/about/',
+      `${SITE}/about/`,
     );
   });
 
   it('normalizes a slashless path to the canonical form', () => {
-    expect(canonicalUrl(new URL('https://example.com/about'))).toBe('https://example.com/about/');
+    expect(canonicalUrl(new URL('https://example.com/about'))).toBe(`${SITE}/about/`);
   });
 
   it('preserves the root', () => {
-    expect(canonicalUrl(new URL('https://example.com/'))).toBe('https://example.com/');
+    expect(canonicalUrl(new URL('https://example.com/'))).toBe(`${SITE}/`);
   });
 
   it('preserves a locale root', () => {
-    expect(canonicalUrl(new URL('https://example.com/es/'))).toBe('https://example.com/es/');
+    expect(canonicalUrl(new URL('https://example.com/es/'))).toBe(`${SITE}/es/`);
   });
 
   it('honors an explicit site override', () => {
@@ -151,7 +154,7 @@ describe('canonicalUrl', () => {
 
   it('handles deep multi-segment paths', () => {
     expect(canonicalUrl(new URL('https://example.com/work/example-project/'))).toBe(
-      'https://example.com/work/example-project/',
+      `${SITE}/work/example-project/`,
     );
   });
 });
@@ -159,14 +162,14 @@ describe('canonicalUrl', () => {
 
 describe('Unicode public URL encoding', () => {
   it('emits the same encoded URL from raw and already encoded route paths', () => {
-    expect(routeUrl('/blog/dise\u00f1o-web/')).toBe('https://example.com/blog/dise%C3%B1o-web/');
-    expect(routeUrl('/blog/dise%C3%B1o-web/')).toBe('https://example.com/blog/dise%C3%B1o-web/');
+    expect(routeUrl('/blog/dise\u00f1o-web/')).toBe(`${SITE}/blog/dise%C3%B1o-web/`);
+    expect(routeUrl('/blog/dise%C3%B1o-web/')).toBe(`${SITE}/blog/dise%C3%B1o-web/`);
   });
 });
 
 
 describe('public encoding preserves existing escapes', () => {
   it('does not decode a reserved encoded separator or encode percent twice', () => {
-    expect(routeUrl('/blog/a%2Fb/')).toBe('https://example.com/blog/a%2Fb/');
+    expect(routeUrl('/blog/a%2Fb/')).toBe(`${SITE}/blog/a%2Fb/`);
   });
 });

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { siteSeo } from './defaults';
 import { exactPath, hreflangLinksFor, isCanonicalForm, routeKeyForUrl, sitemapPath } from './sitemap';
 import { ROUTE_KEYS, pathFor } from './locale';
 import { LOCALES } from './types';
 
-const SITE = 'https://example.com';
+const SITE = siteSeo.siteUrl;
 
 describe('sitemapPath', () => {
   it('keeps the trailing slash on a locale root', () => {
