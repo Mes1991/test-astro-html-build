@@ -187,13 +187,14 @@ Pipeline en build-time: **manifest → template JSX → Satori (SVG) → Resvg (
 
 ## 6. Variables de entorno
 
-Leídas por el código en `src/`. **No existe todavía un `.env.example` en el
-repositorio**; para trabajar en local, crea un `.env` con las que necesites:
+Leídas por el código en `src/`, tipadas en `src/env.d.ts` y documentadas en
+`.env.example` (copiarlo a `.env`). `src/env-contract.test.ts` mantiene los tres
+en paridad:
 
 - `PUBLIC_COMING_SOON` — `"true"` sirve `/coming-soon` en toda ruta (vía `middleware.ts`).
 - `PUBLIC_GA_MEASUREMENT_ID` — ID de GA4; GA solo emite en producción con esto seteado.
 - `PUBLIC_GSC_VERIFICATION` / `PUBLIC_BING_VERIFICATION` — meta de verificación (solo prod).
-- `SITE_ENV` — `production` emite el `robots.txt` completo; cualquier otro valor emite `Disallow: /`.
+- `SITE_ENV` — `production` emite el `robots.txt` completo; cualquier otro valor (incluido vacío) emite `Disallow: /`; sin definir, sigue al build (`production` en `astro build`).
 
 **Deploy:** salida estática pura → cualquier host estático (Netlify/Vercel/
 Cloudflare Pages). `public/_headers` da cache headers en formato Netlify/Cloudflare.
