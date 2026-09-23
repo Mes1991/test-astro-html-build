@@ -2,7 +2,7 @@
   "name": "test-astro-html-build",
   "description": "Agent-ready Astro static site template",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "packageManager": "bun@1.2.13",
   "engines": {
     "node": ">=22.12.0",
