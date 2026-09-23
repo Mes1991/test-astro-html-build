@@ -225,6 +225,13 @@ describe('the wizard is referenced from every file that must route to it', () =>
     const b = text.match(/\*\*B\. Site type\.\*\*(.*?)\*\*Ask B/);
     expect(b, 'Round 1 B paragraph not found').not.toBeNull();
     expect(b![1]).not.toMatch(/\b(cart|checkout|map|search|payment)\b/i);
+    // "This wording and these options" must be the pinned ones, not any feature-free rewrite.
+    expect(b![1]).toContain(
+      "\"Does the site only publish content generated when it's deployed, does it need a few server functions — forms, login, an API — or is it mainly a dynamic application with personalised data?\"",
+    );
+    expect(b![1]).toContain(
+      'Options: static; mostly static with a few dynamic functions; server-first; static frontend with an external backend; "I don\'t know"',
+    );
   });
 
   it('project-setup/SKILL.md references the wizard by its relative path', () => {
