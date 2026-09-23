@@ -32,15 +32,12 @@ esos archivos deben enlazar aquí, no repetir la lista.
     HARDCODED placeholder... To rebrand: change the word below, or replace this
     whole #introOverlay block with your own intro. See
     docs/product/rebrand-checklist.md"* — el comentario apunta a este documento.
-- **CTA `mailto:` hardcodeado**, repetido en cuatro archivos (no es
-  configuración, es texto literal):
-  - `src/components/shared/SiteHeader.astro:28` — `const ctaHref =
-    "mailto:hello@example.com"`.
-  - `src/components/home/Hero.astro:30`.
-  - `src/components/home/FAQ.astro:28`, más el propio email visible en
-    `src/i18n/en.json` y `src/i18n/es.json` → `home.faq.cardEmail`
-    (`"hello@example.com →"`).
-  - `src/pages/coming-soon.astro:45`.
+- **Email público**: vive solo en `src/lib/seo/defaults.ts` →
+  `siteSeo.organization.email`. Los CTA de `SiteHeader.astro`, `Hero.astro`,
+  `FAQ.astro` y `src/pages/coming-soon.astro:60` derivan de ese valor; el texto
+  visible de FAQ usa la interpolación `{email}` de `home.faq.cardEmail` en
+  ambos diccionarios. No dupliques una dirección literal en componentes ni
+  en i18n.
 - `src/i18n/en.json` / `src/i18n/es.json` → `footer.copyright` = `"© {year}
   Example Site"` — la marca está escrita dentro del string de i18n, no viene
   de `siteSeo.brand`.

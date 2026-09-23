@@ -4,6 +4,7 @@ import Hero3D from "../components/coming-soon/Hero3D.astro";
 import AvatarCycler from "../components/coming-soon/AvatarCycler.astro";
 import { absoluteUrl, routeUrl } from "../lib/seo/url";
 import { DEFAULT_LOCALE } from "../lib/seo/types";
+import { siteSeo } from "../lib/seo/defaults";
 
 const title = "Coming soon — a new site built with this template";
 const description =
@@ -56,7 +57,7 @@ const robots = isFallbackCopy ? "noindex,follow" : "index,follow";
           something <span class="cs-accent">great<span class="cs-dot">.</span></span><br />
           back <em>soon<span class="cs-dot">.</span></em>
         </h1>
-        <a class="cs-email" href="mailto:hello@example.com">hello@example.com</a>
+        <a class="cs-email" href={`mailto:${siteSeo.organization.email}`}>{siteSeo.organization.email}</a>
       </div>
 
       <AvatarCycler />

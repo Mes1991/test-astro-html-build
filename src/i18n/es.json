@@ -52,7 +52,7 @@
       "titleB": "frecuentes.",
       "lede": "Las preguntas que nos hacen cada semana, en una sola página.",
       "cardLabel": "¿Sigues con dudas? Pregúntanos directo",
-      "cardEmail": "hello@example.com →"
+      "cardEmail": "{email} →"
     },
     "blog": {
       "eyebrow": "— Lo último del blog",

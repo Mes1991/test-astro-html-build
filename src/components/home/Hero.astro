@@ -1,6 +1,7 @@
 ---
 import type { LocaleCode } from "../../lib/seo/types";
 import { DEFAULT_LOCALE } from "../../lib/seo/types";
+import { siteSeo } from "../../lib/seo/defaults";
 import { t } from "../../i18n/t";
 
 interface Props {
@@ -27,7 +28,7 @@ const { locale = DEFAULT_LOCALE } = Astro.props;
     </p>
     <div class="hero-cta mt-10">
       <a
-        href="mailto:hello@example.com"
+        href={`mailto:${siteSeo.organization.email}`}
         class="inline-block bg-brand-highlight text-brand-ink no-underline font-display font-extrabold px-8 py-[18px] rounded-pill text-[16px] tracking-[-0.01em] hover:bg-white transition-colors"
       >
         {t("home.hero.cta", locale)}

@@ -2,6 +2,7 @@
 import type { LocaleCode } from "../../lib/seo/types";
 import { DEFAULT_LOCALE } from "../../lib/seo/types";
 import { pathFor, routeKeyFromPath } from "../../lib/seo/locale";
+import { siteSeo } from "../../lib/seo/defaults";
 import { t } from "../../i18n/t";
 import LanguageSwitcher from "./LanguageSwitcher.astro";
 import MobileMenu from "./MobileMenu.astro";
@@ -25,7 +26,7 @@ const menu = [
   { href: onHome ? "#faq" : `${home}#faq`, label: t("header.menu.faq", locale) },
 ];
 
-const ctaHref = "mailto:hello@example.com";
+const ctaHref = `mailto:${siteSeo.organization.email}`;
 const ctaLabel = t("header.cta", locale);
 ---
 
