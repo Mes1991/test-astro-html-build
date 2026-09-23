@@ -143,10 +143,11 @@ authority.
 few server functions — forms, login, an API — or is it mainly a dynamic application with
 personalised data?" Options: static; mostly static with a few dynamic functions; server-first;
 static frontend with an external backend; "I don't know" (the agent recommends once it has learned
-the needed features). See §8. **Ask B with this wording and these options only; name no feature
-detected in the design** — no cart, checkout, form, map, sign-in or search appears in the question,
-its options or its examples. Those are Round 2 topics, and B's answer is revisited after Round 2 if
-a feature changes it.
+the needed features). See §8. **Ask B with this wording and these options only.** Its generic
+examples (forms, login, an API) stay as written; add no feature detected in the design — no cart,
+checkout, map, search or specific form from the design appears in the question, its options or
+its examples. Those are Round 2 topics; when a Round 2 answer changes the site type, the contract
+records the adjusted B without asking an extra round.
 
 **C. Git.** "How should I handle Git during the build?" Options: branch or worktree with local
 commits, no push; branch/worktree with commits and push to an authorized remote; no commits, leave

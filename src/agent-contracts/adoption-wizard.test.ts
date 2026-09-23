@@ -213,11 +213,18 @@ describe('the wizard is referenced from every file that must route to it', () =>
   });
 
   // Clean-agent runs folded a detected cart into Round 1 B ("does the cart need to work?"),
-  // which pre-empts the Round 2 feature decision. B's wording is pinned feature-free.
+  // which pre-empts the Round 2 feature decision. B's wording is pinned feature-free. This
+  // pins the contract text only; whether an agent obeys it is measured behaviourally (S1).
   it('adoption-wizard.md keeps Round 1 B free of detected features', () => {
     const text = wizard.replace(/\s+/g, ' ');
-    expect(text).toContain('Ask B with this wording and these options only; name no feature detected in the design');
+    expect(text).toContain('Ask B with this wording and these options only.');
+    expect(text).toContain('add no feature detected in the design');
     expect(tableRow(wizard, 'S1')![2]).toContain('names no detected feature in any of them');
+
+    // The canonical question and options themselves must not name a Round 2 feature.
+    const b = text.match(/\*\*B\. Site type\.\*\*(.*?)\*\*Ask B/);
+    expect(b, 'Round 1 B paragraph not found').not.toBeNull();
+    expect(b![1]).not.toMatch(/\b(cart|checkout|map|search|payment)\b/i);
   });
 
   it('project-setup/SKILL.md references the wizard by its relative path', () => {
@@ -275,28 +282,36 @@ describe('skill descriptions route a site build to the adoption gate first', () 
 describe('adoption-wizard.md §7 inventory matches the repository', () => {
   const section = wizard.match(/^## §7[^\n]*\n([\s\S]*?)^## §8/m);
   const text = section ? section[1] : '';
-  const hasSpanish = (LOCALES as readonly string[]).includes('es');
+  const locales = LOCALES as readonly string[];
+  // The es→en fallback only exists while English is the default and Spanish is still served.
+  const hasEsToEnFallback = locales.includes('es') && DEFAULT_LOCALE === 'en';
 
   const paths = [...new Set([...text.matchAll(/`((?:src\/|astro\.config)[^`]*)`/g)].map((m) => m[1]))];
 
   /**
-   * The locale code a §7 entry is specific to, if any: a path segment `/xx/`
-   * (e.g. `src/pages/es/**`) or a bare dictionary file `xx.json`, for a
-   * two-letter code that isn't the default locale. Such an entry is only
-   * expected to exist while that code is still served.
+   * Codes that are locales: the ones served now plus every dictionary §7 names. A
+   * two-letter path segment outside this set (`src/pages/og/`) is an ordinary directory,
+   * not a locale, and is never skipped.
    */
-  function localeSpecificCode(entry: string): string | null {
-    const segment = entry.match(/\/([a-z]{2})\//);
-    if (segment && segment[1] !== DEFAULT_LOCALE) return segment[1];
-    const file = entry.match(/(?:^|\/)([a-z]{2})\.json$/);
-    if (file && file[1] !== DEFAULT_LOCALE) return file[1];
-    return null;
-  }
+  const localeCodes = new Set([
+    ...locales,
+    ...paths.flatMap((p) => p.match(/^src\/i18n\/([a-z]{2})\.json$/)?.slice(1) ?? []),
+  ]);
 
-  /** Whether a §7 entry is expected to exist given the repository's current `LOCALES`. */
+  /**
+   * Whether a §7 entry is expected to exist given the repository's current `LOCALES`.
+   * A dictionary `src/i18n/xx.json` exists while `xx` is served. A locale segment `/xx/`
+   * (e.g. `src/pages/es/**`) exists only while `xx` is served AND is not the default —
+   * the default locale is unprefixed (`prefixDefaultLocale: false`), so a Spanish-only
+   * site serves Spanish from the root and has no `src/pages/es/`.
+   */
   function isEntryApplicable(entry: string): boolean {
-    const code = localeSpecificCode(entry);
-    if (code) return (LOCALES as readonly string[]).includes(code);
+    const dictionary = entry.match(/^src\/i18n\/([a-z]{2})\.json$/);
+    if (dictionary) return locales.includes(dictionary[1]);
+    const segment = entry.match(/\/([a-z]{2})\//);
+    if (segment && localeCodes.has(segment[1])) {
+      return locales.includes(segment[1]) && segment[1] !== DEFAULT_LOCALE;
+    }
     // The switcher only exists to switch between locales.
     if (entry.endsWith('LanguageSwitcher.astro')) return LOCALES.length > 1;
     return true;
@@ -368,7 +383,7 @@ describe('adoption-wizard.md §7 inventory matches the repository', () => {
     }
   });
 
-  it.runIf(hasSpanish)('the es→en fallback §7 warns about is still configured', () => {
+  it.runIf(hasEsToEnFallback)('the es→en fallback §7 warns about is still configured', () => {
     expect(text).toContain("fallback: { es: 'en' }");
     expect(read('astro.config.mjs')).toContain("fallback: { es: 'en' }");
   });
