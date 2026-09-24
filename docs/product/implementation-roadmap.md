@@ -243,6 +243,9 @@ nothing unexplained.
 - Pre-1.0 single-maintainer dependencies re-evaluated.
 - Per-provider deployment recipes, including the host-level redirect
   `trailingSlash: 'always'` cannot perform for prerendered pages.
+- Template subpath deployment contract: routes, SEO, OG images, hreflang,
+  sitemap, assets and internal links respect Astro `config.base`, proven under
+  both `trailingSlash` policies.
 
 **Acceptance**
 
@@ -252,10 +255,17 @@ supply-chain changes human-reviewed. Optional workflows live outside
 
 **Depends on.** B, which decides which workflows exist at all.
 
+**The template currently supports deployment at the site root only, not under a
+subpath.** A non-root `base` is not yet a supported configuration.
+
 **Status at `16d276a`: Open — not audited row by row.** Two rows are known Not
 built: actions use mutable tags (`actions/checkout@v4`, `oven-sh/setup-bun@v2`,
 `marocchino/sticky-pull-request-comment@v2`), and `public/_headers` sets only
 `Cache-Control`. The remaining rows need an audit before they carry a status.
+
+| Deliverable | Status | Evidence | Missing proof |
+|---|---|---|---|
+| Template subpath deployment contract | Not built | Reproduced 2026-09-24 in a disposable clone of the template (PF-B run 2 state, only `astro.config.mjs` changed, then restored): `base: '/preview'` makes `bun run build` exit 1 under both `trailingSlash: 'never'` and `'always'`. `seo-lint` reports `OG_IMAGE_404` (e.g. `og:image` `https://example.com/og/preview/blog.png`, and `https://example.com/preview/_astro/example-post.<hash>.png` missing in `dist/`, both modes); `INTERNAL_LINK_NOT_CANONICAL_FORM` under `'never'` (e.g. internal links to `/es/preview/blog`, `/preview/blog`, `/preview/404`, `/es/preview/404` — locale prefix and base joined in the wrong order, wrong slash form); `LOCALIZED_ROUTE_WITHOUT_ALTERNATES` under `'always'` for `/`, `/es/`, `/blog/`, `/es/blog/` (no hreflang en/es/x-default at all). The cause is the template, not any opt-in extension — no extension involvement is needed to reproduce it. | Goal: routes, SEO, OG images, hreflang, sitemap, assets and internal links respect Astro `config.base`, proven under both `trailingSlash` policies. Nothing yet fixes any of the three reported codes above. |
 
 ### G — Adoption contract
 
