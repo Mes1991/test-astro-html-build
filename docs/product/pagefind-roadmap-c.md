@@ -100,7 +100,7 @@ Not built, with its required result as the missing proof.
 | Exclude an indexable page from search | It remains in robots/sitemap per its own contract, but does not appear in Pagefind. |
 | Delete a post and rebuild | Its URL and unique term disappear; no stale shards remain. |
 | Add `postbuild`, an integration, or a hook that re-invokes Pagefind from `bun run build` | The production-graph probe and the process counter both fail; `search:preview` remains a valid alternative entrypoint. |
-| Build at root; then with `base: '/preview'` + `trailingSlash: 'never'`; then with `trailingSlash: 'always'` | Root required and verified; subpath NOT_SUPPORTED until phase F, "Template subpath deployment contract," is Implemented. Once supported: exercises `BASE_URL` without and with a trailing slash; assets and links join correctly, with no `/previewpagefind/`, no double slashes, and no escape to `/`. |
+| Build at root `/` (subpath matrix NOT_SUPPORTED until phase F) | Root required and verified; subpath NOT_SUPPORTED until phase F, "Template subpath deployment contract," is Implemented. Once supported: exercises `BASE_URL` without and with a trailing slash; assets and links join correctly, with no `/previewpagefind/`, no double slashes, and no escape to `/`. |
 | Put a unique term only in the header/footer | It does not appear in results or snippets. |
 | Remove the title or any metadata declared mandatory | The result-metadata check fails. |
 | Search `diseño`, `café`, and `ñ`/Unicode | Returns the correct pages without mojibake. |
@@ -146,7 +146,7 @@ Findings outside PF-C's scope go to the human, not auto-fixed.
 | PATH shim / process-counter execution-once proof | Not built | — | Shim output showing exactly one Pagefind process during `bun run build`, restored afterward. |
 | `search:preview` alternative-entrypoint check | Not built | — | Confirmation it calls Pagefind once without becoming a second production-build owner. |
 | Browser tests (keyboard, focus, zero-results announcement, EN/ES, no-JS fallback) | Not built | — | Recorded browser-test run covering all properties, including UI-specific focus proof: if a modal was chosen, a focus trap while open and focus returned to the trigger on close (Escape, backdrop, close button); if inline, focus returned to the search field after selecting or closing results; visible focus while navigating results in either case. |
-| Base-path matrix (`/`, `/preview` never, `/preview` always) | Not built | — | Root required; one recorded build with verification evidence at root `/`. The `/preview` sub-cases are subpath NOT_SUPPORTED until `implementation-roadmap.md` phase F, "Template subpath deployment contract," is Implemented — never scored as PASS before then. |
+| Root deployment verified (subpath matrix NOT_SUPPORTED until phase F) | Not built | — | Root required; one recorded build with verification evidence at root `/`. The `/preview` sub-cases are subpath NOT_SUPPORTED until `implementation-roadmap.md` phase F, "Template subpath deployment contract," is Implemented — never scored as PASS before then. |
 | Repository gates green | Not built | — | `bun run test`, `bun run check`, `bun run build` (seo-lint clean), `git diff --check` output, no staged residue. |
 | Remove `data-pagefind-body` from an included post | Not built | The coverage check names the missing URL. | Mutation run and restore recorded. |
 | Include a page declared out of scope | Not built | Fails, naming the unexpected URL. | Mutation run and restore recorded. |
@@ -155,7 +155,7 @@ Findings outside PF-C's scope go to the human, not auto-fixed.
 | Exclude an indexable page from search | Not built | It remains in robots/sitemap per its own contract, but does not appear in Pagefind. | Mutation run and restore recorded. |
 | Delete a post and rebuild | Not built | Its URL and unique term disappear; no stale shards remain. | Mutation run and restore recorded. |
 | Add `postbuild`/integration/hook re-invoking Pagefind | Not built | The production-graph probe and the process counter both fail; `search:preview` remains valid. | Mutation run and restore recorded. |
-| Build at root, then `/preview` never, then `/preview` always | Not built | Root required and verified; `BASE_URL` exercised without and with a trailing slash; no `/previewpagefind/`, no double slashes, no escape to `/`. | Mutation run and restore recorded at root `/`. The `/preview` never/always sub-cases are subpath NOT_SUPPORTED until `implementation-roadmap.md` phase F, "Template subpath deployment contract," is Implemented — never scored as PASS before then. |
+| Build at root `/` (subpath matrix NOT_SUPPORTED until phase F) | Not built | — | Mutation run and restore recorded at root `/`. The `/preview` never/always sub-cases are subpath NOT_SUPPORTED until `implementation-roadmap.md` phase F, "Template subpath deployment contract," is Implemented — never scored as PASS before then. |
 | Unique term only in header/footer | Not built | Does not appear in results or snippets. | Mutation run and restore recorded. |
 | Remove mandatory metadata | Not built | The result-metadata check fails. | Mutation run and restore recorded. |
 | Search `diseño`, `café`, `ñ`/Unicode | Not built | Returns correct pages without mojibake. | Mutation run and restore recorded. |
