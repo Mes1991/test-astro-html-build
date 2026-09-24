@@ -11,6 +11,9 @@ description: "Use when adding, changing, removing or debugging internal full-tex
 >
 > **Activation gate.** The existence of a blog, or of a search-looking control, is not
 > authorization to install anything. Confirm the contract below before any write.
+> Adding search to a site built on this template is an adoption request under `CLAUDE.md` rule 0:
+> open `skills/site-build/references/adoption-wizard.md` first, and delegate to no subagent — not
+> even read-only reconnaissance — until the contract is confirmed; read what you need directly.
 
 ## 1. Confirm the contract
 
