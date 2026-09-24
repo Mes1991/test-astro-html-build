@@ -602,6 +602,44 @@ does not address (see "Findings for the skill" below).
   skill (§5) now states root-only support and marks the `/preview` matrix NOT_SUPPORTED until that
   deliverable is Implemented, rather than treating this as a skill defect fixed here.
 
+### Run 3 (paused)
+
+Paused by the human on 2026-09-24 after turn 3, before the Round 2 answers; to resume in a later
+session. No verdict yet — this is a partial record, not a PASS or FAIL.
+
+- **Commit tested** — skill state `815f548`; the disposable clone removes
+  `docs/product/pagefind-roadmap-*.md` and `docs/product/pf-b-runs/run-{1,2}-transcript.md`
+  (clone commit `03e6e3a`). The only remaining reference to the simulation in the clone is the
+  phase F evidence row in `docs/product/implementation-roadmap.md` ("PF-B run 2 state"), which
+  states no conclusion about the skill.
+- **Agent / runtime** — as runs 1–2; session `6501318b-fdf0-48a5-881e-d6eaafc251aa`.
+- **Transcript extract and fingerprints** — `docs/product/pf-b-runs/run-3-transcript.md`; raw
+  stream-json kept outside Git:
+  - turn 1 — 156889 bytes, SHA-256
+    `947a154de2ad33852ee7606d9b84655f9a64e1f8ec10399ae14466b1351a6ec3`;
+  - turn 2 — 15386 bytes, SHA-256
+    `bbdd0de3a40175a98403df6e7d27b1e744c0b32046861e38dc49b1a3177fe4a3`;
+  - turn 3 — 26128 bytes, SHA-256
+    `241d7dfff30a3203a40bf93f9a19b5ae18a7b9b622e599379cf75875c1194387`.
+- **Observed so far** (clone working tree clean after every turn; no writes, installs or
+  delegation):
+  - Turn 1 read `static-site-search` and the adoption wizard, recognized `CLAUDE.md` rule 0,
+    delegated nothing, and ran wizard Round 1 (language, site type, Git, scope) with a
+    recommendation per question, announcing the seven-question skill contract as Round 2.
+  - Turn 2: the human answered "monolingual EN" together with "search only". The agent flagged
+    the conflict — a monolingual conversion is an untested site-wide migration (phase D) — and
+    asked which was intended instead of acting on either.
+  - Turn 3: the human kept the bilingual site with one search surface per locale. The agent asked
+    all seven contract questions explicitly, each with a reasoned recommendation, including Q7
+    and the sub-results and image decisions.
+- **Findings for the skill** (not verdict inputs):
+  - The seven questions arrived in one message, while the adoption wizard caps a round at five
+    questions and the skill says to ask each "as its own prompt"; the two rules need reconciling.
+  - Questions 1 and 2 were restated with "¿Confirmas?" and, in the same message, declared already
+    confirmed; the skill requires the human's confirmation of a restated answer.
+- **Next** — resume the session with the Round 2 answers, then score the run against "Run 3
+  acceptance".
+
 ## PF-A + PF-B together close S1
 
 Brief §11 lists a clean-agent simulation as one of S1's closing criteria. PF-A's acceptance
@@ -650,8 +688,8 @@ blocker. Findings outside PF-B's scope go to the human, not auto-fixed.
 | Run marked PASS or FAIL (run 2) | Implemented | Run 2: FAIL against "Run 2 acceptance" — three of six criteria unmet or partially unmet (question 7 not separately asked; Component UI substituted without asking; only the draft mutation performed, and the `data-pagefind-body`-removal mutation this verification ran independently does not fail for the intended reason; no real-browser verification pass) — "Run records → Run 2" above | — |
 | Codex adversarial review of the run | Implemented | Runs 1–2 records and the skill revisions reviewed across `6649ab9..796a2cd`: `NEEDS_ATTENTION` rounds fixed in `f6e1ffc`, `0fcc95d`, `9ca0617`, `026b511`, `4059657`, `796a2cd`; final targeted check `PASS`. Applies to the recorded runs; a future PASS run needs its own review | — |
 | Global roadmap guard review | Implemented | Every review confirmed `git diff --name-only 6649ab9..796a2cd -- package.json bun.lock astro.config.mjs src` empty, i18n parity 38/38 keys, locale sync and route map intact; orchestrator gates at `85ad52f`: `bun run test` 506/506, `bun run check` 0 errors, `bun run build` with seo-lint clean (10 pages) | — |
-| Disposable copy prepared from a PF-A-complete state (run 3, PF-B-fixed skill) | Not built | — | Run 3 has not been executed; requires a disposable copy built from the PF-B skill-fix state. |
-| Simulation run with the verbatim test prompt (run 3) | Not built | — | Run 3 has not been executed. |
+| Disposable copy prepared from a PF-A-complete state (run 3, PF-B-fixed skill) | Implemented | Clone of `815f548` with PF docs and run 1–2 transcripts removed (`03e6e3a`), no remote; see "Run 3 (paused)" | — |
+| Simulation run with the verbatim test prompt (run 3) | Not built | — | Started with the verbatim prompt and paused after turn 3, before the Round 2 answers; resume and complete. |
 | Pre-write behavior observed and scored (run 3) | Not built | — | Run 3 has not been executed; must satisfy "Run 3 acceptance". |
 | Post-authorization result observed and scored (run 3) | Not built | — | Run 3 has not been executed; must satisfy "Run 3 acceptance". |
 | Auditable extract recorded per "Record format for the run" (run 3) | Not built | — | Run 3 has not been executed; the record must meet the revised format, including the contract summary and explicit authorization. |
