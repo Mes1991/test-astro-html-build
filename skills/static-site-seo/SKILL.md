@@ -74,7 +74,8 @@ output as a whole) and `routes.ts` (routes and the generated sitemap).
 - the generated sitemap, from `routes.ts`: `SITEMAP_URL_NOT_CANONICAL_FORM`,
   `SITEMAP_NON_HTML_ENTRY`, `SITEMAP_ALTERNATES_MISSING`, `SITEMAP_LOC_DANGLING`,
   `SITEMAP_LOC_NOT_CANONICAL`, `SITEMAP_ALTERNATE_DANGLING`,
-  `SITEMAP_PAGE_MISSING`, `SITEMAP_OPTED_OUT_PAGE`, `SITEMAP_NOINDEX_PAGE`
+  `SITEMAP_PAGE_MISSING`, `SITEMAP_OPTED_OUT_PAGE`, `SITEMAP_NOINDEX_PAGE`,
+  `SITEMAP_MARKER_INVALID`
 <!-- /seo-lint-codes:fail -->
 
 **`warn` — printed to the build log only; the build still succeeds:**
@@ -125,7 +126,14 @@ Three things that are still easy to get wrong, even with the build doing the reg
   `sitemap: false` with it. Static resource routes remain excluded by `sitemap()`'s `filter`, while
   holding pages emit the same HTML exclusion marker. The route gates reject an unmarked indexable
   page missing from the sitemap (`SITEMAP_PAGE_MISSING`), a marked page that is still listed
-  (`SITEMAP_OPTED_OUT_PAGE`), or a listed noindex page (`SITEMAP_NOINDEX_PAGE`).
+  (`SITEMAP_OPTED_OUT_PAGE`), a listed noindex page (`SITEMAP_NOINDEX_PAGE`), or a `meta[name="sitemap"]`
+  declaration that is not the exact `<meta name="sitemap" content="exclude">` form inside `<head>`
+  (`SITEMAP_MARKER_INVALID`) — a wrong case, stray whitespace, a duplicate, a contradiction with
+  another such declaration, or one placed in `<body>` all fail this way instead of silently acting as
+  either present or absent. `meta[name="sitemap"]` is a private, template-internal signal: search
+  engines assign it no meaning of their own. It exists only so `sitemap-opt-out` and `seo-lint` agree
+  on which pages are intentionally left out of the sitemap — robots/`noindex` remain the only real
+  indexing directive.
 - **A locale added to `i18n.locales` in `astro.config.mjs` with no matching entry in
   `src/lib/seo/locale.ts`** no longer builds clean. Astro's `fallback` still emits the new locale's
   pages, and `lintLocalizedRouteCoverage` (`routes.ts`) then sees a route emitted in more than one
@@ -179,10 +187,13 @@ One of those it still does not do. **`robots.txt` is never read** — nothing ch
 `Sitemap:` line or for crawler access, so that one stays read-and-apply, using
 `references/seo-site.md` §2 as the checklist. Sitemap discovery is checked in both directions:
 `SITEMAP_PAGE_MISSING` catches an unmarked indexable emitted page that was dropped,
-`SITEMAP_OPTED_OUT_PAGE` catches a page with the sitemap-exclusion marker that was included, and
-`SITEMAP_NOINDEX_PAGE` catches a noindex page that was included. For blog content, `sitemap: false`
-controls only sitemap omission and `noindex` controls only robots; using `noindex: true` requires an
-explicit `sitemap: false` or content validation fails.
+`SITEMAP_OPTED_OUT_PAGE` catches a page with a valid sitemap-exclusion marker that was included, and
+`SITEMAP_NOINDEX_PAGE` catches a noindex page that was included. `SITEMAP_MARKER_INVALID` catches a
+`meta[name="sitemap"]` declaration that does not take the exact valid form — an invalid marker never
+activates exclusion, so it never suppresses `SITEMAP_PAGE_MISSING` by accident; it is reported on its
+own terms instead. For blog content, `sitemap: false` controls only sitemap omission and `noindex`
+controls only robots; using `noindex: true` requires an explicit `sitemap: false` or content
+validation fails.
 
 **It says nothing about most of what the contracts cover.** It cannot see Core Web Vitals, judge
 whether a passage is quotable, validate a schema type's properties beyond parsing as JSON, or know

@@ -14,6 +14,7 @@ import {
   lintSitemapRoutes,
   parseSitemap,
   routeFromDistFile,
+  sitemapMarkerState,
   type GeneratedPage,
 } from './routes';
 
@@ -92,8 +93,7 @@ describe('page attribute readers', () => {
   });
 
   it('extracts sitemap exclusions across attribute order, case and quoting variants', () => {
-    expect(isSitemapExcluded("<head><META CONTENT='EXCLUDE' NAME=SITEMAP></head>")).toBe(true);
-    expect(isSitemapExcluded('<head><meta content=exclude name="sitemap"></head>')).toBe(true);
+    expect(isSitemapExcluded('<head><meta name="sitemap" content="exclude"></head>')).toBe(true);
     expect(isSitemapExcluded('<head><meta name="sitemap" content="include"></head>')).toBe(false);
   });
 
@@ -104,6 +104,50 @@ describe('page attribute readers', () => {
           '<script>const example = `<meta name="sitemap" content="exclude">`;</script></head>',
       ),
     ).toBe(false);
+  });
+});
+
+describe('sitemapMarkerState', () => {
+  it.each([
+    ['canonical form', '<head><meta name="sitemap" content="exclude"></head>'],
+    ['uppercase attribute names', '<head><META NAME="sitemap" CONTENT="exclude"></head>'],
+    ['reversed attribute order', '<head><meta content="exclude" name="sitemap"></head>'],
+    ['single quotes', "<head><meta name='sitemap' content='exclude'></head>"],
+    ['an entity that decodes to exactly exclude', '<head><meta name="sitemap" content="&#101;xclude"></head>'],
+  ])('accepts %s as valid', (_case, html) => {
+    expect(sitemapMarkerState(`<html>${html}<body></body></html>`)).toBe('valid');
+  });
+
+  it.each([
+    ['wrong case in content', '<head><meta name="sitemap" content="Exclude"></head>'],
+    ['trailing whitespace in content', '<head><meta name="sitemap" content="exclude "></head>'],
+    ['a near-miss value', '<head><meta name="sitemap" content="excluded"></head>'],
+    ['an unrelated value', '<head><meta name="sitemap" content="noexclude"></head>'],
+    ['an empty content', '<head><meta name="sitemap" content=""></head>'],
+    ['a missing content', '<head><meta name="sitemap"></head>'],
+    ['wrong case in name', '<head><meta name="Sitemap" content="exclude"></head>'],
+    [
+      'two identical markers',
+      '<head><meta name="sitemap" content="exclude"><meta name="sitemap" content="exclude"></head>',
+    ],
+    [
+      'a contradiction between exclude and include',
+      '<head><meta name="sitemap" content="exclude"><meta name="sitemap" content="include"></head>',
+    ],
+    [
+      'a marker placed in the body',
+      '<head></head><body><meta name="sitemap" content="exclude"></body>',
+    ],
+  ])('rejects %s as invalid', (_case, html) => {
+    expect(sitemapMarkerState(`<html>${html}</html>`)).toBe('invalid');
+  });
+
+  it.each([
+    ['no meta at all', '<head></head>'],
+    ['a marker only inside a comment', '<head><!-- <meta name="sitemap" content="exclude"> --></head>'],
+    ['a marker only inside a script', '<head><script>const html = \'<meta name="sitemap" content="exclude">\';</script></head>'],
+  ])('reports %s as none', (_case, html) => {
+    expect(sitemapMarkerState(`<html>${html}</html>`)).toBe('none');
   });
 });
 
@@ -557,6 +601,50 @@ describe('lintSitemapRoutes', () => {
     }));
   });
 
+  it('flags an invalid marker without downgrading it to page-missing', () => {
+    const html =
+      '<html lang="en"><head><meta name="robots" content="index, follow">' +
+      '<meta name="sitemap" content="Exclude"></head><body></body></html>';
+    const findings = lintSitemapDiscovery([], [{ route: '/invalid-marker/', html }], SITE);
+    expect(findings).toEqual([
+      expect.objectContaining({ route: '/invalid-marker/', code: 'SITEMAP_MARKER_INVALID' }),
+    ]);
+  });
+
+  it('flags an invalid marker on a listed noindex page as exactly two findings', () => {
+    const html =
+      '<html lang="en"><head><meta name="robots" content="noindex, follow">' +
+      '<meta name="sitemap" content="exclude"><meta name="sitemap" content="include">' +
+      '</head><body></body></html>';
+    const findings = lintSitemapDiscovery(
+      [{ loc: `${SITE}/contradiction/`, alternates: [] }],
+      [{ route: '/contradiction/', html }],
+      SITE,
+    );
+    expect(findings.map((f) => f.code).sort()).toEqual([
+      'SITEMAP_MARKER_INVALID',
+      'SITEMAP_NOINDEX_PAGE',
+    ]);
+  });
+
+  it('flags both opt-out and noindex findings for a valid marker on a listed noindex page', () => {
+    const optedOutNoindex = page('/double-violation/', {
+      lang: 'en',
+      canonical: `${SITE}/double-violation/`,
+      robots: 'noindex, nofollow',
+      sitemapExcluded: true,
+    });
+    const findings = lintSitemapDiscovery(
+      [{ loc: `${SITE}/double-violation/`, alternates: [] }],
+      [optedOutNoindex],
+      SITE,
+    );
+    expect(findings.map((f) => f.code).sort()).toEqual([
+      'SITEMAP_NOINDEX_PAGE',
+      'SITEMAP_OPTED_OUT_PAGE',
+    ]);
+  });
+
   it('flags a known static route published without alternates — the A1 defect', () => {
     const entries = [
       { loc: `${SITE}/`, alternates },
@@ -721,6 +809,39 @@ describe('lintSitemapRoutes', () => {
     ];
     const findings = lintSitemapRoutes(entries, pages, SITE);
     expect(findings.map((f) => f.code)).toContain('SITEMAP_ALTERNATE_DANGLING');
+  });
+});
+
+describe('lintSitemapDiscovery — representative routes', () => {
+  it.each([
+    ['/', { lang: 'en' }],
+    ['/es/', { lang: 'es' }],
+  ])('a normal static page %s produces no findings listed, and SITEMAP_PAGE_MISSING absent', (route, opts) => {
+    const p = page(route, { ...opts, robots: 'index, follow' });
+    expect(lintSitemapDiscovery([{ loc: `${SITE}${route}`, alternates: [] }], [p], SITE)).toEqual([]);
+    expect(lintSitemapDiscovery([], [p], SITE).map((f) => f.code)).toEqual(['SITEMAP_PAGE_MISSING']);
+  });
+
+  it.each([
+    ['/blog/example-post/', { lang: 'en' }],
+    ['/es/blog/example-post/', { lang: 'es' }],
+  ])('a dynamic blog-post-shaped route %s with a valid marker produces no findings absent', (route, opts) => {
+    const p = page(route, { ...opts, robots: 'index, follow', sitemapExcluded: true });
+    expect(lintSitemapDiscovery([], [p], SITE)).toEqual([]);
+  });
+
+  it.each([
+    // coming-soon.astro hardcodes lang="en" regardless of the locale prefix.
+    ['/coming-soon/', { lang: 'en' }],
+    ['/es/coming-soon/', { lang: 'en' }],
+  ])('a coming-soon-shaped route %s: no findings absent, both findings listed', (route, opts) => {
+    const p = page(route, { ...opts, robots: 'noindex,follow', sitemapExcluded: true });
+    expect(lintSitemapDiscovery([], [p], SITE)).toEqual([]);
+    const findings = lintSitemapDiscovery([{ loc: `${SITE}${route}`, alternates: [] }], [p], SITE);
+    expect(findings.map((f) => f.code).sort()).toEqual([
+      'SITEMAP_NOINDEX_PAGE',
+      'SITEMAP_OPTED_OUT_PAGE',
+    ]);
   });
 });
 

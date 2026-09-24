@@ -129,7 +129,7 @@ diagnostic. Key parity proven by deleting a key and watching the suite fail.
 | Language match by primary subtag (content, `inLanguage`) | Implemented | `langMatches` at `src/integrations/seo-lint/lint.ts:176-185`, used at `routes.ts:266-285`; test `lint.test.ts` (es vs es-MX) | producer mutation not recorded |
 | Regional variants in hreflang alternate coverage | Not built | `routes.ts:153-165` compares `hreflang` by exact string against `LOCALES` | — |
 | Asset classification by emitted inventory | Implemented | `walkAssets` in `src/integrations/seo-lint/index.ts:95-111`, consumed at `routes.ts:366-400`; tests `routes.test.ts:429-493` (file-shaped routes, dotted slugs, Unicode names) | extensionless-file producer mutation not recorded |
-| Sitemap discovery opt-out | Implemented | Independent `sitemap` / `noindex` content controls; explicit HTML exclusion marker; marker-only `sitemap-opt-out` postprocessor; `SITEMAP_PAGE_MISSING` / `SITEMAP_OPTED_OUT_PAGE` / `SITEMAP_NOINDEX_PAGE` gates and tests | Mutations cover marker detection, accidental sitemap omission, postprocessor removal, listed noindex pages, and invalid content combinations |
+| Sitemap discovery opt-out | Implemented | Independent `sitemap` / `noindex` content controls; explicit HTML exclusion marker under a strict three-state contract (`sitemapMarkerState`: `none` / `valid` / `invalid`); marker-only `sitemap-opt-out` postprocessor, which only ever acts on `valid`; `SITEMAP_PAGE_MISSING` / `SITEMAP_OPTED_OUT_PAGE` / `SITEMAP_NOINDEX_PAGE` / `SITEMAP_MARKER_INVALID` gates and tests | Mutations cover marker detection, accidental sitemap omission, postprocessor removal, listed noindex pages, and invalid content combinations |
 | Router-safe slug rule | Implemented | `src/lib/content/slug.ts`, wired by `src/content.config.ts`; schema tests preserve dotted and Unicode slugs | Mutation: `Bad Slug/x` failed content sync with the named Router-safe slug rule |
 | Initialiser value-flow provenance | Implemented | `documented-codes.test.ts` follows const/let initialisers, simple aliases, and named object-literal properties; virtual graph tests cover each boundary | Mutation fixture produced `ALIASED_UNDOCUMENTED_CODE`; both documentation parity assertions named it |
 | i18n key parity test | Implemented | `src/i18n/parity.test.ts`; commits `21ef614`, `c84ed06` | — (mutations recorded: deleting `nav.home` → named failure; orphan `fr.json`; empty `"nav": {}`) |
@@ -138,6 +138,15 @@ diagnostic. Key parity proven by deleting a key and watching the suite fail.
 indexability are independent controls. `sitemap: false` excludes a page without
 changing robots, while `noindex: true` controls robots and requires an explicit
 `sitemap: false`; otherwise content validation fails the build.
+
+**Decided 2026-09-23 — strict sitemap marker contract.** The `meta[name="sitemap"]`
+HTML marker only activates exclusion in exactly one form: a single
+`<meta name="sitemap" content="exclude">` inside `<head>`, matched case- and
+whitespace-exactly after entity decoding. Any other shape a page can emit —
+wrong case, trailing whitespace, a near-miss value, a duplicate, a contradiction
+with another such declaration, or one placed outside `<head>` — is `invalid` and
+fails the build with `SITEMAP_MARKER_INVALID` rather than silently acting as
+either present or absent.
 
 ### D — Content and languages
 

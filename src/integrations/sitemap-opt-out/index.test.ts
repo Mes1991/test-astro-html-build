@@ -69,4 +69,45 @@ describe('sitemap page-level opt-out', () => {
       }),
     ]);
   });
+
+  it('never removes a page whose marker is invalid, whatever the shape of the mistake', async () => {
+    const dist = await mkdtemp(path.join(tmpdir(), 'sitemap-opt-out-invalid-'));
+    await mkdir(path.join(dist, 'wrong-case'), { recursive: true });
+    await mkdir(path.join(dist, 'duplicate'), { recursive: true });
+
+    const wrongCaseHtml =
+      '<html><head><meta name="robots" content="index, follow">' +
+      '<meta name="sitemap" content="Exclude"></head></html>';
+    const duplicateHtml =
+      '<html><head><meta name="robots" content="index, follow">' +
+      '<meta name="sitemap" content="exclude"><meta name="sitemap" content="exclude">' +
+      '</head></html>';
+    await writeFile(path.join(dist, 'wrong-case', 'index.html'), wrongCaseHtml);
+    await writeFile(path.join(dist, 'duplicate', 'index.html'), duplicateHtml);
+    await writeFile(
+      path.join(dist, 'sitemap-0.xml'),
+      '<urlset>' +
+        `<url><loc>${SITE}/wrong-case/</loc></url>` +
+        `<url><loc>${SITE}/duplicate/</loc></url>` +
+        '</urlset>',
+    );
+
+    const integration = sitemapOptOut();
+    await (integration.hooks['astro:config:done'] as Function)({ config: { site: SITE } });
+    await (integration.hooks['astro:build:done'] as Function)({
+      dir: pathToFileURL(dist + path.sep),
+    });
+
+    const xml = await readFile(path.join(dist, 'sitemap-0.xml'), 'utf8');
+    expect(xml).toContain(`${SITE}/wrong-case/`);
+    expect(xml).toContain(`${SITE}/duplicate/`);
+
+    const pages: GeneratedPage[] = [
+      { route: '/wrong-case/', html: wrongCaseHtml },
+      { route: '/duplicate/', html: duplicateHtml },
+    ];
+    expect(
+      lintSitemapDiscovery(parseSitemap(xml), pages, SITE).map((f) => f.code),
+    ).toEqual(['SITEMAP_MARKER_INVALID', 'SITEMAP_MARKER_INVALID']);
+  });
 });

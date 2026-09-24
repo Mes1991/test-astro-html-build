@@ -120,6 +120,16 @@ esos archivos deben enlazar aquí, no repetir la lista.
   robots; declara `noindex: true` solo para controlar robots. El schema exige
   combinar `noindex: true` con un `sitemap: false` explícito. No mantengas una
   segunda lista de slugs en `astro.config.mjs`.
+- La marca `meta[name="sitemap"]` es una señal privada e interna de la
+  plantilla: los buscadores no le asignan ningún significado propio. Existe
+  solo para que `sitemap-opt-out` y `seo-lint` coincidan en qué páginas quedan
+  fuera del sitemap a propósito; robots/`noindex` siguen siendo la única
+  directiva real de indexación. La única forma válida es exactamente
+  `<meta name="sitemap" content="exclude">` dentro de `<head>`, sin
+  duplicados ni contradicciones. Cualquier otra variante — mayúsculas o
+  espacios distintos, un valor parecido pero no exacto, un duplicado, una
+  marca `exclude` junto a otra `include`, o la marca fuera de `<head>` — falla
+  con `SITEMAP_MARKER_INVALID` y nunca activa la exclusión.
 
 ## 8. Analytics opcional
 
@@ -164,7 +174,7 @@ distingue dos severidades:
   `SITEMAP_NON_HTML_ENTRY`, `SITEMAP_ALTERNATES_MISSING`,
   `SITEMAP_LOC_DANGLING`, `SITEMAP_LOC_NOT_CANONICAL`,
   `SITEMAP_ALTERNATE_DANGLING`, `SITEMAP_PAGE_MISSING`,
-  `SITEMAP_OPTED_OUT_PAGE`, `SITEMAP_NOINDEX_PAGE`.
+  `SITEMAP_OPTED_OUT_PAGE`, `SITEMAP_NOINDEX_PAGE`, `SITEMAP_MARKER_INVALID`.
 <!-- /seo-lint-codes:fail -->
 
 **WARN (se imprime, no rompe el build):**

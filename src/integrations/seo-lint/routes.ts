@@ -241,14 +241,13 @@ export function isIndexable(html: string): boolean {
 }
 
 /**
- * Only metadata parsed from the document head is effective. Remove comments
- * and raw-text/inert blocks before looking for the marker so examples inside a
- * comment, script, style, or template cannot opt a page out accidentally.
+ * Strip comments and raw-text/inert blocks from markup, wherever in the
+ * document they occur, so a documented example inside a comment, script,
+ * style, or template is never read as real markup.
  */
-function effectiveHeadMarkup(html: string): string {
+function effectiveMarkup(html: string): string {
   const uncommented = html.replace(/<!--[\s\S]*?-->/g, '');
-  const head = uncommented.match(/<head(?=[\s>])[^>]*>([\s\S]*?)<\/head\s*>/i)?.[1] ?? '';
-  return head
+  return uncommented
     .replace(
       /<(script|style|title|textarea|template|noscript|xmp|iframe|noembed|noframes)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,
       '',
@@ -256,13 +255,83 @@ function effectiveHeadMarkup(html: string): string {
     .replace(/<plaintext\b[^>]*>[\s\S]*$/i, '');
 }
 
-/** True when the page head explicitly opts out of sitemap discovery. */
-export function isSitemapExcluded(html: string): boolean {
-  return extractTags(effectiveHeadMarkup(html), 'meta').some(
-    ({ attributes }) =>
-      attributes.get('name')?.trim().toLowerCase() === 'sitemap' &&
-      attributes.get('content')?.trim().toLowerCase() === 'exclude',
+/** Only metadata parsed from the document head is effective — see `effectiveMarkup`. */
+function effectiveHeadMarkup(html: string): string {
+  return effectiveMarkup(html).match(/<head(?=[\s>])[^>]*>([\s\S]*?)<\/head\s*>/i)?.[1] ?? '';
+}
+
+/** `sitemapMarkerState`'s three outcomes. */
+export type SitemapMarkerState = 'none' | 'valid' | 'invalid';
+
+/**
+ * Classify the page's `meta[name="sitemap"]` declaration(s).
+ *
+ * `meta[name="sitemap"]` is a private, template-internal signal: search
+ * engines assign it no meaning of their own. It exists only so that
+ * `sitemap-opt-out` (which removes a page from the generated sitemap) and
+ * `seo-lint` (which checks that removal actually happened) agree on which
+ * pages are intentionally left out of sitemap discovery. Robots/noindex
+ * remain the only real indexing directive.
+ *
+ * A "sitemap declaration" is detected loosely — any `<meta>` whose `name`
+ * value trim+lower-cases to `sitemap` — so a typo is caught as `invalid`
+ * rather than silently ignored as `none`. Only one shape is `valid`: exactly
+ * one such declaration in the whole document, sitting inside `<head>`, whose
+ * `name` is exactly `sitemap` and whose `content` is exactly `exclude` once
+ * entities are decoded — no trimming, no case folding on either value. The
+ * only variation HTML itself normalises away (attribute-name case, attribute
+ * order, quote style, an entity that decodes to exactly `exclude`) is
+ * tolerated. Everything else that is not `none` — wrong case, a trailing
+ * space, `content=""` or a missing `content`, a duplicate, a contradiction
+ * (`exclude` alongside `include`), or a declaration outside `<head>` — is
+ * `invalid`, and an invalid marker must never activate exclusion.
+ */
+function analyzeSitemapMarker(html: string): { state: SitemapMarkerState; reason?: string } {
+  const isDeclaration = (attributes: ReadonlyMap<string, string>): boolean =>
+    (attributes.get('name') ?? '').trim().toLowerCase() === 'sitemap';
+
+  const wholeDocument = extractTags(effectiveMarkup(html), 'meta').filter(({ attributes }) =>
+    isDeclaration(attributes),
   );
+  if (wholeDocument.length === 0) return { state: 'none' };
+
+  const inHead = extractTags(effectiveHeadMarkup(html), 'meta').filter(({ attributes }) =>
+    isDeclaration(attributes),
+  );
+
+  if (wholeDocument.length > 1) {
+    return {
+      state: 'invalid',
+      reason:
+        inHead.length === wholeDocument.length
+          ? `${wholeDocument.length} sitemap declarations found — exactly one is allowed`
+          : `${wholeDocument.length} sitemap declarations found, at least one outside <head>`,
+    };
+  }
+  if (inHead.length !== 1) {
+    return { state: 'invalid', reason: 'the declaration sits outside <head>' };
+  }
+
+  const { attributes } = inHead[0];
+  if (attributes.get('name') !== 'sitemap' || attributes.get('content') !== 'exclude') {
+    return {
+      state: 'invalid',
+      reason:
+        `name="${attributes.get('name') ?? ''}" content="${attributes.get('content') ?? ''}" ` +
+        'is not the exact required form',
+    };
+  }
+  return { state: 'valid' };
+}
+
+/** `'none' | 'valid' | 'invalid'` — see `analyzeSitemapMarker` for the exact rule. */
+export function sitemapMarkerState(html: string): SitemapMarkerState {
+  return analyzeSitemapMarker(html).state;
+}
+
+/** True when the page head declares a valid sitemap exclusion marker. */
+export function isSitemapExcluded(html: string): boolean {
+  return sitemapMarkerState(html) === 'valid';
 }
 
 /** Parse the `<url>` entries — loc plus hreflang alternates — out of a sitemap. */
@@ -549,8 +618,10 @@ export function lintSitemapRoutes(
 
 /**
  * Reverse sitemap discovery gates. Sitemap inclusion and indexability are
- * independent: an explicit marker permits omission, while noindex pages must
- * never be published in the sitemap.
+ * independent: a valid marker permits omission, while noindex pages must
+ * never be published in the sitemap. An invalid marker never permits
+ * omission — it is reported on its own terms instead of being treated as
+ * either present or absent.
  */
 export function lintSitemapDiscovery(
   entries: SitemapEntry[],
@@ -563,8 +634,19 @@ export function lintSitemapDiscovery(
   for (const page of pages) {
     const published = sitemapPaths.has(publicPath(routePath(page.route)));
     const indexable = isIndexable(page.html);
-    const excluded = isSitemapExcluded(page.html);
-    if (excluded && published) {
+    const marker = analyzeSitemapMarker(page.html);
+
+    if (marker.state === 'invalid') {
+      findings.push({
+        route: page.route,
+        code: 'SITEMAP_MARKER_INVALID',
+        severity: 'fail',
+        message:
+          `Sitemap exclusion marker is invalid${marker.reason ? ` (${marker.reason})` : ''}. ` +
+          'The only recognised form is <meta name="sitemap" content="exclude"> inside <head>.',
+      });
+    }
+    if (marker.state === 'valid' && published) {
       findings.push({
         route: page.route,
         code: 'SITEMAP_OPTED_OUT_PAGE',
@@ -580,7 +662,7 @@ export function lintSitemapDiscovery(
         message: 'Page declares noindex but is still published in the sitemap.',
       });
     }
-    if (indexable && !excluded && !published) {
+    if (indexable && marker.state === 'none' && !published) {
       findings.push({
         route: page.route,
         code: 'SITEMAP_PAGE_MISSING',
