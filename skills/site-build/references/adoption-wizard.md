@@ -14,7 +14,8 @@ decision nobody has made yet.
 ## §1 Trigger and precedence
 
 This gate has precedence over every other skill route in this set — `project-setup`,
-`design-ingestion`, `astro-craft`, `static-site-seo`, `form-slot`, `visual-gate`. None of them
+`design-ingestion`, `astro-craft`, `static-site-seo`, `form-slot`, `static-site-search`,
+`visual-gate`. None of them
 applies until a contract is confirmed, with one carve-out: during intake, `design-ingestion`'s
 inventory and provenance work and `project-setup`'s repository read may run **read-only**, because
 this wizard needs their output to ask informed questions. Read-only means exactly what §3 defines
@@ -308,7 +309,8 @@ plan — which assets will be fetched, from where, and what is still blocked. IM
 opens in this order: the Git boundary (§9), the `DESIGN.md` contract section, the asset downloads
 the contract authorized. Then the route is `site-build` §2's order: `project-setup` consumes the contract's fields, `design-ingestion` runs
 its extraction, then `static-site-seo`, then `astro-craft`, then `form-slot` only if a form was
-activated in the contract, then `visual-gate`.
+activated in the contract, then `static-site-search` only if search was activated in the contract,
+then `visual-gate`.
 
 Technical decisions inside the confirmed contract are the agent's to make. Anything the contract
 does not cover goes back to the human — it is a new question, not a technical decision dressed up

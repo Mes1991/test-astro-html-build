@@ -62,7 +62,7 @@ Estas 8 son las skills reales que existen hoy en `skills/`, cada una con conteni
 
 ### Adopción futura opcional: `security-audit` de Cloudflare
 
-No es una skill instalada ni forma parte del catálogo de 7 anterior. Es una evaluación de trabajo futuro opcional: el skill oficial implementa seis fases (reconocimiento, hunting guiado por cobertura, validación independiente, hallazgos estructurados, verificación independiente y reportes derivados) e incluye validadores sin dependencias para el ledger y los hallazgos. Sería un buen gate de seguridad de release, nunca una instrucción permanente para todo agente.
+No es una skill instalada ni forma parte del catálogo de 8 anterior. Es una evaluación de trabajo futuro opcional: el skill oficial implementa seis fases (reconocimiento, hunting guiado por cobertura, validación independiente, hallazgos estructurados, verificación independiente y reportes derivados) e incluye validadores sin dependencias para el ledger y los hallazgos. Sería un buen gate de seguridad de release, nunca una instrucción permanente para todo agente.
 
 Si se adopta en el futuro, condiciones mínimas:
 
