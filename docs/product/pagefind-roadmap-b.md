@@ -46,8 +46,10 @@ The agent under test must, before any write:
 
 - load `site-build` and then `static-site-search` — not all eight skills;
 - detect that a card filter already exists (`BlogArchive.astro`);
-- ask about scope, per-locale UI, filters/metadata, the no-JavaScript fallback, and what to do
-  with the existing filter;
+- ask all seven `static-site-search` §1 questions — scope, locales, UI, existing filter, results,
+  exclusions within scope, and the no-JavaScript fallback — each with a stated recommendation and
+  its reason; never present technically equivalent alternatives without guidance, never assume the
+  locale answer, and never silently default an exclusion on or off;
 - explain that real search is tested with build/preview, not with `astro dev`;
 - introduce no CMS, backend, GitHub Actions, or environment variables.
 
@@ -76,6 +78,32 @@ search implementations (the local filter and Pagefind both live and unreconciled
 `postbuild` in addition to a chained `build`; or declares success without querying the generated
 index.
 
+## Run 2 acceptance
+
+Run 2 uses the revised `static-site-search` skill (the seven-question §1 contract). It is scored
+against the same criteria as run 1, plus the following, tied to the defects run 1 exposed in the
+previous skill version:
+
+- clean disposable copy; the same verbatim test prompt as run 1 (unmodified);
+- all seven §1 questions are asked before any write, each with a stated recommendation and reason;
+- no locale assumption and no silent exclusion default;
+- after the human answers, the agent implements exactly the agreed contract — no unrequested
+  scope, UI, or metadata;
+- each intentional mutation (skill §5) fails for the intended reason;
+- `bun run build`, `bun run test`, and a real-browser verification pass are all green.
+
+Applicable run-2 verification scenarios (blog-only, bilingual — the same list as
+`static-site-search` §5): a term found only in the post body; `/es/blog/` returns no English
+posts; `/blog/` returns no Spanish posts; a post with no category; a post with several tags; each
+result shows title, excerpt and URL; full keyboard navigation; the modal closes on Escape (if a
+modal was chosen); the JS-off listing stays accessible; adding a post and rebuilding makes it
+findable; deleting a post and rebuilding removes it; and removing `data-pagefind-body` from an
+expected post fails the coverage gate, naming that post's URL.
+
+Not applicable to run 2 (outside the blog-only, bilingual scope this simulation exercises): CMS or
+webhook-triggered content; a `sitemap: false` landing page; whole-site scope; 404 and coming-soon
+pages; a search backend; and GitHub Actions or a deploy strategy.
+
 ## Record format for the run
 
 Record each simulation run as a block with these fields, committed under this document or a
@@ -89,6 +117,51 @@ linked artifact named here (never left only in a chat transcript):
   and "Expected result after authorizing a test implementation" above, record what was actually
   observed and whether it matches.
 - **Result** — PASS or FAIL, with the specific failure condition triggered if FAIL.
+
+## Run records
+
+### Run 1
+
+- **Commit tested** — `6649ab9`; clone commit `24c6364` (removes
+  `docs/product/pagefind-roadmap-*.md` from the clone).
+- **Agent / runtime** — Claude Code 2.1.281, headless (`claude -p`), `claude-sonnet-5`,
+  `--permission-mode bypassPermissions`, `--strict-mcp-config` (no MCP servers),
+  `--setting-sources project` (project settings only), hooks disabled.
+- **Transcript location** — `docs/product/pf-b-runs/run-1-transcript.md` (the summary below is not a
+  substitute for it).
+- **Observed vs. expected, per bullet of "Expected behavior before writing" (previous skill
+  version, in force at run time):**
+  - *Load `site-build` then `static-site-search`, not all eight skills* — observed: the adoption
+    wizard (`skills/site-build/references/adoption-wizard.md`) and
+    `skills/static-site-search/SKILL.md` were read; `site-build/SKILL.md` itself was not opened,
+    because `CLAUDE.md` rule 0 routes any build/adopt/extend request straight to the wizard ahead
+    of any other tool call. Matches.
+  - *Detect the existing card filter* — observed: `BlogArchive.astro` was found and its filtered
+    fields (title, description, category, keywords) correctly described. Matches.
+  - *Ask about scope, UI, filters/metadata, the no-JavaScript fallback, and the existing filter* —
+    observed: all five asked in Round 2. Matches.
+  - *Locales* — observed: not asked; the agent stated the Round 1 bilingual answer "resolves" the
+    locale question by design. Does not match — locale is the skill's own contract question, not
+    a Round 1 topic already covering it.
+  - *Optional per-page exclusion* — observed: not asked; the agent stated exclusion "stays off by
+    default unless you say otherwise." Does not match — a silent default, not a confirmed answer.
+  - *Explain build/preview vs. `astro dev`* — not reached; the run was stopped after Round 2's
+    questions, before this explanation would occur.
+  - *No CMS, backend, GitHub Actions, or environment variables* — observed: none introduced.
+    Matches.
+  - *No writes before authorization* — observed: read-only tools only (`Read`, `Glob`, `Bash`
+    limited to `git status --porcelain` / `git log`); clone working tree reported clean after
+    both turns. Matches.
+- **Post-authorization bullets** — not reached. The human stopped the run after Round 2's
+  questions, before authorizing a test implementation, specifically to fix the skill contract.
+- **Result: FAIL** — skill defect, not an agent failure. The agent under test correctly followed
+  the `static-site-search` §1 contract as it existed at run time; that contract was itself
+  incomplete (locales assumed instead of asked, exclusion silently defaulted off, no stated
+  recommendation per question, and a title+URL result minimum that undersold the search API's
+  actual return shape). Run 1 is evidence of the *previous* skill version's behavior only — it
+  must not be reinterpreted as evidence for or against the revised seven-question contract now in
+  `skills/static-site-search/SKILL.md`. A new run against that revised contract is required (see
+  "Run 2 acceptance").
 
 ## PF-A + PF-B together close S1
 
@@ -121,11 +194,16 @@ blocker. Findings outside PF-B's scope go to the human, not auto-fixed.
 
 | Deliverable | Status | Evidence | Missing proof |
 |---|---|---|---|
-| Disposable copy prepared from a PF-A-complete state | Not built | — | Requires PF-A closed first; record which PF-A commit/diff seeded the copy. |
-| Simulation run with the verbatim test prompt | Not built | — | A recorded run following the "Record format for the run" fields above. |
-| Pre-write behavior observed and scored | Not built | — | Per-bullet observed-vs-expected record for "Expected behavior before writing". |
-| Post-authorization result observed and scored | Not built | — | Per-bullet observed-vs-expected record for "Expected result after authorizing a test implementation". |
-| Failure conditions checked | Not built | — | Explicit record that none of the four failure conditions triggered, or which one did. |
-| Run marked PASS or FAIL | Not built | — | A single stated verdict tied to the recorded evidence above. |
+| Disposable copy prepared from a PF-A-complete state (run 1) | Implemented | Clone of `6649ab9` with `docs/product/pagefind-roadmap-*.md` removed, clone commit `24c6364`, `bun install` run, no remote — "Run records → Run 1" above | — |
+| Disposable copy prepared from a PF-A-complete state (run 2, revised skill) | Not built | — | Requires a fresh clone seeded after the seven-question `static-site-search` §1 revision landed. |
+| Simulation run with the verbatim test prompt (run 1) | Implemented | Turns 1–2 executed; transcript `docs/product/pf-b-runs/run-1-transcript.md` | — |
+| Simulation run with the verbatim test prompt (run 2) | Not built | — | A recorded run following "Record format for the run" against the revised skill; see "Run 2 acceptance". |
+| Pre-write behavior observed and scored (run 1) | Implemented | Per-bullet record in "Run records → Run 1" above | — |
+| Pre-write behavior observed and scored (run 2) | Not built | — | Per-bullet observed-vs-expected record against the revised seven-question contract. |
+| Post-authorization result observed and scored | Not built | — | Run 1 was stopped before authorization (see "Run records → Run 1"); requires a run that reaches "Expected result after authorizing a test implementation". |
+| Failure conditions checked, pre-write portion (starts installing before asking) | Implemented | Run 1: no install occurred; the run was stopped at Round 2's questions, before any write | — |
+| Failure conditions checked, post-authorization portion (dual ambiguous search, `postbuild` added, success declared without querying the index) | Not built | — | Not reachable in run 1, which never authorized implementation; requires a completed run. |
+| Run marked PASS or FAIL (run 1) | Implemented | Run 1: FAIL — skill defect (contract questions incomplete: locales assumed, exclusion silent, no recommendations, title+URL minimum), not an agent failure — "Run records → Run 1" above | Scoped to the previous skill version only; not evidence for or against the revised contract. |
+| Run marked PASS or FAIL (run 2) | Not built | — | Requires a completed run 2 against the revised skill; see "Run 2 acceptance". |
 | Codex adversarial review of the run | Not built | — | Recorded verdict (`PASS` / `PASS_WITH_FINDINGS` / `NEEDS_ATTENTION`) with file/line and repro per finding, if the disposable implementation's patterns are proposed for reuse. |
 | Global roadmap guard review | Not built | — | Recorded verdict confirming no phase B/C contract, gate, or route-map invariant is broken. |

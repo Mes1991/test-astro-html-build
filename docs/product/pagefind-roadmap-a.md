@@ -409,7 +409,7 @@ subject (see `pagefind-roadmap-b.md`).
 
 | Deliverable | Status | Evidence | Missing proof |
 |---|---|---|---|
-| `skills/static-site-search/SKILL.md` created and catalog-eligible | Implemented | `skills/static-site-search/SKILL.md` (174 lines), commit `214f759` | — |
+| `skills/static-site-search/SKILL.md` created and catalog-eligible | Implemented | `skills/static-site-search/SKILL.md` (174 lines), commit `214f759`; §1 contract revised to seven explicit, recommendation-backed questions after PF-B run 1 exposed it as incomplete (assumed locales, silent exclusion default, no recommendations, title+URL minimum) — see `docs/product/pagefind-roadmap-b.md` "Run records → Run 1"; revised in `c8d52f3` | — |
 | `skills/README.md` updated to eight skills | Implemented | catalog row and count, `214f759` | — |
 | `AGENTS.md` search-routing entry and transitory eight-skills state | Implemented | router row and counts, `214f759` | — |
 | `CLAUDE.md` stale-count cleanup | Implemented | "8 real skills", `214f759` | — |
