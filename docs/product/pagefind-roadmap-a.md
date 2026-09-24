@@ -409,15 +409,15 @@ subject (see `pagefind-roadmap-b.md`).
 
 | Deliverable | Status | Evidence | Missing proof |
 |---|---|---|---|
-| `skills/static-site-search/SKILL.md` created and catalog-eligible | Not built | — | File does not exist yet; needs creation, plus `skills/README.md` row and length check (roughly 120–180 lines). |
-| `skills/README.md` updated to eight skills | Not built | — | Diff adding the new row and count. |
-| `AGENTS.md` search-routing entry and transitory eight-skills state | Not built | — | Diff to the router table and "Estado transitorio" section. |
-| `CLAUDE.md` stale-count cleanup | Not built | — | Diff removing/updating any "7 skills" style claim. |
-| `skills/site-build/SKILL.md` opt-in step inserted | Not built | — | Diff showing the new step placed after content build, before visual close. |
-| `skills/site-build/references/adoption-wizard.md` search row updated | Not built | — | Diff pointing the "search" row at `static-site-search` without duplicating its contract. |
-| `docs/product/template-contract.md` records search as opt-in extension | Not built | — | Diff recording the extension, not core, status. |
-| `docs/product/agent-ecosystem-contract.md` inventory updated | Not built | — | Diff reflecting the real eight-skill inventory. |
-| `docs/product/current-repository-map.md` catalog/search description updated (if applicable) | Not built | — | Determine at unit start whether this file enumerates the catalog or describes search as global; diff if so. |
-| Anti-drift `rg` sweep clean | Not built | — | Command output showing zero remaining "seven/7 skills" claims outside historical/roadmap context. |
-| Codex adversarial review (brief §8 questions) | Not built | — | Recorded verdict (`PASS` / `PASS_WITH_FINDINGS` / `NEEDS_ATTENTION`) with file/line and repro per finding. |
-| Global roadmap guard review | Not built | — | Recorded verdict confirming no phase B/C contract, gate, or route-map invariant is broken. |
+| `skills/static-site-search/SKILL.md` created and catalog-eligible | Implemented | `skills/static-site-search/SKILL.md` (174 lines), commit `214f759` | — |
+| `skills/README.md` updated to eight skills | Implemented | catalog row and count, `214f759` | — |
+| `AGENTS.md` search-routing entry and transitory eight-skills state | Implemented | router row and counts, `214f759` | — |
+| `CLAUDE.md` stale-count cleanup | Implemented | "8 real skills", `214f759` | — |
+| `skills/site-build/SKILL.md` opt-in step inserted | Implemented | step 8.5 between `form-slot` (8) and `visual-gate` (9), activation-gated, `214f759`; later steps not renumbered because prose cites them by number | — |
+| `skills/site-build/references/adoption-wizard.md` search row updated | Implemented | Round 2 search row points at the skill (`214f759`); §1 precedence list and §10 post-confirmation order include `static-site-search` (`fa4094d`, from the adversarial review) | — |
+| `docs/product/template-contract.md` records search as opt-in extension | Implemented | extension bullet and catalog row (`214f759`); last stale "catálogo de 7" fixed (`fa4094d`) | — |
+| `docs/product/agent-ecosystem-contract.md` inventory updated | Implemented | eight-skill inventory, `214f759` | — |
+| `docs/product/current-repository-map.md` catalog/search description updated (if applicable) | Implemented | Not applicable: the file neither enumerates the catalog nor mentions search (`rg -i search` has no hits); left unchanged | — |
+| Anti-drift `rg` sweep clean | Implemented | remaining hits are historical session docs (`docs/sessions/*`, unrelated "seven signals" or dated evidence) and this spec | — |
+| Codex adversarial review (brief §8 questions) | Implemented | Review of `f915df8..214f759`: `NEEDS_ATTENTION`, 8 questions answered with no activation bypass, single Pagefind owner in the documented graph, base joining correct at root and `/preview` under both trailing-slash modes, no runtime change; two majors (wizard §1/§10 omitted the skill; `template-contract.md:65` said seven) fixed in `fa4094d`; targeted re-review: `PASS_WITH_FINDINGS`, only finding a dirty working tree during the review | — |
+| Global roadmap guard review | Implemented | Both reviews: phase C gates, i18n parity, route map and locale sync intact; `git diff --name-only f915df8..fa4094d -- package.json bun.lock astro.config.mjs src` empty; `bun run test` 506/506, `bun run check` 0 errors, `bun run build` with seo-lint clean (10 pages) | — |
