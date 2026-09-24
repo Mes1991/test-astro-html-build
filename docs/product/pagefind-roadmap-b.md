@@ -94,7 +94,7 @@ previous skill version:
 
 Applicable run-2 verification scenarios (blog-only, bilingual — the same list as
 `static-site-search` §5): a term found only in the post body; `/es/blog/` returns no English
-posts; `/blog/` returns no Spanish posts; a post with no category; a post with several tags; each
+posts; `/blog/` returns no Spanish posts; a post with no category; a post with several keywords; each
 result shows title, excerpt and URL; full keyboard navigation; the modal closes on Escape (if a
 modal was chosen); the JS-off listing stays accessible; adding a post and rebuilding makes it
 findable; deleting a post and rebuilding removes it; and removing `data-pagefind-body` from an
@@ -127,15 +127,22 @@ linked artifact named here (never left only in a chat transcript):
 - **Agent / runtime** — Claude Code 2.1.281, headless (`claude -p`), `claude-sonnet-5`,
   `--permission-mode bypassPermissions`, `--strict-mcp-config` (no MCP servers),
   `--setting-sources project` (project settings only), hooks disabled.
-- **Transcript location** — `docs/product/pf-b-runs/run-1-transcript.md` (the summary below is not a
-  substitute for it).
+- **Transcript location** — `docs/product/pf-b-runs/run-1-transcript.md`. That committed file is an
+  extract (tool calls and assistant text only; the system prompt and tool results are omitted;
+  clone paths are redacted as `<clone>`), not the full transcript. The full raw stream-json
+  transcript existed only in a local session scratchpad and was not preserved in this repository.
+  "Record format for the run" above calls for the full transcript's location; this run does not
+  satisfy that — recorded as a gap in the status table below, not as compliance.
 - **Observed vs. expected, per bullet of "Expected behavior before writing" (previous skill
   version, in force at run time):**
   - *Load `site-build` then `static-site-search`, not all eight skills* — observed: the adoption
     wizard (`skills/site-build/references/adoption-wizard.md`) and
-    `skills/static-site-search/SKILL.md` were read; `site-build/SKILL.md` itself was not opened,
-    because `CLAUDE.md` rule 0 routes any build/adopt/extend request straight to the wizard ahead
-    of any other tool call. Matches.
+    `skills/static-site-search/SKILL.md` were read; `site-build/SKILL.md` itself was never opened.
+    Does not match — the bullet names `site-build` itself, and only its adoption-wizard reference
+    file was read. Context: `CLAUDE.md` rule 0 routes any build/adopt/extend request straight to
+    the wizard ahead of any other tool call, which is why the agent under test went there directly;
+    whether the bullet's expectation should instead name the wizard is a question this record
+    raises but does not resolve — the expectation text above is unchanged.
   - *Detect the existing card filter* — observed: `BlogArchive.astro` was found and its filtered
     fields (title, description, category, keywords) correctly described. Matches.
   - *Ask about scope, UI, filters/metadata, the no-JavaScript fallback, and the existing filter* —
@@ -152,8 +159,27 @@ linked artifact named here (never left only in a chat transcript):
   - *No writes before authorization* — observed: read-only tools only (`Read`, `Glob`, `Bash`
     limited to `git status --porcelain` / `git log`); clone working tree reported clean after
     both turns. Matches.
-- **Post-authorization bullets** — not reached. The human stopped the run after Round 2's
-  questions, before authorizing a test implementation, specifically to fix the skill contract.
+- **Observed vs. expected, per bullet of "Expected result after authorizing a test
+  implementation"** — the human stopped the run after Round 2's questions, before authorizing a
+  test implementation, specifically to fix the skill contract, so every bullet below is recorded
+  individually as not reached:
+  - *Pagefind is a devDependency, not a runtime dependency* — Not reached — run stopped by the
+    human before Round 2 answers.
+  - *`bun run build` runs Astro and Pagefind exactly once* — Not reached — run stopped by the
+    human before Round 2 answers.
+  - *the UI uses the Component UI, not legacy `PagefindUI` or React* — Not reached — run stopped
+    by the human before Round 2 answers.
+  - *`dist/pagefind/` is not committed and not copied to `public/`* — Not reached — run stopped by
+    the human before Round 2 answers.
+  - *EN and ES results are not mixed* — Not reached — run stopped by the human before Round 2
+    answers.
+  - *a non-root `base` works* — Not reached — run stopped by the human before Round 2 answers.
+  - *a real query demonstrates the expected URL set bidirectionally, the agreed exclusions, and
+    the agreed metadata/filters* — Not reached — run stopped by the human before Round 2 answers.
+  - *browser tests demonstrate keyboard navigation, focus, zero-results announcement, and the
+    no-JavaScript fallback* — Not reached — run stopped by the human before Round 2 answers.
+  - *`bun run test`, `bun run check`, `bun run build`, and `git diff --check` are all green* — Not
+    reached — run stopped by the human before Round 2 answers.
 - **Result: FAIL** — skill defect, not an agent failure. The agent under test correctly followed
   the `static-site-search` §1 contract as it existed at run time; that contract was itself
   incomplete (locales assumed instead of asked, exclusion silently defaulted off, no stated
@@ -196,7 +222,8 @@ blocker. Findings outside PF-B's scope go to the human, not auto-fixed.
 |---|---|---|---|
 | Disposable copy prepared from a PF-A-complete state (run 1) | Implemented | Clone of `6649ab9` with `docs/product/pagefind-roadmap-*.md` removed, clone commit `24c6364`, `bun install` run, no remote — "Run records → Run 1" above | — |
 | Disposable copy prepared from a PF-A-complete state (run 2, revised skill) | Not built | — | Requires a fresh clone seeded after the seven-question `static-site-search` §1 revision landed. |
-| Simulation run with the verbatim test prompt (run 1) | Implemented | Turns 1–2 executed; transcript `docs/product/pf-b-runs/run-1-transcript.md` | — |
+| Simulation run with the verbatim test prompt (run 1) | Implemented | Turns 1–2 executed against the verbatim prompt, clone working tree clean afterwards — "Run records → Run 1" above | — |
+| Full transcript preserved per "Record format for the run" (run 1) | Not built | `docs/product/pf-b-runs/run-1-transcript.md` is an extract only (tool calls and assistant text; system prompt and tool results omitted; clone paths redacted) | The full raw stream-json transcript was kept only in a local session scratchpad and was not preserved in this repository. |
 | Simulation run with the verbatim test prompt (run 2) | Not built | — | A recorded run following "Record format for the run" against the revised skill; see "Run 2 acceptance". |
 | Pre-write behavior observed and scored (run 1) | Implemented | Per-bullet record in "Run records → Run 1" above | — |
 | Pre-write behavior observed and scored (run 2) | Not built | — | Per-bullet observed-vs-expected record against the revised seven-question contract. |
