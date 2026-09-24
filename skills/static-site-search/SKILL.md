@@ -14,16 +14,38 @@ description: "Use when adding, changing, removing or debugging internal full-tex
 
 ## 1. Confirm the contract
 
-Before writing, obtain or read the confirmed answers for:
+Before writing, ask these seven questions explicitly — do not infer answers from the request or
+from repository state — and state a recommendation with its reason for each one. Do not present
+technically equivalent alternatives without guidance, do not assume locales, and do not silently
+switch exclusions on or off.
 
-- scope: blog, whole site, or selected routes;
-- UI: inline, dedicated page, or modal;
-- locales: separate indexes by `<html lang>` and one search surface per locale — a single
-  multilingual index is a different contract, out of scope for this skill;
-- filters and required result metadata; title and URL are the minimum, other fields are opt-in;
-- whether the existing `BlogArchive.astro` card filter (see §3 below) is replaced or retained;
-- optional per-page search exclusion, independent of `noindex` and sitemap;
-- fallback label and navigable destination when JavaScript is unavailable.
+1. **Scope.** "Does search cover the blog, the whole site, or specific routes?" Recommend blog
+   when the request comes from the post archive.
+2. **Locales.** "Should search exist in every active locale, or only some?" Recommend one search
+   surface per locale with same-language results: Pagefind loads the index matching `<html lang>`
+   and searches only same-language pages. For this template: `/blog/` searches English only,
+   `/es/blog/` Spanish only; translate the placeholder, empty state and labels. Never assume the
+   answer from the site's current locale set.
+3. **UI.** "Inline, dedicated page, or global modal?" Recommend inline in the archive when scope
+   is blog; a global modal or `/search/` when scope is the whole site; a dedicated page for
+   selected routes unless the product requires otherwise.
+4. **Existing filter.** "Is the `BlogArchive.astro` filter kept, replaced, or integrated with
+   Pagefind?" For `BlogArchive`, recommend replacing the local text search with Pagefind, keeping
+   category/tags as Pagefind filters; never leave two fields returning different results for the
+   same query.
+5. **Results.** "What metadata and filters does each result need?" Mandatory minimum: title,
+   excerpt, and URL — the Pagefind search API returns `excerpt`, `plain_excerpt`, `url`, and
+   `meta.title` for every result. For blog, recommend showing the date and category, and exposing
+   tags as filters; add an image only if the product asks for one.
+6. **Exclusions within scope.** "Within the confirmed routes, is there content that must not
+   appear?" For blog-only scope, recommend no extra exclusion: index only articles deliberately
+   marked with `data-pagefind-body`, since pages without the mark are excluded by that mark alone.
+   Do not raise 404 or coming-soon pages for a blog-only scope — they are outside that scope, not
+   an exclusion inside it. Never derive an exclusion from `noindex`, sitemap, or canonical.
+7. **No-JavaScript fallback.** "What remains available without JavaScript?" For `BlogArchive`,
+   recommend keeping the full HTML card listing visible; do not invent a fallback page. A link
+   fallback applies only when the search component visually replaces the listing, and its
+   destination depends on the confirmed scope.
 
 If these answers already live in a `DESIGN.md` reaffirmed for the session, do not ask again. Do
 not activate search merely because a blog or search-looking control exists.
@@ -124,9 +146,17 @@ const { fallbackHref, fallbackLabel } = Astro.props;
 <noscript><a href={fallbackHref}>{fallbackLabel}</a></noscript>
 ```
 
-Pass a canonical, base-aware `fallbackHref`; do not build it by raw string concatenation. Place the
-stylesheet and script through the page's existing head slot when possible, and place
-`<pagefind-config>` before the UI components.
+The `<noscript>` link only applies when the search component visually replaces the content it
+searches — a dedicated page or a modal trigger. When search is added inline to `BlogArchive`, the
+full card listing (§1 Q7) already is the no-JS fallback; do not also add this link there. Where it
+does apply, pass a canonical, base-aware `fallbackHref` — never build it by raw string
+concatenation — whose destination matches the confirmed scope. Place the stylesheet and script
+through the page's existing head slot when possible, and place `<pagefind-config>` before the UI
+components.
+
+If the confirmed UI is a global modal, `<pagefind-modal>` is documented to open over the page
+content, trap focus while open, and close on Escape, a backdrop click, or its own close button —
+verify this in a real browser per §5, not from the documentation alone.
 
 Rely on `<html lang>` for language selection — `BaseLayout.astro` already emits `<html lang={lang}>`
 per locale — and do not set `force-language`. Confirm each generated locale page has the correct
@@ -161,6 +191,15 @@ alone cannot prove these. Test base handling at root, then under a configured `b
 Mutate before accepting: remove `data-pagefind-body` from an expected page, break one emitted
 `html lang`, break the bundle/base path, add a second Pagefind owner. Each mutation must fail for
 the intended reason and be restored.
+
+For a blog-only bilingual activation, additionally verify: a term that only appears in the post
+body (not in any card metadata) is found; `/es/blog/` returns no English posts; `/blog/` returns
+no Spanish posts; a post with no category still appears; a post with several tags appears once
+with every tag as a filter; each result shows title, excerpt and URL; full keyboard navigation
+reaches and activates a result; if a modal was chosen, it closes on Escape; with JavaScript
+disabled the full card listing stays accessible; adding a post and rebuilding makes it findable;
+deleting a post and rebuilding removes it; and removing `data-pagefind-body` from a post expected
+in scope fails the coverage gate, naming that post's URL.
 
 Run the repository gates last:
 
