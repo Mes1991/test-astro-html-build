@@ -209,6 +209,17 @@ declare las dos severidades posibles, así que un código que deje de ser
 condicional no puede quedarse acá en silencio. Los marcadores HTML que rodean
 las tres listas son los anclajes de ese test — no los quites.
 
+El analizador sigue literales de objeto y arreglo que representan hallazgos,
+alias de importación, inicializadores locales `const`/`let`, propiedades
+nombradas de literales de objeto y retornos explícitos simples de funciones
+locales. Si un valor recolectado proviene de una llamada cuyo retorno no puede
+resolverse a esas formas locales —incluidas las llamadas a módulos excluidos o
+externos—, falla de forma cerrada con `UNRESOLVED_FINDING_PROVENANCE` e indica
+archivo, posición y expresión. No intenta inferir reasignaciones,
+desestructuración ni accesos a propiedades calculadas: si una de esas formas
+llega al recolector sin una fuente compatible, el gate falla en lugar de
+aceptar un conjunto vacío de códigos.
+
 Un rebrand solo cuenta como terminado cuando ambos comandos (`bun run build`
 y `bun run test`) terminan en verde desde un checkout limpio.
 

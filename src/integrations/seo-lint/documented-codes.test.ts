@@ -29,11 +29,13 @@ import type { Severity } from './lint';
  * aliases and named object-literal properties. Anything it cannot resolve
  * within those forms fails closed with a file, line and column.
  *
- * Not guaranteed: assignments after declaration, destructuring, computed
- * property access, or interprocedural return-value flow. Those shapes are not
- * followed and may escape when their declarations are local and no literal is
- * otherwise visited. Extending them requires another explicit value-flow rule
- * rather than an optimistic guess.
+ * Simple local function returns are followed when a collected call resolves to
+ * a function declaration returning an object literal or a resolvable carrier.
+ * Calls into excluded/external modules and calls whose return construction
+ * cannot be resolved fail closed with `UNRESOLVED_FINDING_PROVENANCE`.
+ * Assignments after declaration, destructuring and computed property access
+ * are not followed; when one of those shapes reaches a collector, the analysis
+ * fails closed rather than treating the value as documented.
  */
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -460,10 +462,10 @@ export function analyze(
    * directly; other carriers follow symbol aliases and local `const`/`let`
    * initialisers until the constructed value is found.
    *
-   * Named object-literal properties are covered too. Reassignment,
-   * destructuring, computed properties and function return values are not
-   * followed; a carrier using one of those shapes may pass the locality check
-   * without this function reaching where its value was constructed.
+   * Named object-literal properties are covered too. A local function
+   * declaration is followed through each explicit return expression. Any call
+   * whose returned finding cannot be resolved fails closed; it never counts as
+   * a declaration-free success.
    */
   const readCollected = (
     file: ts.SourceFile,
@@ -486,9 +488,8 @@ export function analyze(
     }
 
     // A carrier: a variable, a call, a property. It declares no code of its
-    // own. Supported declaration initialisers are followed below. Other local
-    // declaration shapes prove locality only, not where the value was built;
-    // see the explicit boundary above.
+    // own. Supported declaration initialisers and local function returns are
+    // followed below. Every other carrier shape fails closed.
     const type = checker.getTypeAtLocation(expression);
     if (!isFindingType(type) && !isFindingType(elementOf(type) ?? undefined)) {
       fail(
@@ -503,6 +504,7 @@ export function analyze(
     // `findings.push(...(await collect(x)))` is traced to `collect`.
     let origin: ts.Node = expression;
     if (ts.isAwaitExpression(origin)) origin = unwrap(origin.expression);
+    const call = ts.isCallExpression(origin) ? origin : null;
     if (ts.isCallExpression(origin)) origin = origin.expression;
 
     const symbol = valueSymbol(origin as ts.Expression);
@@ -541,9 +543,10 @@ export function analyze(
         fail(
           file,
           expression,
-          `\`${name}\` is declared in ${path.basename(origin_file)}, outside the ` +
-            'integration module graph, so the code it carries is never read and ' +
-            'cannot be documented.',
+          'UNRESOLVED_FINDING_PROVENANCE: ' +
+            `expression \`${expression.getText(file)}\` cannot be resolved locally; ` +
+            `\`${name}\` is declared in ${path.basename(origin_file)}, outside the integration module graph, ` +
+            'so the code it returns or carries cannot be documented.',
         );
       }
     }
@@ -552,6 +555,35 @@ export function analyze(
       fail(file, expression, `\`${name}\` forms a value-initialiser cycle.`);
     }
     const nextSeen = new Set(seen).add(terminal as ts.Symbol);
+    if (call) {
+      const returns: { file: ts.SourceFile; expression: ts.Expression }[] = [];
+      for (const site of sites) {
+        if (!ts.isFunctionDeclaration(site) || !site.body) continue;
+        const visitReturns = (node: ts.Node): void => {
+          if (node !== site && ts.isFunctionLike(node)) return;
+          if (ts.isReturnStatement(node) && node.expression) {
+            returns.push({ file: site.getSourceFile(), expression: node.expression });
+            return;
+          }
+          ts.forEachChild(node, visitReturns);
+        };
+        visitReturns(site.body);
+      }
+      if (returns.length === 0) {
+        fail(
+          file,
+          expression,
+          'UNRESOLVED_FINDING_PROVENANCE: ' +
+            `the return value of expression \`${expression.getText(file)}\` cannot be ` +
+            'resolved to a local finding literal or carrier.',
+        );
+      }
+      for (const returned of returns) {
+        readCollected(returned.file, returned.expression, nextSeen);
+      }
+      return;
+    }
+
     const initialisers = sites.flatMap((site) => {
       const initialiser = declarationInitialiser(site);
       return initialiser ? [{ file: site.getSourceFile(), initialiser }] : [];
@@ -568,6 +600,12 @@ export function analyze(
         `\`${name}\` reaches a findings collector without a supported declaration initialiser.`,
       );
     }
+    fail(
+      file,
+      expression,
+      'UNRESOLVED_FINDING_PROVENANCE: ' +
+        `expression \`${expression.getText(file)}\` has no supported local value source.`,
+    );
   };
 
   for (const file of modules) {
@@ -1047,6 +1085,48 @@ export function emit(): Finding[] {
       ),
     });
     expect([...bySeverity.keys()]).toEqual(['ALIASED_CODE']);
+  });
+
+  it('follows a collected call through a simple local function return', () => {
+    const { bySeverity } = virtualGraph({
+      'entry.ts': collecting(
+        "function makeLocal(): Finding {\n" +
+          "  const local = { code: 'LOCAL_RETURN', severity: 'fail' as const };\n" +
+          '  return local;\n' +
+          '}\n' +
+          'findings.push(makeLocal());',
+      ),
+    });
+    expect([...bySeverity.keys()]).toEqual(['LOCAL_RETURN']);
+  });
+
+  it('fails closed when a local wrapper returns an external call result', () => {
+    const build = () => virtualGraph({
+      'entry.ts': `
+import type { Finding } from './contract';
+import { wrap } from './bridge';
+export function emit(): Finding[] {
+  const findings: Finding[] = [];
+  const local = wrap();
+  findings.push(local);
+  return findings;
+}
+`,
+      'bridge.ts': `
+import type { Finding } from './contract';
+import { make } from './node_modules/vendor';
+export function wrap(): Finding { return make(); }
+`,
+      'node_modules/vendor.ts': `
+import type { Finding } from '../contract';
+export function make(): Finding {
+  return { code: 'EXTERNAL_ESCAPE', severity: 'fail' };
+}
+`,
+    });
+    expect(build).toThrow(/UNRESOLVED_FINDING_PROVENANCE/);
+    expect(build).toThrow(/bridge\.ts:\d+:\d+/);
+    expect(build).toThrow(/expression `make\(\)`/);
   });
 
   it('rejects an external finding rebound through a local initialiser', () => {

@@ -105,6 +105,15 @@ if a code is added, removed or re-graded here or there. It also holds the condit
 of its severities, so a code that stops being conditional cannot quietly stay in this section. The
 HTML markers around the three lists are that test's anchors — keep them.
 
+The analyzer follows finding object/array literals, import aliases, local `const`/`let`
+initializers, named object-literal properties, and simple explicit returns from local function
+declarations. If a collected value comes from a call whose return cannot be resolved to those local
+forms — including a call into an excluded or external module — it fails closed with
+`UNRESOLVED_FINDING_PROVENANCE`, naming the file, position, and expression. Reassignment,
+destructuring, and computed property access are not inferred optimistically: when one reaches a
+collector without a supported value source, the same gate fails instead of accepting an empty code
+set.
+
 A clean `warn` list is worth reading anyway — nothing forces you to, and that is exactly why it gets
 skipped. `OG_IMAGE_MISSING` in particular is silent on every category `seo-lint` cannot see for you:
 a page with no social image still builds green.
