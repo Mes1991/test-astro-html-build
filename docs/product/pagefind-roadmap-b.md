@@ -118,9 +118,11 @@ everything in "Run 2 acceptance", plus:
 - the coverage gate exists, derives its expected set from published posts and canonical routes
   (never from Pagefind markers or output), and fails naming the URL under the
   `data-pagefind-body` mutation;
-- the base-path matrix passes: root `/`, then `base: "/preview"` with `trailingSlash: "never"`,
-  then with `"always"`, with assets and links joined throughout;
-- the Playwright/Chromium browser scenarios pass (the minimum list in `static-site-search` §5);
+- root `/` is verified; the `/preview` subpath matrix is NOT_SUPPORTED by the template
+  (`implementation-roadmap.md` phase F, "Template subpath deployment contract") and outside run
+  3's acceptance — it must be recorded as NOT_SUPPORTED, never as PASS;
+- the Playwright/Chromium browser scenarios pass at root `/` (the minimum list in
+  `static-site-search` §5);
 - the temporary browser probe is absent from the final candidate diff;
 - `bun run test`, `bun run check`, `bun run build` (seo-lint clean) and `git diff --check` are
   green.
@@ -550,10 +552,6 @@ does not address (see "Findings for the skill" below).
   right by following the human's explicit instructions rather than the (at-the-time weaker) skill
   default. `1075459` codifies the draft/`data-pagefind-body`/`noindex` three-contracts-separate
   rule the human stated verbatim in Turn 7, matching what the agent implemented.
-- **Still unaddressed.** None of the five commits add a step requiring the agent to state the
-  build/preview-vs-`astro dev` distinction to the human before writing. The skill states it in §2
-  but nothing forces the agent to surface it, so this gap remains open. (The other gaps listed here
-  before this revision are now addressed in the skill; see the next bullet.)
 - **Addressed by this revision (PF-B skill fixes)** — new instructions added to
   `skills/static-site-search/SKILL.md`, without changing run 1's or run 2's recorded verdicts:
   - **Contract summary, explicit go-ahead, `DESIGN.md` first (§1).** After the seven answers and
@@ -563,20 +561,40 @@ does not address (see "Findings for the skill" below).
   - **Every question asked individually (§1).** Ask each of the seven as its own prompt with its own
     recommendation; when an earlier answer seems to settle one, restate it and ask for
     confirmation; never mark a question answered by inference.
+  - **Build/preview vs. `astro dev` (§1).** Before implementing, the agent must state to the human
+    that Pagefind is verified through `bun run build` / `bun run search:preview`, not `astro dev`
+    (which has no finished index) — closing the gap this record previously listed as unaddressed.
   - **Component UI stop (§2).** The Component UI stays the default; if it cannot fit the existing
     UI, stop and ask the human, naming the options — adapt the design, customize the templates
     keeping their ARIA contract, or use the raw JS API only with explicit approval and
     agent-owned, browser-proven accessibility.
-  - **Automated coverage gate (§5).** A test or build gate must derive the expected URL set from
-    published posts and canonical routes (never from `data-pagefind-body`, `dist/pagefind/` or the
-    index), compare bidirectionally, and fail naming each missing or unexpected URL under the
+  - **Scope-specific coverage gate (§5).** A test or build gate must derive the expected URL set
+    from the confirmed scope — published posts times emitted locales for blog scope, emitted HTML
+    routes minus an exclusion manifest for whole-site scope, or an explicit independent route
+    manifest for selected routes — never from `data-pagefind-body`, `dist/pagefind/` or the index,
+    compare bidirectionally, and fail naming each missing or unexpected URL under the
     `data-pagefind-body` mutation.
-  - **Base-path matrix (§5).** Build and verify at root `/`, then `base: "/preview"` with
-    `trailingSlash: "never"`, then `"always"`, with assets and links joined and the config restored
-    afterwards.
-  - **Real-browser fallback (§5).** Browser behavior is proven with Playwright + Chromium, or a
-    temporary probe that never enters the candidate diff when the repo has no browser tooling; the
-    minimum browser scenarios are listed.
+  - **Real-browser fallback and focus scenarios (§5).** Browser behavior is proven with Playwright
+    + Chromium, or a temporary probe that never enters the candidate diff when the repo has no
+    browser tooling; the minimum browser scenarios now explicitly include visible focus while
+    navigating results, a focus trap while the modal is open (if a modal was chosen), and focus
+    returned to the trigger or search field on close, alongside the existing zero-results
+    announcement.
+
+- **Base-path matrix — verified as a pre-existing template failure, not a skill gap.** The
+  orchestrator reproduced this on 2026-09-24 in a disposable clone of the template (PF-B run 2
+  state, only `astro.config.mjs` changed, then restored): `base: '/preview'` makes `bun run build`
+  exit 1 under both `trailingSlash: 'never'` and `'always'`. `seo-lint` reports `OG_IMAGE_404`
+  (e.g. `og:image` `https://example.com/og/preview/blog.png`, and
+  `https://example.com/preview/_astro/example-post.<hash>.png` missing in `dist/`, both modes);
+  `INTERNAL_LINK_NOT_CANONICAL_FORM` under `'never'` (e.g. internal links to `/es/preview/blog`,
+  `/preview/blog`, `/preview/404`, `/es/preview/404` — locale prefix and base joined in the wrong
+  order, wrong slash form); `LOCALIZED_ROUTE_WITHOUT_ALTERNATES` under `'always'` for `/`, `/es/`,
+  `/blog/`, `/es/blog/` (no hreflang en/es/x-default at all). The cause is the template, not
+  Pagefind — no Pagefind involvement is needed to reproduce it. This is tracked as
+  `implementation-roadmap.md` phase F, "Template subpath deployment contract" (Not built); the
+  skill (§5) now states root-only support and marks the `/preview` matrix NOT_SUPPORTED until that
+  deliverable is Implemented, rather than treating this as a skill defect fixed here.
 
 ## PF-A + PF-B together close S1
 

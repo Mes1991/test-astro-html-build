@@ -82,7 +82,9 @@ After the seven answers, and before ANY write, install or delegation: present a 
 of all seven answers and wait for the human's explicit confirmation. An agent's own "contract
 confirmed" is not authorization; silence or a follow-up question is not a yes (adoption wizard
 §2). Once confirmed, the first file write is the confirmed contract in `DESIGN.md`, as the
-wizard's §9 requires — never a task file, and never a dependency install first.
+wizard's §9 requires — never a task file, and never a dependency install first. Before
+implementing, also state to the human that Pagefind is verified through `bun run build` /
+`bun run search:preview`, not `astro dev` — `astro dev` has no finished index.
 
 ## 2. Preserve the architecture
 
@@ -221,13 +223,16 @@ search works.
 ## 5. Verify the real capability
 
 Do not close on the existence of `dist/pagefind/`. Add a test or build gate that derives the
-expected URL set from the published content — the `blog` collection filtered by `!draft`, times
-the emitted locales, through the repo's canonical route helpers (`src/lib/seo/locale.ts`) — and
-NEVER from `data-pagefind-body`, `dist/pagefind/`, or the index itself: otherwise removing the
-mark shrinks "expected" and "actual" together and the gate passes for the wrong reason. Compare
-expected against the URLs actually present in the generated index, bidirectionally, and fail
-naming each missing or unexpected URL. Prove the gate with the mutation: remove
-`data-pagefind-body` from one expected post → the gate fails naming that URL; restore.
+expected URL set from the confirmed scope, and NEVER from `data-pagefind-body`, `dist/pagefind/`,
+or the index itself: for blog scope, published posts — the `blog` collection filtered by
+`!draft` — times the emitted locales, through the repo's canonical route helpers
+(`src/lib/seo/locale.ts`); for whole-site scope, the emitted HTML routes minus an explicit
+exclusion manifest; for selected-routes scope, an explicit, independent route manifest. Deriving
+the expected set from `data-pagefind-body`, `dist/pagefind/`, or the index itself shrinks
+"expected" and "actual" together and the gate passes for the wrong reason. Compare expected
+against the URLs actually present in the generated index, bidirectionally, and fail naming each
+missing or unexpected URL. Prove the gate with the mutation: remove `data-pagefind-body` from one
+expected post → the gate fails naming that URL; restore.
 
 Then query the generated index through Pagefind's public browser API and record evidence for: one
 unique term per included locale absent from the other; exact expected URLs and no unexpected URL;
@@ -249,13 +254,17 @@ only the implementation an adopter would ship. Minimum browser scenarios: a term
 body; EN/ES separation (`/blog/` shows no Spanish results, `/es/blog/` no English); category as a
 filter; keywords as searchable metadata with no keyword filter shown; a result with linked title,
 excerpt and localized date; a result with no optional metadata; an empty query shows all posts;
-zero results announced; full keyboard navigation; JavaScript disabled keeps the listing; root `/`;
-and `/preview` under both `trailingSlash` policies.
+zero results announced; visible focus while navigating results; a focus trap while the modal is
+open, if a modal was chosen; focus returned to the trigger or search field on close; full keyboard
+navigation; JavaScript disabled keeps the listing; and root `/`.
 
-Build and verify the base-path matrix: at root `/`, then with `base: "/preview"` and
-`trailingSlash: "never"`, then again with `trailingSlash: "always"`. Assets and links stay joined
-throughout — no `/previewpagefind/`, no double slash, no escape back to `/`. Restore the config
-afterwards.
+The template currently supports root deployment only (see `implementation-roadmap.md` phase F,
+"Template subpath deployment contract"); verify search at root `/`. The `/preview` matrix — both
+`trailingSlash: "never"` and `"always"` — is NOT_SUPPORTED by the template until that F
+deliverable is Implemented: do not report it as passing, and do not attempt to fix template
+subpath support inside a search activation. Once supported, the criteria that apply are the
+joined-path rules: assets and links stay joined throughout — no `/previewpagefind/`, no double
+slash, no escape back to `/`. Restore any config changed while probing this afterwards.
 
 Mutate before accepting: remove `data-pagefind-body` from an expected page, break one emitted
 `html lang`, break the bundle/base path, add a second Pagefind owner. Each mutation must fail for
