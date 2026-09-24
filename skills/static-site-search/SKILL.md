@@ -30,9 +30,11 @@ switch exclusions on or off.
    `<html lang>` and searches only same-language pages. For this template: `/blog/` searches
    English only, `/es/blog/` Spanish only; translate the placeholder, empty state and labels.
    Never assume the answer from the site's current locale set.
-3. **UI.** "Inline, dedicated page, or global modal?" Recommend inline in the archive when scope
-   is blog — the card listing already renders there. For whole-site scope, recommend a global
-   modal reachable from every page: Pagefind documents `<pagefind-modal>` as trapping focus while
+3. **UI.** "Inline, dedicated page, or global modal?" When the request carries a design source
+   (Figma, screenshots, `DESIGN.md`), derive the recommendation from where it places search and
+   cite that frame; the defaults below apply only when no design shows search. Recommend inline in
+   the archive when scope is blog — the card listing already renders there. For whole-site
+   scope, recommend a global modal reachable from every page: Pagefind documents `<pagefind-modal>` as trapping focus while
    open and closing on Escape, a backdrop click, or its own close button (still browser-tested per
    §4/§5, not assumed from the docs). Recommend a dedicated `/search/` page instead only when the
    product needs shareable or bookmarkable result URLs — a modal's state is not addressable by URL.
