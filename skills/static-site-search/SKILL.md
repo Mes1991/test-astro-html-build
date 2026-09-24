@@ -45,22 +45,27 @@ switch exclusions on or off.
    results for the same query. The HTML card listing stays as the initial state and the no-JS
    fallback; an empty query shows every post.
 5. **Results.** "What metadata and filters does each result need?" Mandatory minimum: title,
-   excerpt, and URL, because a result without its matching excerpt cannot show why it matched;
-   the Pagefind search API returns all three for every result (`url`, `excerpt`/`plain_excerpt`,
-   `meta.title`, alongside other keys such as `sub_results`). For blog, recommend
-   showing the date and category, with category as a Pagefind filter. The URL is the title link's
-   target, not visible text; the date is localized to the page's locale; a result missing date or
-   category still renders. The default result template shows only the linked title and excerpt,
-   so date and category need a custom template that keeps its ARIA contract. Leave images out
-   unless the product asks (`show-images` defaults to `false`). Index `keywords` as searchable metadata, not as visible filters: Pagefind
-   searches custom metadata by default, while filters suit a small set of exact, selectable values.
-   Keywords are not localized per locale (unlike `category`); translating them, turning them into
-   filters, or adding a separate `tags` taxonomy is a distinct decision the human must confirm.
+   excerpt, and URL, because a result without its matching excerpt cannot show why it matched; the
+   Pagefind search API returns all three for every result (`url`, `excerpt`/`plain_excerpt`,
+   `meta.title`, alongside other keys such as `sub_results`). For blog, recommend showing the date
+   and category, with category as a Pagefind filter. The URL is the title link's target, not visible
+   text; the date is localized to the page's locale; a result missing date or category still
+   renders. The default result template shows only the linked title and excerpt, so date and
+   category need a custom template that keeps its ARIA contract. Leave images out unless the product
+   asks (`show-images` defaults to `false`). Index `keywords` as searchable metadata, not as visible
+   filters: Pagefind searches custom metadata by default, while filters suit a small set of exact,
+   selectable values. Keywords are not localized per locale (unlike `category`); translating them,
+   turning them into filters, or adding a separate `tags` taxonomy is a distinct decision the human
+   must confirm.
 6. **Exclusions within scope.** "Within the confirmed routes, is there content that must not
    appear?" For blog-only scope, recommend no extra exclusion, because indexing already follows
    `data-pagefind-body` alone: pages without the mark are excluded by that mark alone. Do not
    raise 404 or coming-soon pages for a blog-only scope — they are outside that scope, not an
-   exclusion inside it. Never derive an exclusion from `noindex`, sitemap, or canonical.
+   exclusion inside it. Keep the contracts separate: `draft: true` controls publication (the
+   route is never generated), `data-pagefind-body` controls which published HTML Pagefind reads,
+   and `noindex`, sitemap and canonical never change internal search. Pagefind does not read
+   frontmatter — only emitted HTML — so prove the draft filter rather than trust it. Add no
+   manual lists or heuristic exclusions; a real exclusion needs its own explicit contract.
 7. **No-JavaScript fallback.** "What remains available without JavaScript?" For `BlogArchive`,
    recommend keeping the full HTML card listing visible, because it already exists and needs no
    new fallback page. A link fallback applies only when the search component visually replaces
@@ -227,16 +232,18 @@ Mutate before accepting: remove `data-pagefind-body` from an expected page, brea
 `html lang`, break the bundle/base path, add a second Pagefind owner. Each mutation must fail for
 the intended reason and be restored.
 
-For a blog-only bilingual activation, additionally verify: a term that only appears in the post
-body (not in any card metadata) is found; `/es/blog/` returns no English posts; `/blog/` returns
-no Spanish posts; a post with no category still appears; a term that only appears in a post's
-keywords finds it, with no keyword filter shown; each result shows title, excerpt, date and
-category, links to the correct URL without printing it, highlights the match in the excerpt,
-localizes the date in English and Spanish, and still renders with a long title or with no
-category; full keyboard navigation reaches and activates a result; if a modal was chosen, it closes on Escape; with JavaScript
-disabled the full card listing stays accessible; adding a post and rebuilding makes it findable;
-deleting a post and rebuilding removes it; and removing `data-pagefind-body` from a post expected
-in scope fails the coverage gate, naming that post's URL.
+For a blog-only bilingual activation, additionally verify: a term that only appears in the post body
+(not in any card metadata) is found; `/es/blog/` returns no English posts; `/blog/` returns no
+Spanish posts; a post with no category still appears; a term that only appears in a post's keywords
+finds it, with no keyword filter shown; each result shows title, excerpt, date and category, links
+to the correct URL without printing it, highlights the match in the excerpt, localizes the date in
+English and Spanish, and still renders with a long title or with no category; full keyboard
+navigation reaches and activates a result; if a modal was chosen, it closes on Escape; with
+JavaScript disabled the full card listing stays accessible; a temporary `draft: true` post has no
+route in `dist/` and its unique term is absent from the index, and both appear once it is published
+and rebuilt (then remove the fixture completely); adding a post and rebuilding makes it findable;
+deleting a post and rebuilding removes it; and removing `data-pagefind-body` from a post expected in
+scope fails the coverage gate, naming that post's URL.
 
 Run the repository gates last:
 
