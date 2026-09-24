@@ -21,19 +21,21 @@ import type { Severity } from './lint';
  *
  * ## What this gate guarantees, and what it does not
  *
- * Guaranteed: parity for the declarations the integration actually contains —
+ * Guaranteed: parity for the declarations the integration actually contains:
  * object literals reaching a findings collector, every static `PropertyName`
  * form, conditional severities, and carriers reached through an alias chain
- * (a direct import, a rename, one barrel, several barrels). Anything it cannot
- * resolve within those forms fails closed with a file, line and column.
+ * (a direct import, a rename, one barrel, several barrels) or through `const` /
+ * `let` initialisers. Static code strings may also flow through simple variable
+ * aliases and named object-literal properties. Anything it cannot resolve
+ * within those forms fails closed with a file, line and column.
  *
- * Not guaranteed: interprocedural value flow. A local rebinding of an imported
- * value — `const local: Finding = imported; findings.push(local)` — resolves to
- * a declaration inside the graph, because a value binding is not an alias
- * symbol. Where that value was *constructed* is therefore not established, so a
- * finding built outside the analysed modules could reach a collector without an
- * error. Nothing in the integration is written that way: every finding is a
- * literal at the point it is pushed.
+ * Simple local function returns are followed when a collected call resolves to
+ * a function declaration returning an object literal or a resolvable carrier.
+ * Calls into excluded/external modules and calls whose return construction
+ * cannot be resolved fail closed with `UNRESOLVED_FINDING_PROVENANCE`.
+ * Assignments after declaration, destructuring and computed property access
+ * are not followed; when one of those shapes reaches a collector, the analysis
+ * fails closed rather than treating the value as documented.
  */
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -293,6 +295,56 @@ export function analyze(
     return current;
   };
 
+  /** The symbol whose declaration supplies an expression's runtime value. */
+  const valueSymbol = (expression: ts.Expression): ts.Symbol | undefined => {
+    const inner = unwrap(expression);
+    if (ts.isPropertyAccessExpression(inner)) {
+      return checker.getSymbolAtLocation(inner.name) ?? checker.getSymbolAtLocation(inner);
+    }
+    return checker.getSymbolAtLocation(inner);
+  };
+
+  /** Initialiser carried by the declaration forms this analysis supports. */
+  const declarationInitialiser = (declaration: ts.Declaration): ts.Expression | null => {
+    if (ts.isVariableDeclaration(declaration)) return declaration.initializer ?? null;
+    if (ts.isPropertyAssignment(declaration)) return declaration.initializer;
+    return null;
+  };
+
+  /** Resolve a code string through simple local initialiser/property aliases. */
+  const staticCode = (
+    file: ts.SourceFile,
+    expression: ts.Expression,
+    seen: Set<ts.Symbol> = new Set(),
+  ): string | null => {
+    const literal = staticString(expression);
+    if (literal !== null) return literal;
+
+    const symbol = valueSymbol(expression);
+    if (!symbol) return null;
+    const terminal = terminalSymbol(symbol);
+    if (!terminal || seen.has(terminal)) return null;
+    seen.add(terminal);
+
+    const values: string[] = [];
+    for (const declaration of terminal.getDeclarations() ?? []) {
+      const origin = slash(declaration.getSourceFile().fileName);
+      if (!analyzed.has(origin)) {
+        fail(
+          file,
+          expression,
+          `the code value \`${symbol.getName()}\` is declared in ${path.basename(origin)}, ` +
+            'outside the integration module graph.',
+        );
+      }
+      const initialiser = declarationInitialiser(declaration);
+      if (!initialiser) continue;
+      const value = staticCode(declaration.getSourceFile(), initialiser, seen);
+      if (value !== null) values.push(value);
+    }
+    return values.length === 1 ? values[0] : null;
+  };
+
   /** `<collector>.push(...)` where the collector holds findings. */
   const isCollectorPush = (node: ts.CallExpression): boolean => {
     const callee = node.expression;
@@ -362,7 +414,7 @@ export function analyze(
       );
     }
 
-    const code = staticString((codeProperty as ts.PropertyAssignment).initializer);
+    const code = staticCode(file, (codeProperty as ts.PropertyAssignment).initializer);
     if (code === null) {
       fail(
         file,
@@ -406,20 +458,20 @@ export function analyze(
   };
 
   /**
-   * An expression handed to a findings collector. It either resolves here, or
-   * it is a carrier: a value the checker already types as a finding, whose
-   * symbol is followed to the declaration that really binds it.
+   * An expression handed to a findings collector. Object/array literals resolve
+   * directly; other carriers follow symbol aliases and local `const`/`let`
+   * initialisers until the constructed value is found.
    *
-   * **Known limitation.** The locality check proves where a symbol is
-   * *declared*, not where its value was *constructed*. A local rebinding of an
-   * imported value — `const local: Finding = imported; findings.push(local)` —
-   * terminates at a declaration inside the graph, because a value binding is
-   * not an alias symbol, so a finding built outside the analysed modules could
-   * reach a collector without an error. Closing that needs value-flow analysis
-   * through `VariableDeclaration` initialisers. No such construction exists in
-   * the integration: every finding is a literal at the point it is pushed.
+   * Named object-literal properties are covered too. A local function
+   * declaration is followed through each explicit return expression. Any call
+   * whose returned finding cannot be resolved fails closed; it never counts as
+   * a declaration-free success.
    */
-  const readCollected = (file: ts.SourceFile, node: ts.Expression): void => {
+  const readCollected = (
+    file: ts.SourceFile,
+    node: ts.Expression,
+    seen: Set<ts.Symbol> = new Set(),
+  ): void => {
     const expression = unwrap(node);
 
     if (ts.isObjectLiteralExpression(expression)) {
@@ -436,9 +488,8 @@ export function analyze(
     }
 
     // A carrier: a variable, a call, a property. It declares no code of its
-    // own; it is accepted because the checker types it as a finding and its
-    // symbol resolves to a declaration inside the graph. See the known
-    // limitation above for what that does and does not prove.
+    // own. Supported declaration initialisers and local function returns are
+    // followed below. Every other carrier shape fails closed.
     const type = checker.getTypeAtLocation(expression);
     if (!isFindingType(type) && !isFindingType(elementOf(type) ?? undefined)) {
       fail(
@@ -453,9 +504,10 @@ export function analyze(
     // `findings.push(...(await collect(x)))` is traced to `collect`.
     let origin: ts.Node = expression;
     if (ts.isAwaitExpression(origin)) origin = unwrap(origin.expression);
+    const call = ts.isCallExpression(origin) ? origin : null;
     if (ts.isCallExpression(origin)) origin = origin.expression;
 
-    const symbol = checker.getSymbolAtLocation(origin);
+    const symbol = valueSymbol(origin as ts.Expression);
     if (!symbol) {
       fail(
         file,
@@ -491,12 +543,69 @@ export function analyze(
         fail(
           file,
           expression,
-          `\`${name}\` is declared in ${path.basename(origin_file)}, outside the ` +
-            'integration module graph, so the code it carries is never read and ' +
-            'cannot be documented.',
+          'UNRESOLVED_FINDING_PROVENANCE: ' +
+            `expression \`${expression.getText(file)}\` cannot be resolved locally; ` +
+            `\`${name}\` is declared in ${path.basename(origin_file)}, outside the integration module graph, ` +
+            'so the code it returns or carries cannot be documented.',
         );
       }
     }
+
+    if (seen.has(terminal as ts.Symbol)) {
+      fail(file, expression, `\`${name}\` forms a value-initialiser cycle.`);
+    }
+    const nextSeen = new Set(seen).add(terminal as ts.Symbol);
+    if (call) {
+      const returns: { file: ts.SourceFile; expression: ts.Expression }[] = [];
+      for (const site of sites) {
+        if (!ts.isFunctionDeclaration(site) || !site.body) continue;
+        const visitReturns = (node: ts.Node): void => {
+          if (node !== site && ts.isFunctionLike(node)) return;
+          if (ts.isReturnStatement(node) && node.expression) {
+            returns.push({ file: site.getSourceFile(), expression: node.expression });
+            return;
+          }
+          ts.forEachChild(node, visitReturns);
+        };
+        visitReturns(site.body);
+      }
+      if (returns.length === 0) {
+        fail(
+          file,
+          expression,
+          'UNRESOLVED_FINDING_PROVENANCE: ' +
+            `the return value of expression \`${expression.getText(file)}\` cannot be ` +
+            'resolved to a local finding literal or carrier.',
+        );
+      }
+      for (const returned of returns) {
+        readCollected(returned.file, returned.expression, nextSeen);
+      }
+      return;
+    }
+
+    const initialisers = sites.flatMap((site) => {
+      const initialiser = declarationInitialiser(site);
+      return initialiser ? [{ file: site.getSourceFile(), initialiser }] : [];
+    });
+    if (initialisers.length > 0) {
+      for (const next of initialisers) readCollected(next.file, next.initialiser, nextSeen);
+      return;
+    }
+
+    if (sites.some((site) => ts.isVariableDeclaration(site) || ts.isPropertyAssignment(site))) {
+      fail(
+        file,
+        expression,
+        `\`${name}\` reaches a findings collector without a supported declaration initialiser.`,
+      );
+    }
+    fail(
+      file,
+      expression,
+      'UNRESOLVED_FINDING_PROVENANCE: ' +
+        `expression \`${expression.getText(file)}\` has no supported local value source.`,
+    );
   };
 
   for (const file of modules) {
@@ -954,6 +1063,89 @@ export function emit(): Finding[] {
     });
     // The code is documented from where it is *built*, not from the push.
     expect([...bySeverity.keys()]).toEqual(['NEAR']);
+  });
+
+  it('follows a finding through const and let initialisers', () => {
+    const { bySeverity } = virtualGraph({
+      'entry.ts': collecting(
+        "const original: Finding = { code: 'INITIALISED', severity: 'fail' };\n" +
+          'let alias: Finding = original;\n' +
+          'findings.push(alias);',
+      ),
+    });
+    expect([...bySeverity.keys()]).toEqual(['INITIALISED']);
+  });
+
+  it('follows a code through a variable and an object-literal property', () => {
+    const { bySeverity } = virtualGraph({
+      'entry.ts': collecting(
+        "const raw = 'ALIASED_CODE';\n" +
+          'const codes = { undocumented: raw };\n' +
+          "findings.push({ code: codes.undocumented, severity: 'warn' });",
+      ),
+    });
+    expect([...bySeverity.keys()]).toEqual(['ALIASED_CODE']);
+  });
+
+  it('follows a collected call through a simple local function return', () => {
+    const { bySeverity } = virtualGraph({
+      'entry.ts': collecting(
+        "function makeLocal(): Finding {\n" +
+          "  const local = { code: 'LOCAL_RETURN', severity: 'fail' as const };\n" +
+          '  return local;\n' +
+          '}\n' +
+          'findings.push(makeLocal());',
+      ),
+    });
+    expect([...bySeverity.keys()]).toEqual(['LOCAL_RETURN']);
+  });
+
+  it('fails closed when a local wrapper returns an external call result', () => {
+    const build = () => virtualGraph({
+      'entry.ts': `
+import type { Finding } from './contract';
+import { wrap } from './bridge';
+export function emit(): Finding[] {
+  const findings: Finding[] = [];
+  const local = wrap();
+  findings.push(local);
+  return findings;
+}
+`,
+      'bridge.ts': `
+import type { Finding } from './contract';
+import { make } from './node_modules/vendor';
+export function wrap(): Finding { return make(); }
+`,
+      'node_modules/vendor.ts': `
+import type { Finding } from '../contract';
+export function make(): Finding {
+  return { code: 'EXTERNAL_ESCAPE', severity: 'fail' };
+}
+`,
+    });
+    expect(build).toThrow(/UNRESOLVED_FINDING_PROVENANCE/);
+    expect(build).toThrow(/bridge\.ts:\d+:\d+/);
+    expect(build).toThrow(/expression `make\(\)`/);
+  });
+
+  it('rejects an external finding rebound through a local initialiser', () => {
+    const build = () => virtualGraph({
+      'entry.ts': `
+import type { Finding } from './contract';
+import { vendored } from './node_modules/vendor';
+export function emit(): Finding[] {
+  const findings: Finding[] = [];
+  const local: Finding = vendored;
+  findings.push(local);
+  return findings;
+}
+`,
+      'node_modules/vendor.ts': vendor,
+    });
+    expect(build).toThrow(
+      /`vendored` is declared in vendor\.ts, outside the integration module graph/,
+    );
   });
 
   it.each([

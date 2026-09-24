@@ -1,26 +1,38 @@
 import { describe, expect, it } from 'vitest';
 import { siteSeo } from '../../lib/seo/defaults';
 import {
+  alternateProblems,
+  declaredAlternates,
   declaredCanonical,
   declaredLang,
+  declaredOgUrl,
   isIndexable,
+  internalRouteLinks,
+  isValidHreflang,
+  isSitemapExcluded,
   lintLocaleRoutes,
   lintLocalizedRouteCoverage,
+  lintSitemapDiscovery,
   lintSitemapRoutes,
   parseSitemap,
   routeFromDistFile,
+  sitemapMarkerState,
   type GeneratedPage,
 } from './routes';
 
 const SITE = siteSeo.siteUrl;
 
 /** Minimal page shell — only the bits the route gates read. */
-function page(route: string, opts: { lang: string; canonical?: string; robots?: string }): GeneratedPage {
+function page(
+  route: string,
+  opts: { lang: string; canonical?: string; robots?: string; sitemapExcluded?: boolean },
+): GeneratedPage {
   const robots = opts.robots ? `<meta name="robots" content="${opts.robots}" />` : '';
+  const sitemap = opts.sitemapExcluded ? '<meta name="sitemap" content="exclude" />' : '';
   const canonical = opts.canonical ? `<link rel="canonical" href="${opts.canonical}" />` : '';
   return {
     route,
-    html: `<!doctype html><html lang="${opts.lang}"><head>${robots}${canonical}</head><body></body></html>`,
+    html: `<!doctype html><html lang="${opts.lang}"><head>${robots}${sitemap}${canonical}</head><body></body></html>`,
   };
 }
 
@@ -47,6 +59,53 @@ describe('page attribute readers', () => {
     expect(declaredCanonical(p.html)).toBe(`${SITE}/es/`);
   });
 
+  it('extracts canonical links with reordered uppercase attributes, single quotes and entities', () => {
+    const html = `<LINK HREF='${SITE}/search/?a=1&amp;b=2' REL='CANONICAL'>`;
+    expect(declaredCanonical(html)).toBe(`${SITE}/search/?a=1&b=2`);
+  });
+
+  it('extracts a canonical containing a quoted greater-than sign and keeps its gates active', () => {
+    const canonical = `${SITE}/blog/?q=a>b`;
+    const html =
+      `<html lang="en"><head><link rel="canonical" href="${canonical}">` +
+      `<meta property="og:url" content="${SITE}/blog/"></head><body></body></html>`;
+    expect(declaredCanonical(html)).toBe(canonical);
+    expect(lintLocaleRoutes([{ route: '/blog/', html }], new Set(), SITE)).toContainEqual(
+      expect.objectContaining({
+        code: 'OG_URL_CANONICAL_MISMATCH',
+        message: `og:url is ${SITE}/blog/ but the canonical is ${canonical}.`,
+      }),
+    );
+    expect(
+      lintSitemapRoutes(
+        [{ loc: `${SITE}/blog/`, alternates: [] }],
+        [{ route: '/blog/', html }],
+        SITE,
+      ).map((finding) => finding.code),
+    ).toContain('SITEMAP_LOC_NOT_CANONICAL');
+  });
+
+  it('decodes invalid numeric character references to the replacement character without throwing', () => {
+    expect(() => declaredCanonical('<link rel="canonical" href="/&#9999999999;">')).not.toThrow();
+    expect(declaredCanonical('<link rel="canonical" href="/&#9999999999;">')).toBe('/�');
+    expect(declaredCanonical('<link rel="canonical" href="/&#0;">')).toBe('/�');
+  });
+
+  it('extracts og:url with reordered uppercase attributes, an unquoted value and entities', () => {
+    const html = `<META CONTENT=${SITE}/blog/?a&amp;b PROPERTY=OG:URL>`;
+    expect(declaredOgUrl(html)).toBe(`${SITE}/blog/?a&b`);
+  });
+
+  it('extracts hreflang alternates across quoting, order and case variants', () => {
+    const html =
+      `<LINK HREF='${SITE}/services/?a=1&amp;b=2' HREFLANG=EN-us REL=ALTERNATE>` +
+      `<link HREF=${SITE}/es/services/ REL='alternate' HREFLANG='es-MX'>`;
+    expect(declaredAlternates(html)).toEqual([
+      { lang: 'EN-us', href: `${SITE}/services/?a=1&b=2` },
+      { lang: 'es-MX', href: `${SITE}/es/services/` },
+    ]);
+  });
+
   it('treats a page with no robots meta as indexable', () => {
     expect(isIndexable(page('/x/', { lang: 'en' }).html)).toBe(true);
   });
@@ -55,6 +114,116 @@ describe('page attribute readers', () => {
     const conflicting =
       '<html lang="en"><meta name="robots" content="index, follow"><meta name="robots" content="noindex"></html>';
     expect(isIndexable(conflicting)).toBe(false);
+  });
+
+  it('extracts robots directives with reordered uppercase attributes and mixed quoting', () => {
+    const html = "<META CONTENT='index, follow' NAME=ROBOTS><meta CONTENT=noindex NAME='robots'>";
+    expect(isIndexable(html)).toBe(false);
+  });
+
+  it('extracts sitemap exclusions across attribute order, case and quoting variants', () => {
+    expect(isSitemapExcluded('<head><meta name="sitemap" content="exclude"></head>')).toBe(true);
+    expect(isSitemapExcluded('<head><meta name="sitemap" content="include"></head>')).toBe(false);
+  });
+
+  it('ignores sitemap markers in comments and raw-text content', () => {
+    expect(
+      isSitemapExcluded(
+        '<head><!-- <meta name="sitemap" content="exclude"> -->' +
+          '<script>const example = `<meta name="sitemap" content="exclude">`;</script></head>',
+      ),
+    ).toBe(false);
+  });
+
+  it('ignores canonical and og:url markup in comments, scripts, templates and noscript', () => {
+    const html =
+      '<html lang="en"><head>' +
+      '<!-- <link rel="canonical" href="/comment/"><meta property="og:url" content="/comment/"> -->' +
+      '<script>`<link rel="canonical" href="/script/"><meta property="og:url" content="/script/">`</script>' +
+      '<template><link rel="canonical" href="/template/"><meta property="og:url" content="/template/"></template>' +
+      '<noscript><link rel="canonical" href="/noscript/"><meta property="og:url" content="/noscript/"></noscript>' +
+      '</head><body></body></html>';
+    expect(declaredCanonical(html)).toBeNull();
+    expect(declaredOgUrl(html)).toBeNull();
+  });
+
+  it('ignores robots and alternate markup in comments, scripts, templates and noscript', () => {
+    const hidden =
+      '<meta name="robots" content="noindex">' +
+      '<link rel="alternate" hreflang="es" href="/es/">';
+    const html =
+      '<html lang="en"><head>' +
+      `<!-- ${hidden} --><script>\`${hidden}\`</script>` +
+      `<template>${hidden}</template><noscript>${hidden}</noscript>` +
+      '</head><body></body></html>';
+    expect(isIndexable(html)).toBe(true);
+    expect(declaredAlternates(html)).toEqual([]);
+  });
+
+  it('ignores internal links and html-like markup in inert content', () => {
+    const hiddenLink = '<a href="/hidden">Hidden</a>';
+    const html =
+      '<html><head><script>\`<html lang="es">\`</script></head><body>' +
+      `<!-- ${hiddenLink} --><script>\`${hiddenLink}\`</script>` +
+      `<template>${hiddenLink}</template><noscript>${hiddenLink}</noscript>` +
+      '<a href="/visible/">Visible</a></body></html>';
+    expect(declaredLang(html)).toBeNull();
+    expect(internalRouteLinks(html)).toEqual(['/visible/']);
+  });
+});
+
+describe('sitemapMarkerState', () => {
+  it.each([
+    ['canonical form', '<head><meta name="sitemap" content="exclude"></head>'],
+    ['uppercase attribute names', '<head><META NAME="sitemap" CONTENT="exclude"></head>'],
+    ['reversed attribute order', '<head><meta content="exclude" name="sitemap"></head>'],
+    ['single quotes', "<head><meta name='sitemap' content='exclude'></head>"],
+    ['an entity that decodes to exactly exclude', '<head><meta name="sitemap" content="&#101;xclude"></head>'],
+  ])('accepts %s as valid', (_case, html) => {
+    expect(sitemapMarkerState(`<html>${html}<body></body></html>`)).toBe('valid');
+  });
+
+  it.each([
+    ['wrong case in content', '<head><meta name="sitemap" content="Exclude"></head>'],
+    ['trailing whitespace in content', '<head><meta name="sitemap" content="exclude "></head>'],
+    ['a near-miss value', '<head><meta name="sitemap" content="excluded"></head>'],
+    ['an unrelated value', '<head><meta name="sitemap" content="noexclude"></head>'],
+    ['an empty content', '<head><meta name="sitemap" content=""></head>'],
+    ['a missing content', '<head><meta name="sitemap"></head>'],
+    ['wrong case in name', '<head><meta name="Sitemap" content="exclude"></head>'],
+    [
+      'two identical markers',
+      '<head><meta name="sitemap" content="exclude"><meta name="sitemap" content="exclude"></head>',
+    ],
+    [
+      'a contradiction between exclude and include',
+      '<head><meta name="sitemap" content="exclude"><meta name="sitemap" content="include"></head>',
+    ],
+    [
+      'a marker placed in the body',
+      '<head></head><body><meta name="sitemap" content="exclude"></body>',
+    ],
+  ])('rejects %s as invalid', (_case, html) => {
+    expect(sitemapMarkerState(`<html>${html}</html>`)).toBe('invalid');
+  });
+
+  it.each([
+    ['no meta at all', '<head></head>'],
+    ['a marker only inside a comment', '<head><!-- <meta name="sitemap" content="exclude"> --></head>'],
+    ['a marker only inside a script', '<head><script>const html = \'<meta name="sitemap" content="exclude">\';</script></head>'],
+  ])('reports %s as none', (_case, html) => {
+    expect(sitemapMarkerState(`<html>${html}</html>`)).toBe('none');
+  });
+
+  it('reports sitemap markers in comments, scripts, templates, nested templates and noscript as none', () => {
+    const marker = '<meta name="sitemap" content="exclude">';
+    const html =
+      '<html><head>' +
+      `<!-- ${marker} --><script>\`${marker}\`</script>` +
+      `<template>${marker}<template>${marker}</template></template>` +
+      `<noscript>${marker}</noscript>` +
+      '</head><body></body></html>';
+    expect(sitemapMarkerState(html)).toBe('none');
   });
 });
 
@@ -223,6 +392,67 @@ describe('lintLocalizedRouteCoverage', () => {
     expect(lintLocalizedRouteCoverage(pair(goodAlts), SITE)).toEqual([]);
   });
 
+  it('accepts regional hreflang variants by primary language subtag', () => {
+    const alts =
+      `<link rel="alternate" hreflang="en-US" href="${SITE}/services/" />` +
+      `<link rel="alternate" hreflang="es-mx" href="${SITE}/es/services/" />`;
+    expect(lintLocalizedRouteCoverage(pair(alts), SITE)).toEqual([]);
+  });
+
+  it.each([
+    ['trailing hyphen', 'es-'],
+    ['non-BCP-47 suffix', 'es-NOT_A_TAG'],
+    ['non-ASCII subtag', 'es-💩'],
+    ['empty subtag', 'es--MX'],
+  ])('rejects malformed hreflang with %s and does not count it as coverage', (_case, tag) => {
+    const alts =
+      `<link rel="alternate" hreflang="en" href="${SITE}/services/" />` +
+      `<link rel="alternate" hreflang="${tag}" href="${SITE}/es/services/" />`;
+    const findings = lintLocalizedRouteCoverage(pair(alts), SITE);
+    expect(findings[0].message).toContain(`invalid hreflang="${tag}"`);
+    expect(findings[0].message).toContain('no hreflang="es"');
+  });
+
+  it.each([
+    ['es', 'es'],
+    ['es-MX', 'es'],
+    ['zh-Hant-TW', 'zh'],
+    ['x-default', 'x-default'],
+  ])(
+    'accepts well-formed hreflang %s',
+    (tag, configuredLocale) => {
+      expect(isValidHreflang(tag)).toBe(true);
+      expect(
+        alternateProblems(
+          [{ lang: tag, href: '/target/' }],
+          new Map([[configuredLocale, '/target/']]),
+          new Set(['/target/']),
+        ),
+      ).toEqual([]);
+    },
+  );
+
+  it('keeps configured regional locales of one language distinct', () => {
+    const expected = new Map([['es-ES', '/es/'], ['es-MX', '/mx/']]);
+    const emitted = new Set(['/es/', '/mx/']);
+    const both = [
+      { lang: 'es-ES', href: '/es/' },
+      { lang: 'es-mx', href: '/mx/' },
+    ];
+    expect(alternateProblems(both, expected, emitted)).toEqual([]);
+    // One regional alternate must not stand in for its missing sibling.
+    expect(alternateProblems([both[0]], expected, emitted)).toEqual(['no hreflang="es-MX"']);
+  });
+
+  it('still reports a genuinely missing locale when another locale is regional', () => {
+    const alts = `<link rel="alternate" hreflang="en-US" href="${SITE}/services/" />`;
+    const findings = lintLocalizedRouteCoverage(pair(alts), SITE);
+    expect(findings.map((finding) => finding.code)).toContain(
+      'LOCALIZED_ROUTE_WITHOUT_ALTERNATES',
+    );
+    expect(findings[0].message).toContain('no hreflang="es"');
+  });
+
   it('is not satisfied by an hreflang tag with no href', () => {
     // Counting tags is not evidence of coverage — this used to switch the gate off.
     const alts =
@@ -349,6 +579,23 @@ describe('parseSitemap', () => {
     ]);
     expect(entries[1].alternates).toEqual([]);
   });
+
+  it('extracts sitemap values across order, quoting, case and entity variants', () => {
+    const xml =
+      `<URL><LOC>${SITE}/search/?a=1&amp;b=2</LOC>` +
+      `<XHTML:LINK HREF='${SITE}/?a=1&amp;b=2' HREFLANG=EN REL=ALTERNATE/>` +
+      `<xhtml:link HREF=${SITE}/es/ REL='alternate' HREFLANG='es-MX'/>` +
+      '</URL>';
+    expect(parseSitemap(xml)).toEqual([
+      {
+        loc: `${SITE}/search/?a=1&b=2`,
+        alternates: [
+          { lang: 'EN', href: `${SITE}/?a=1&b=2` },
+          { lang: 'es-MX', href: `${SITE}/es/` },
+        ],
+      },
+    ]);
+  });
 });
 
 describe('lintSitemapRoutes', () => {
@@ -371,6 +618,140 @@ describe('lintSitemapRoutes', () => {
       { loc: `${SITE}/es/`, alternates },
     ];
     expect(lintSitemapRoutes(entries, pages, SITE)).toEqual([]);
+  });
+
+  it('accepts an indexable unmarked page included in the sitemap', () => {
+    expect(
+      lintSitemapDiscovery(
+        [{ loc: `${SITE}/blog/`, alternates: [] }],
+        [pages[2]],
+        SITE,
+      ),
+    ).toEqual([]);
+  });
+
+  it('accepts an indexable sitemap exclusion that is absent from the sitemap', () => {
+    const excluded = page('/campaign/', {
+      lang: 'en',
+      canonical: `${SITE}/campaign/`,
+      robots: 'index, follow',
+      sitemapExcluded: true,
+    });
+    expect(isIndexable(excluded.html)).toBe(true);
+    expect(lintSitemapDiscovery([], [excluded], SITE)).toEqual([]);
+  });
+
+  it('flags an absent indexable page whose only sitemap marker is commented out', () => {
+    const html =
+      '<html lang="en"><head><meta name="robots" content="index, follow">' +
+      '<!-- <meta name="sitemap" content="exclude"> --></head><body></body></html>';
+    expect(isSitemapExcluded(html)).toBe(false);
+    expect(lintSitemapDiscovery([], [{ route: '/commented-marker/', html }], SITE)).toEqual([
+      expect.objectContaining({
+        route: '/commented-marker/',
+        code: 'SITEMAP_PAGE_MISSING',
+      }),
+    ]);
+  });
+
+  it('accepts a noindex sitemap exclusion that is absent from the sitemap', () => {
+    const optedOut = page('/private/', {
+      lang: 'en',
+      canonical: `${SITE}/private/`,
+      robots: 'noindex, nofollow',
+      sitemapExcluded: true,
+    });
+    expect(lintSitemapDiscovery([], [optedOut], SITE)).toEqual([]);
+  });
+
+  it('flags an indexable page missing from the sitemap', () => {
+    const findings = lintSitemapDiscovery([], [pages[2]], SITE);
+    expect(findings).toContainEqual(expect.objectContaining({
+      route: '/blog/',
+      code: 'SITEMAP_PAGE_MISSING',
+      message: expect.stringContaining('Include the page in the sitemap or declare sitemap: false'),
+    }));
+  });
+
+  it('flags a noindex page that remains in the sitemap', () => {
+    const noindex = page('/private/', {
+      lang: 'en',
+      canonical: `${SITE}/private/`,
+      robots: 'noindex, nofollow',
+    });
+    const findings = lintSitemapDiscovery(
+      [{ loc: `${SITE}/private/`, alternates: [] }],
+      [noindex],
+      SITE,
+    );
+    expect(findings).toContainEqual(expect.objectContaining({
+      route: '/private/',
+      code: 'SITEMAP_NOINDEX_PAGE',
+      message: expect.stringContaining('declares noindex'),
+    }));
+  });
+
+  it('flags a sitemap exclusion that remains in the sitemap', () => {
+    const excluded = page('/campaign/', {
+      lang: 'en',
+      canonical: `${SITE}/campaign/`,
+      robots: 'index, follow',
+      sitemapExcluded: true,
+    });
+    const findings = lintSitemapDiscovery(
+      [{ loc: `${SITE}/campaign/`, alternates: [] }],
+      [excluded],
+      SITE,
+    );
+    expect(findings).toContainEqual(expect.objectContaining({
+      route: '/campaign/',
+      code: 'SITEMAP_OPTED_OUT_PAGE',
+      message: expect.stringContaining('declares sitemap exclusion'),
+    }));
+  });
+
+  it('flags an invalid marker without downgrading it to page-missing', () => {
+    const html =
+      '<html lang="en"><head><meta name="robots" content="index, follow">' +
+      '<meta name="sitemap" content="Exclude"></head><body></body></html>';
+    const findings = lintSitemapDiscovery([], [{ route: '/invalid-marker/', html }], SITE);
+    expect(findings).toEqual([
+      expect.objectContaining({ route: '/invalid-marker/', code: 'SITEMAP_MARKER_INVALID' }),
+    ]);
+  });
+
+  it('flags an invalid marker on a listed noindex page as exactly two findings', () => {
+    const html =
+      '<html lang="en"><head><meta name="robots" content="noindex, follow">' +
+      '<meta name="sitemap" content="exclude"><meta name="sitemap" content="include">' +
+      '</head><body></body></html>';
+    const findings = lintSitemapDiscovery(
+      [{ loc: `${SITE}/contradiction/`, alternates: [] }],
+      [{ route: '/contradiction/', html }],
+      SITE,
+    );
+    expect(findings.map((f) => f.code).sort()).toEqual([
+      'SITEMAP_MARKER_INVALID',
+      'SITEMAP_NOINDEX_PAGE',
+    ]);
+  });
+
+  it('flags both opt-out and noindex findings for a valid marker on a listed noindex page', () => {
+    const optedOutNoindex = page('/double-violation/', {
+      lang: 'en',
+      canonical: `${SITE}/double-violation/`,
+      robots: 'noindex, nofollow',
+      sitemapExcluded: true,
+    });
+    const findings = lintSitemapDiscovery(
+      [{ loc: `${SITE}/double-violation/`, alternates: [] }],
+      [optedOutNoindex],
+      SITE,
+    );
+    expect(findings.map((f) => f.code).sort()).toEqual([
+      'SITEMAP_NOINDEX_PAGE',
+      'SITEMAP_OPTED_OUT_PAGE',
+    ]);
   });
 
   it('flags a known static route published without alternates — the A1 defect', () => {
@@ -540,6 +921,39 @@ describe('lintSitemapRoutes', () => {
   });
 });
 
+describe('lintSitemapDiscovery — representative routes', () => {
+  it.each([
+    ['/', { lang: 'en' }],
+    ['/es/', { lang: 'es' }],
+  ])('a normal static page %s produces no findings listed, and SITEMAP_PAGE_MISSING absent', (route, opts) => {
+    const p = page(route, { ...opts, robots: 'index, follow' });
+    expect(lintSitemapDiscovery([{ loc: `${SITE}${route}`, alternates: [] }], [p], SITE)).toEqual([]);
+    expect(lintSitemapDiscovery([], [p], SITE).map((f) => f.code)).toEqual(['SITEMAP_PAGE_MISSING']);
+  });
+
+  it.each([
+    ['/blog/example-post/', { lang: 'en' }],
+    ['/es/blog/example-post/', { lang: 'es' }],
+  ])('a dynamic blog-post-shaped route %s with a valid marker produces no findings absent', (route, opts) => {
+    const p = page(route, { ...opts, robots: 'index, follow', sitemapExcluded: true });
+    expect(lintSitemapDiscovery([], [p], SITE)).toEqual([]);
+  });
+
+  it.each([
+    // coming-soon.astro hardcodes lang="en" regardless of the locale prefix.
+    ['/coming-soon/', { lang: 'en' }],
+    ['/es/coming-soon/', { lang: 'en' }],
+  ])('a coming-soon-shaped route %s: no findings absent, both findings listed', (route, opts) => {
+    const p = page(route, { ...opts, robots: 'noindex,follow', sitemapExcluded: true });
+    expect(lintSitemapDiscovery([], [p], SITE)).toEqual([]);
+    const findings = lintSitemapDiscovery([{ loc: `${SITE}${route}`, alternates: [] }], [p], SITE);
+    expect(findings.map((f) => f.code).sort()).toEqual([
+      'SITEMAP_NOINDEX_PAGE',
+      'SITEMAP_OPTED_OUT_PAGE',
+    ]);
+  });
+});
+
 
 describe('Phase A alternate set regressions', () => {
   const urls = [{ lang: 'en', href: `${SITE}/blog/` }, { lang: 'es', href: `${SITE}/es/blog/` }, { lang: 'x-default', href: `${SITE}/blog/` }];
@@ -560,6 +974,21 @@ describe('Phase A alternate set regressions', () => {
   it.each(cases)('rejects registered HTML %s', (_, alts) => { expect(lintLocalizedRouteCoverage(htmlPages([...alts]), SITE).map((f) => f.code)).toContain('LOCALIZED_ROUTE_WITHOUT_ALTERNATES'); });
   it.each(cases)('rejects registered sitemap %s', (_, alts) => { expect(lintSitemapRoutes([{ loc: `${SITE}/blog/`, alternates: [...alts] }], pages, SITE).map((f) => f.code)).toContain('SITEMAP_ALTERNATES_MISSING'); });
   it('preserves empty sitemap attributes for set validation', () => { expect(parseSitemap(`<url><loc>${SITE}/blog/</loc><xhtml:link hreflang="" href=""/></url>`)[0].alternates).toEqual([{lang: '', href: ''}]); });
+  it.each(['es-', 'es-NOT_A_TAG', 'es-💩', 'es--MX'])(
+    'rejects malformed sitemap hreflang %s without counting it as coverage',
+    (tag) => {
+      const malformed = urls.map((alternate) =>
+        alternate.lang === 'es' ? { ...alternate, lang: tag } : alternate,
+      );
+      const findings = lintSitemapRoutes(
+        [{ loc: `${SITE}/blog/`, alternates: malformed }],
+        pages,
+        SITE,
+      );
+      expect(findings[0].message).toContain(`invalid hreflang="${tag}"`);
+      expect(findings[0].message).toContain('no hreflang="es"');
+    },
+  );
 });
 
 describe('Phase A emitted path regressions', () => {

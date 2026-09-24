@@ -3,6 +3,7 @@ import { localeOfRoute, pathFor } from '../../lib/seo/locale';
 import { LOCALES, DEFAULT_LOCALE, type LocaleCode } from '../../lib/seo/types';
 import { exactPath, isCanonicalForm, routeKeyForUrl, sitemapPath } from '../../lib/seo/sitemap';
 import { langMatches, type Finding } from './lint';
+import { parse, parseFragment, type DefaultTreeAdapterTypes } from 'parse5';
 
 /**
  * Route-level SEO gates.
@@ -48,6 +49,79 @@ export interface RouteFinding extends Finding {
   route: string;
 }
 
+type DocumentNode = DefaultTreeAdapterTypes.Document;
+type ParentNode = DefaultTreeAdapterTypes.ParentNode;
+type ElementNode = DefaultTreeAdapterTypes.Element;
+type Node = DefaultTreeAdapterTypes.Node;
+
+const documentCache = new Map<string, DocumentNode>();
+const DOCUMENT_CACHE_LIMIT = 32;
+
+function parsedDocument(html: string): DocumentNode {
+  const cached = documentCache.get(html);
+  if (cached) {
+    documentCache.delete(html);
+    documentCache.set(html, cached);
+    return cached;
+  }
+
+  const document = parse(html);
+  documentCache.set(html, document);
+  if (documentCache.size > DOCUMENT_CACHE_LIMIT) {
+    documentCache.delete(documentCache.keys().next().value!);
+  }
+  return document;
+}
+
+function isElement(node: Node): node is ElementNode {
+  return 'tagName' in node;
+}
+
+function elementsIn(root: ParentNode): ElementNode[] {
+  const elements: ElementNode[] = [];
+  const visit = (parent: ParentNode): void => {
+    for (const child of parent.childNodes) {
+      if (!isElement(child)) continue;
+      elements.push(child);
+      // parse5 stores a template's contents in a separate DocumentFragment.
+      // Its childNodes therefore represent only effective DOM descendants.
+      visit(child);
+    }
+  };
+  visit(root);
+  return elements;
+}
+
+function attributesOf(element: ElementNode): ReadonlyMap<string, string> {
+  return new Map(element.attrs.map(({ name, value }) => [name, value]));
+}
+
+function hasAncestor(element: ElementNode, tagName: string): boolean {
+  let parent = element.parentNode;
+  while (parent) {
+    if (isElement(parent) && parent.tagName === tagName) return true;
+    parent = 'parentNode' in parent ? parent.parentNode : null;
+  }
+  return false;
+}
+
+function documentElements(html: string, tagName?: string): ElementNode[] {
+  return elementsIn(parsedDocument(html)).filter((element) => !tagName || element.tagName === tagName);
+}
+
+function headElements(html: string, tagName: string): ElementNode[] {
+  return documentElements(html, tagName).filter((element) => hasAncestor(element, 'head'));
+}
+
+function textContent(node: ParentNode): string {
+  let text = '';
+  for (const child of node.childNodes) {
+    if (child.nodeName === '#text' && 'value' in child) text += child.value;
+    else if (isElement(child)) text += textContent(child);
+  }
+  return text;
+}
+
 /**
  * Turn a `dist`-relative file path into the route it is served at.
  * Accepts either path separator, so Windows build output resolves the same way.
@@ -61,17 +135,24 @@ export function routeFromDistFile(relPath: string): string {
 
 /** The `lang` attribute on `<html>`, or null when absent. */
 export function declaredLang(html: string): string | null {
-  return html.match(/<html[^>]*\slang="([^"]+)"/i)?.[1]?.trim() ?? null;
+  const root = documentElements(html, 'html')[0];
+  return root ? attributesOf(root).get('lang')?.trim() ?? null : null;
 }
 
 /** The `href` of `<link rel="canonical">`, or null when absent. */
 export function declaredCanonical(html: string): string | null {
-  return html.match(/<link\s+rel="canonical"\s+href="([^"]+)"/i)?.[1]?.trim() ?? null;
+  const tag = headElements(html, 'link').find(
+    (element) => attributesOf(element).get('rel')?.toLowerCase() === 'canonical',
+  );
+  return tag ? attributesOf(tag).get('href')?.trim() ?? null : null;
 }
 
 /** The `content` of `<meta property="og:url">`, or null when absent. */
 export function declaredOgUrl(html: string): string | null {
-  return html.match(/<meta\s+property="og:url"\s+content="([^"]+)"/i)?.[1]?.trim() ?? null;
+  const tag = headElements(html, 'meta').find(
+    (element) => attributesOf(element).get('property')?.toLowerCase() === 'og:url',
+  );
+  return tag ? attributesOf(tag).get('content')?.trim() ?? null : null;
 }
 
 /**
@@ -83,8 +164,8 @@ export function declaredOgUrl(html: string): string | null {
  */
 export function internalRouteLinks(html: string): string[] {
   const out = new Set<string>();
-  for (const m of html.matchAll(/<a\b[^>]*\shref="([^"]*)"/gi)) {
-    const href = m[1].trim();
+  for (const element of documentElements(html, 'a')) {
+    const href = (attributesOf(element).get('href') ?? '').trim();
     if (!href.startsWith('/') || href.startsWith('//')) continue;
     const path = href.split('?')[0].split('#')[0];
     if (path === '') continue;
@@ -131,31 +212,55 @@ export interface PageAlternate {
  */
 export function declaredAlternates(html: string): PageAlternate[] {
   const out: PageAlternate[] = [];
-  for (const m of html.matchAll(/<link\b[^>]*\brel="alternate"[^>]*>/gi)) {
-    const tag = m[0];
-    if (!/\bhreflang=/i.test(tag)) continue;
+  for (const element of headElements(html, 'link')) {
+    const attributes = attributesOf(element);
+    if (attributes.get('rel')?.toLowerCase() !== 'alternate' || !attributes.has('hreflang')) continue;
     out.push({
-      lang: tag.match(/\bhreflang="([^"]*)"/i)?.[1]?.trim() ?? '',
-      href: tag.match(/\bhref="([^"]*)"/i)?.[1]?.trim() ?? '',
+      lang: attributes.get('hreflang')?.trim() ?? '',
+      href: attributes.get('href')?.trim() ?? '',
     });
   }
   return out;
 }
 
+/**
+ * The BCP 47 subset accepted for hreflang coverage.
+ *
+ * Extensions and private-use subtags are deliberately outside this gate: the
+ * site locale contract only needs language, optional script/region, and
+ * variants. `x-default` is the one non-language value defined by hreflang.
+ */
+export function isValidHreflang(tag: string): boolean {
+  if (tag.toLowerCase() === 'x-default') return true;
+  return /^(?:[a-z]{2,3}|[a-z]{4,8})(?:-[a-z]{4})?(?:-(?:[a-z]{2}|\d{3}))?(?:-(?:[a-z0-9]{5,8}|\d[a-z0-9]{3}))*$/i.test(tag);
+}
+
 /** Validate every declaration, never just a count or the first matching link. */
-function alternateProblems(
+export function alternateProblems(
   alternates: PageAlternate[],
   expected: ReadonlyMap<string, string>,
   emitted: ReadonlySet<string>,
   site?: string,
 ): string[] {
   const problems: string[] = [];
+  const locales = [...expected.keys()];
+  const exact = (tag: string, locale: string) => tag.toLowerCase() === locale.toLowerCase();
+  // A regional tag (`es-MX`) covers a bare locale (`es`) only when no configured
+  // locale names it exactly, so `es-ES` and `es-MX` stay distinct locales.
+  const covers = (tag: string, locale: string) =>
+    isValidHreflang(tag) &&
+    (exact(tag, locale) ||
+      (locale !== 'x-default' && !locale.includes('-') && langMatches(tag, locale) &&
+        !locales.some((other) => exact(tag, other))));
   for (const alt of alternates) {
     if (!alt.lang) problems.push('alternate declares no hreflang');
-    else if (!expected.has(alt.lang)) problems.push(`unexpected hreflang="${alt.lang}"`);
+    else if (!isValidHreflang(alt.lang)) problems.push(`invalid hreflang="${alt.lang}"`);
+    else if (!locales.some((locale) => covers(alt.lang, locale))) {
+      problems.push(`unexpected hreflang="${alt.lang}"`);
+    }
   }
   for (const [locale, expectedRoute] of expected) {
-    const matches = alternates.filter((a) => a.lang === locale);
+    const matches = alternates.filter((a) => covers(a.lang, locale));
     if (matches.length === 0) { problems.push(`no hreflang="${locale}"`); continue; }
     if (matches.length > 1) { problems.push(`${matches.length} hreflang="${locale}" entries — exactly one is required`); continue; }
     const alt = matches[0];
@@ -172,24 +277,106 @@ function alternateProblems(
  * to the most restrictive value, which is how search engines read them too.
  */
 export function isIndexable(html: string): boolean {
-  const metas = [...html.matchAll(/<meta\s+name="robots"[^>]*content="([^"]*)"/gi)];
-  return !metas.some((m) => /\bnoindex\b/i.test(m[1]));
+  const directives = headElements(html, 'meta')
+    .map(attributesOf)
+    .filter((attributes) => attributes.get('name')?.toLowerCase() === 'robots')
+    .map((attributes) => attributes.get('content') ?? '');
+  return !directives.some((content) => /\bnoindex\b/i.test(content));
+}
+
+/** `sitemapMarkerState`'s three outcomes. */
+export type SitemapMarkerState = 'none' | 'valid' | 'invalid';
+
+/**
+ * Classify the page's `meta[name="sitemap"]` declaration(s).
+ *
+ * `meta[name="sitemap"]` is a private, template-internal signal: search
+ * engines assign it no meaning of their own. It exists only so that
+ * `sitemap-opt-out` (which removes a page from the generated sitemap) and
+ * `seo-lint` (which checks that removal actually happened) agree on which
+ * pages are intentionally left out of sitemap discovery. Robots/noindex
+ * remain the only real indexing directive.
+ *
+ * A "sitemap declaration" is detected loosely — any `<meta>` whose `name`
+ * value trim+lower-cases to `sitemap` — so a typo is caught as `invalid`
+ * rather than silently ignored as `none`. Only one shape is `valid`: exactly
+ * one such declaration in the whole document, sitting inside `<head>`, whose
+ * `name` is exactly `sitemap` and whose `content` is exactly `exclude` once
+ * entities are decoded — no trimming, no case folding on either value. The
+ * only variation HTML itself normalises away (attribute-name case, attribute
+ * order, quote style, an entity that decodes to exactly `exclude`) is
+ * tolerated. Everything else that is not `none` — wrong case, a trailing
+ * space, `content=""` or a missing `content`, a duplicate, a contradiction
+ * (`exclude` alongside `include`), or a declaration outside `<head>` — is
+ * `invalid`, and an invalid marker must never activate exclusion.
+ */
+function analyzeSitemapMarker(html: string): { state: SitemapMarkerState; reason?: string } {
+  const isDeclaration = (attributes: ReadonlyMap<string, string>): boolean =>
+    (attributes.get('name') ?? '').trim().toLowerCase() === 'sitemap';
+
+  const wholeDocument = documentElements(html, 'meta')
+    .map((element) => ({ element, attributes: attributesOf(element) }))
+    .filter(({ attributes }) => isDeclaration(attributes));
+  if (wholeDocument.length === 0) return { state: 'none' };
+
+  const inHead = wholeDocument.filter(({ element }) => hasAncestor(element, 'head'));
+
+  if (wholeDocument.length > 1) {
+    return {
+      state: 'invalid',
+      reason:
+        inHead.length === wholeDocument.length
+          ? `${wholeDocument.length} sitemap declarations found — exactly one is allowed`
+          : `${wholeDocument.length} sitemap declarations found, at least one outside <head>`,
+    };
+  }
+  if (inHead.length !== 1) {
+    return { state: 'invalid', reason: 'the declaration sits outside <head>' };
+  }
+
+  const { attributes } = inHead[0];
+  if (attributes.get('name') !== 'sitemap' || attributes.get('content') !== 'exclude') {
+    return {
+      state: 'invalid',
+      reason:
+        `name="${attributes.get('name') ?? ''}" content="${attributes.get('content') ?? ''}" ` +
+        'is not the exact required form',
+    };
+  }
+  return { state: 'valid' };
+}
+
+/** `'none' | 'valid' | 'invalid'` — see `analyzeSitemapMarker` for the exact rule. */
+export function sitemapMarkerState(html: string): SitemapMarkerState {
+  return analyzeSitemapMarker(html).state;
+}
+
+/** True when the page head declares a valid sitemap exclusion marker. */
+export function isSitemapExcluded(html: string): boolean {
+  return sitemapMarkerState(html) === 'valid';
 }
 
 /** Parse the `<url>` entries — loc plus hreflang alternates — out of a sitemap. */
 export function parseSitemap(xml: string): SitemapEntry[] {
   const entries: SitemapEntry[] = [];
-  for (const block of xml.matchAll(/<url>([\s\S]*?)<\/url>/g)) {
-    const body = block[1];
-    const loc = body.match(/<loc>(.*?)<\/loc>/)?.[1];
-    if (!loc) continue;
-    const alternates = [...body.matchAll(/<xhtml:link\b([^>]*?)\/?>/g)].flatMap((l) => {
-      if (!/hreflang=/.test(l[1])) return [];
-      const lang = l[1].match(/hreflang="([^"]*)"/)?.[1]?.trim() ?? '';
-      const href = l[1].match(/href="([^"]*)"/)?.[1]?.trim() ?? '';
-      return [{ lang, href }];
-    });
-    entries.push({ loc, alternates });
+  const fragment = parseFragment(xml);
+  for (const url of elementsIn(fragment).filter((element) => element.tagName === 'url')) {
+    const descendants = elementsIn(url);
+    const loc = descendants.find((element) => element.tagName === 'loc');
+    const locValue = loc ? textContent(loc).trim() : '';
+    if (!locValue) continue;
+    const alternates = descendants
+      .filter((element) => element.tagName === 'xhtml:link')
+      .flatMap((element) => {
+        const attributes = attributesOf(element);
+        return attributes.has('hreflang')
+          ? [{
+              lang: attributes.get('hreflang')?.trim() ?? '',
+              href: attributes.get('href')?.trim() ?? '',
+            }]
+          : [];
+      });
+    entries.push({ loc: locValue, alternates });
   }
   return entries;
 }
@@ -451,6 +638,67 @@ export function lintSitemapRoutes(
           message: `hreflang="${alt.lang}" points at ${alt.href}, which the build never emitted.`,
         });
       }
+    }
+  }
+
+  return findings;
+}
+
+/**
+ * Reverse sitemap discovery gates. Sitemap inclusion and indexability are
+ * independent: a valid marker permits omission, while noindex pages must
+ * never be published in the sitemap. An invalid marker never permits
+ * omission — it is reported on its own terms instead of being treated as
+ * either present or absent.
+ */
+export function lintSitemapDiscovery(
+  entries: SitemapEntry[],
+  pages: GeneratedPage[],
+  site: string,
+): RouteFinding[] {
+  const findings: RouteFinding[] = [];
+  const sitemapPaths = new Set(entries.map((entry) => routePath(exactPath(entry.loc, site))));
+
+  for (const page of pages) {
+    const published = sitemapPaths.has(publicPath(routePath(page.route)));
+    const indexable = isIndexable(page.html);
+    const marker = analyzeSitemapMarker(page.html);
+
+    if (marker.state === 'invalid') {
+      findings.push({
+        route: page.route,
+        code: 'SITEMAP_MARKER_INVALID',
+        severity: 'fail',
+        message:
+          `Sitemap exclusion marker is invalid${marker.reason ? ` (${marker.reason})` : ''}. ` +
+          'The only recognised form is <meta name="sitemap" content="exclude"> inside <head>.',
+      });
+    }
+    if (marker.state === 'valid' && published) {
+      findings.push({
+        route: page.route,
+        code: 'SITEMAP_OPTED_OUT_PAGE',
+        severity: 'fail',
+        message: 'Page declares sitemap exclusion but is still published in the sitemap.',
+      });
+    }
+    if (!indexable && published) {
+      findings.push({
+        route: page.route,
+        code: 'SITEMAP_NOINDEX_PAGE',
+        severity: 'fail',
+        message: 'Page declares noindex but is still published in the sitemap.',
+      });
+    }
+    if (indexable && marker.state === 'none' && !published) {
+      findings.push({
+        route: page.route,
+        code: 'SITEMAP_PAGE_MISSING',
+        severity: 'fail',
+        message:
+          'Indexable page is missing from the generated sitemap. Include the page in the ' +
+          'sitemap or declare sitemap: false.',
+      });
     }
   }
 

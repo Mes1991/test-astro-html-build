@@ -73,7 +73,9 @@ output as a whole) and `routes.ts` (routes and the generated sitemap).
   `INTERNAL_LINK_NOT_CANONICAL_FORM`, `LOCALIZED_ROUTE_WITHOUT_ALTERNATES`
 - the generated sitemap, from `routes.ts`: `SITEMAP_URL_NOT_CANONICAL_FORM`,
   `SITEMAP_NON_HTML_ENTRY`, `SITEMAP_ALTERNATES_MISSING`, `SITEMAP_LOC_DANGLING`,
-  `SITEMAP_LOC_NOT_CANONICAL`, `SITEMAP_ALTERNATE_DANGLING`
+  `SITEMAP_LOC_NOT_CANONICAL`, `SITEMAP_ALTERNATE_DANGLING`,
+  `SITEMAP_PAGE_MISSING`, `SITEMAP_OPTED_OUT_PAGE`, `SITEMAP_NOINDEX_PAGE`,
+  `SITEMAP_MARKER_INVALID`
 <!-- /seo-lint-codes:fail -->
 
 **`warn` — printed to the build log only; the build still succeeds:**
@@ -103,6 +105,15 @@ if a code is added, removed or re-graded here or there. It also holds the condit
 of its severities, so a code that stops being conditional cannot quietly stay in this section. The
 HTML markers around the three lists are that test's anchors — keep them.
 
+The analyzer follows finding object/array literals, import aliases, local `const`/`let`
+initializers, named object-literal properties, and simple explicit returns from local function
+declarations. If a collected value comes from a call whose return cannot be resolved to those local
+forms — including a call into an excluded or external module — it fails closed with
+`UNRESOLVED_FINDING_PROVENANCE`, naming the file, position, and expression. Reassignment,
+destructuring, and computed property access are not inferred optimistically: when one reaches a
+collector without a supported value source, the same gate fails instead of accepting an empty code
+set.
+
 A clean `warn` list is worth reading anyway — nothing forces you to, and that is exactly why it gets
 skipped. `OG_IMAGE_MISSING` in particular is silent on every category `seo-lint` cannot see for you:
 a page with no social image still builds green.
@@ -118,9 +129,20 @@ Three things that are still easy to get wrong, even with the build doing the reg
 
 - **Read the build output, not just its exit code.** A `warn` line does not fail the build and is
   therefore the easiest thing in this workflow to ship past.
-- **`sitemap.xml` only lists what `sitemap()`'s `filter` lets through** — check `astro.config.mjs` if
-  a page you expect is missing or a page you excluded (`/404`, `/coming-soon`, anything under
-  `/og/` or `/api/`) shows up anyway.
+- **Blog posts control sitemap inclusion and indexability independently in frontmatter.** Set
+  `sitemap: false` to emit the sitemap-exclusion marker and omit both locale URLs without changing
+  robots. Set `noindex: true` only for indexability; the content schema requires an explicit
+  `sitemap: false` with it. Static resource routes remain excluded by `sitemap()`'s `filter`, while
+  holding pages emit the same HTML exclusion marker. The route gates reject an unmarked indexable
+  page missing from the sitemap (`SITEMAP_PAGE_MISSING`), a marked page that is still listed
+  (`SITEMAP_OPTED_OUT_PAGE`), a listed noindex page (`SITEMAP_NOINDEX_PAGE`), or a `meta[name="sitemap"]`
+  declaration that is not the exact `<meta name="sitemap" content="exclude">` form inside `<head>`
+  (`SITEMAP_MARKER_INVALID`) — a wrong case, stray whitespace, a duplicate, a contradiction with
+  another such declaration, or one placed in `<body>` all fail this way instead of silently acting as
+  either present or absent. `meta[name="sitemap"]` is a private, template-internal signal: search
+  engines assign it no meaning of their own. It exists only so `sitemap-opt-out` and `seo-lint` agree
+  on which pages are intentionally left out of the sitemap — robots/`noindex` remain the only real
+  indexing directive.
 - **A locale added to `i18n.locales` in `astro.config.mjs` with no matching entry in
   `src/lib/seo/locale.ts`** no longer builds clean. Astro's `fallback` still emits the new locale's
   pages, and `lintLocalizedRouteCoverage` (`routes.ts`) then sees a route emitted in more than one
@@ -170,14 +192,17 @@ sitemap `<loc>` against the page set (`SITEMAP_LOC_DANGLING`) and against the em
 (`SITEMAP_LOC_NOT_CANONICAL`), and it does validate complete reciprocal `hreflang` sets across
 pages and in the sitemap.
 
-Three of those it still does not do. **`robots.txt` is never read** — nothing checks for a
+One of those it still does not do. **`robots.txt` is never read** — nothing checks for a
 `Sitemap:` line or for crawler access, so that one stays read-and-apply, using
-`references/seo-site.md` §2 as the checklist. **A page missing from the sitemap is not caught
-either**: the sitemap gates walk the sitemap's entries and check each one against the build output,
-never the other way round, so an emitted page the `filter` silently dropped raises nothing — check
-`sitemap.xml` yourself when you add a page. And a `noindex` page published in the sitemap anyway is
-not flagged as such; the locale and alternate gates deliberately skip non-indexable pages, and the
-`filter` in `astro.config.mjs` is what keeps `/404` and `/coming-soon` out.
+`references/seo-site.md` §2 as the checklist. Sitemap discovery is checked in both directions:
+`SITEMAP_PAGE_MISSING` catches an unmarked indexable emitted page that was dropped,
+`SITEMAP_OPTED_OUT_PAGE` catches a page with a valid sitemap-exclusion marker that was included, and
+`SITEMAP_NOINDEX_PAGE` catches a noindex page that was included. `SITEMAP_MARKER_INVALID` catches a
+`meta[name="sitemap"]` declaration that does not take the exact valid form — an invalid marker never
+activates exclusion, so it never suppresses `SITEMAP_PAGE_MISSING` by accident; it is reported on its
+own terms instead. For blog content, `sitemap: false` controls only sitemap omission and `noindex`
+controls only robots; using `noindex: true` requires an explicit `sitemap: false` or content
+validation fails.
 
 **It says nothing about most of what the contracts cover.** It cannot see Core Web Vitals, judge
 whether a passage is quotable, validate a schema type's properties beyond parsing as JSON, or know

@@ -7,10 +7,12 @@ import { lintHtml, type Finding } from './lint';
 import {
   lintLocaleRoutes,
   lintLocalizedRouteCoverage,
+  lintSitemapDiscovery,
   lintSitemapRoutes,
   parseSitemap,
   routeFromDistFile,
   type GeneratedPage,
+  type SitemapEntry,
 } from './routes';
 
 /** True if the file exists at `full`. */
@@ -220,11 +222,16 @@ export default function seoLint(options: SeoLintOptions = {}): AstroIntegration 
             ? '@astrojs/sitemap is configured but no URL-set sitemap was emitted. Place seoLint() after sitemap() and check sitemap generation.'
             : 'No URL-set sitemap emitted; sitemap integration is not configured.',
         }] });
+        const sitemapEntries: SitemapEntry[] = [];
         for (const sitemapFile of sitemapFiles) {
           const entries = parseSitemap(await readFile(sitemapFile, 'utf8'));
+          sitemapEntries.push(...entries);
           for (const f of lintSitemapRoutes(entries, pages, siteOrigin, emittedFiles)) {
             reports.push({ page: `${path.relative(distPath, sitemapFile)} → ${f.route}`, findings: [f] });
           }
+        }
+        for (const f of lintSitemapDiscovery(sitemapEntries, pages, siteOrigin)) {
+          reports.push({ page: `sitemap → ${f.route}`, findings: [f] });
         }
 
         let failCount = 0;

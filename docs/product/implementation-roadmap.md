@@ -23,6 +23,23 @@ green again. Reading a gate and agreeing with it proves nothing about the gate.
 implemented and verifiable, or described plainly as not built. There is no third
 category.
 
+## How status is recorded
+
+Each phase carries a status table pinned to the commit it was verified against.
+A row is **Implemented** only when the code does it and the evidence column
+points at where; otherwise it is **Not built**. A deliverable that is half done
+is split into the part that exists and the part that does not — there is no
+"partial". The **Missing proof** column names what acceptance still needs even
+for an implemented row, usually a producer mutation that has not been recorded.
+
+A phase is **Open** until every row is Implemented and its acceptance criteria
+hold with their proof recorded. It is then **Accepted**. Status tables are
+re-verified, not carried forward: a table pinned to an older commit says nothing
+about the current one.
+
+**Current status:** B Open (verified at `f6791a4`) · C Accepted (verified at
+`d89d6f1`) · D Open · E Open · F Open · G Open.
+
 ## Phases
 
 ### B — Coherence and safe adoption
@@ -56,19 +73,42 @@ their repository that they did not choose.
 
 **Depends on.** Nothing. B is first.
 
+**Status at `f6791a4`: Open**
+
+| Deliverable | Status | Evidence | Missing proof |
+|---|---|---|---|
+| Emitted-code contract parity (`SKILL.md`, rebrand checklist) | Implemented | `src/integrations/seo-lint/documented-codes.test.ts` | — |
+| Site origin from `siteSeo.siteUrl` only | Implemented | `src/lib/seo/defaults.ts`; `astro.config.mjs` derives `site`; commits `cd1ba19`, `aa854be`, `a730f3a`, `9329caa` | — (mutation recorded: origin + email changed alone in a clone → 371/371 tests, build clean, no `example.com` in `dist`) |
+| Every read env variable typed | Implemented | `src/env.d.ts` declares all five variables read under `src/`; `.env.example` documents them; `src/env-contract.test.ts` asserts three-way parity; commit `f6791a4` | — (mutation recorded: removing `PUBLIC_COMING_SOON` from `env.d.ts` turns two parity assertions red naming that variable; restoring turns it green) |
+| One version source | Implemented | `package.json:5` → `0.1.0`; `version.txt`, `release-please-config.json`, `.release-please-manifest.json` removed; `src/repo-contract.test.ts`; commit `cf28296` | — (mutation recorded: reintroducing `version.txt` in a clone turns `src/repo-contract.test.ts` red on the "no competing version source" assertion; removing it again turns it green) |
+| Performance budgets on emitted routes | Implemented | `lighthouserc.json` / `lighthouserc.mobile.json` audit only `/`, `/blog/`, `/blog/example-post/`, `/es/`, `/es/blog/`, `/es/blog/example-post/`; `src/lighthouse-routes.test.ts` derives the expected set from `pathFor`/`postPathFor` and blog frontmatter without depending on a prior build; commit `8a34c6c` | — (mutation recorded: swapping an entry for `/work/index.html` in a clone turns the test red on both the added and the dropped URL; restoring turns it green) |
+| Font licences shipped | Implemented | `public/fonts/jetbrains-mono/OFL.txt`, `src/assets/fonts/OFL.txt` (verbatim SIL OFL 1.1); `src/font-license.test.ts`; `THIRD_PARTY_NOTICES.md`; commit `2396323` | — (mutation recorded: deleting `OFL.txt` from one font directory in a clone turns the test red; restoring turns it green). Note: the two `.ttf` files are SHA-256-verified against the upstream `master` branch; the two `.woff2` variable-font subsets are a derived build with no upstream artifact to hash against and are recorded as unverified provenance, not unlicensed — see `THIRD_PARTY_NOTICES.md` |
+| Read-only CI | Implemented | `.github/workflows/ci.yml` — `permissions: contents: read` | — |
+| Side-effect automation withdrawn | Implemented | `release-please.yml`, `cleanup-pages-previews.yml`, `pr-title-lint.yml` removed from `.github/workflows/` (preserved as opt-in examples at `docs/recipes/workflows/*.example`); only `ci.yml` ships by default; `src/repo-contract.test.ts` asserts no default-shipping workflow grants a `write` permission, runs `gh pr merge`, or calls an external API with a write verb; commit `cf28296` | — (mutation recorded: re-adding `contents: write` to `ci.yml` in a clone turns the test red on that one assertion; restoring turns it green) |
+
+| Acceptance criterion | Holds? |
+|---|---|
+| test / check / build green | Yes at `f6791a4` (403 tests, `check` 0 errors, `seo-lint` clean) |
+| Origin change alone leaves the build clean | Yes (recorded above) |
+| No auto-triggered workflow that writes | Yes — `src/repo-contract.test.ts`; commit `cf28296` |
+| Audited URLs are emitted routes | Yes — `src/lighthouse-routes.test.ts`; commit `8a34c6c` |
+| Remote CI observed green | Not recorded |
+
 ### C — Hardening of gates and invariants
 
 **Goal.** The build-time gates hold under inputs nobody has written yet, and the
 invariants the contracts assert are enforced rather than trusted.
 
-**Deliverables**
+**Deliverables**, in build order — attribute extraction first, because the other
+route rules read through it:
 
-- The `seo-lint` gate surface extended where it currently classifies by
-  heuristic: asset classification for extensionless and unusual public files,
-  opt-out for sitemap discovery, regional locale variants in hreflang matching,
-  and a content-contract rule for slugs the router cannot carry.
 - Attribute extraction in the route gates made insensitive to attribute order
   and quoting style.
+- Regional locale variants in hreflang matching.
+- The `seo-lint` gate surface extended where it currently classifies by
+  heuristic: asset classification for extensionless and unusual public files,
+  opt-out for sitemap discovery, and a content-contract rule for slugs the
+  router cannot carry.
 - Provenance analysis in the documentation-parity gate: value flow through
   variable initialisers, so a finding constructed outside the analysed module
   graph cannot reach a collector unnoticed.
@@ -81,6 +121,42 @@ diagnostic. Key parity proven by deleting a key and watching the suite fail.
 
 **Depends on.** B, for the contracts that say what the gates are meant to hold.
 
+**Status at `d89d6f1`: Accepted** — `bun run test` 506/506, `bun run check` 0 errors,
+`bun run build` with seo-lint clean (10 pages). An adversarial review of `9bbc050..7bd6f1e`
+found four blockers and two majors; each is fixed with a named regression and a recorded
+producer mutation (`bee1e47`, `81ecbcb`, `d89d6f1`). Acceptance after those fixes is a human
+decision; the adversarial review was not re-run against `d89d6f1`.
+
+**Scope note.** The deliverables cover the route gates in `routes.ts`. The page-level checks
+in `src/integrations/seo-lint/lint.ts` (`CANONICAL_MISSING`, description, `<html lang>`) still
+read markup with regular expressions and inherit the same class of weakness; they are outside
+phase C and not claimed here.
+
+| Deliverable | Status | Evidence | Missing proof |
+|---|---|---|---|
+| Order- and quote-insensitive attribute extraction | Implemented | Spec-compliant parse through `parse5` (declared in `package.json`): `parsedDocument` / `elementsIn` / `headElements` in `src/integrations/seo-lint/routes.ts:60-123`, read by `declaredCanonical`, `declaredOgUrl`, `declaredAlternates`, `isIndexable`, `parseSitemap`. Head-only metadata; comments, raw text and `<template>` contents are never effective; attribute values arrive decoded, and invalid numeric references decode to U+FFFD. Tests `routes.test.ts` (reordered/uppercase/single-quoted/unquoted/entity variants, "extracts a canonical containing a quoted greater-than sign and keeps its gates active", "ignores canonical and og:url markup in comments, scripts, templates and noscript", "ignores robots and alternate markup in comments, scripts, templates and noscript", "decodes invalid numeric character references to the replacement character without throwing"); commits `50e25e4`, `bee1e47` | — (mutations recorded: fixed-order double-quote canonical regex → `expected null to be '…?a=1&b=2'`; truncating at the first `>` → canonical `null`; reading comment content → canonical `/comment/`; throwing decoder → `RangeError: Invalid code point 9999999999`; traversing template contents → 3 named failures incl. "ignores internal links and html-like markup in inert content"; all restored) |
+| Language match by primary subtag (content, `inLanguage`) | Implemented | `langMatches` at `src/integrations/seo-lint/lint.ts:181-186`, used by `lintLocaleRoutes` in `routes.ts`; test `lint.test.ts` (es vs es-MX) | — (mutation recorded: comparing full tags instead of primary subtags failed `lintHtml — JSON-LD inLanguage cross-check (LD_LANG_MISMATCH) > passes when primary subtag matches across regional variants (es vs es-MX)` (`expected true to be false`), plus `lintLocaleRoutes > passes when every indexable page matches the locale in its URL` and the regional hreflang coverage test; restored) |
+| Regional variants in hreflang alternate coverage | Implemented | `isValidHreflang` and `alternateProblems` in `routes.ts:233-273`: a tag must be `x-default` or a well-formed ASCII BCP 47 subset (language, optional script, region, variants; extensions and private use excluded) or it reports `invalid hreflang="…"` and never counts; then exact match first, primary-subtag fallback only for a bare configured locale no other locale names exactly. Same path for page heads and sitemap alternates. Tests `routes.test.ts` (regional acceptance, distinct `es-ES`/`es-MX`, missing sibling, malformed `es-`, `es-NOT_A_TAG`, non-ASCII, empty subtag in heads and sitemap); commits `50e25e4`, `81ecbcb` | — (mutations recorded: exact-only matching failed `accepts regional hreflang variants by primary language subtag`; primary-subtag-only matching failed the distinct-regional test with `2 hreflang="es-ES" entries`; accepting every tag failed 8 named malformed-tag tests; restored) |
+| Asset classification by emitted inventory | Implemented | `walkAssets` in `src/integrations/seo-lint/index.ts:103`, consumed at `index.ts:193` and by the route gates in `routes.ts`; tests `index.test.ts` (`walkAssets`), `routes.test.ts` (file-shaped routes, dotted slugs, Unicode names); commit `01a0021` | — (mutation recorded: excluding extensionless emitted files from `walkAssets` exposed a coverage gap; added `walkAssets > includes extensionless emitted files in the asset inventory`, which failed with `expected [] to deeply equal ['/downloads/NOTICE']`; restored) |
+| Sitemap discovery opt-out | Implemented | Independent `sitemap` / `noindex` content controls (schema rule in `src/lib/content/discovery.ts`); explicit HTML exclusion marker under a strict three-state contract (`sitemapMarkerState` via `analyzeSitemapMarker` in `routes.ts:313-358`: `none` / `valid` / `invalid`), read from the parsed DOM so markers in comments, raw text or (nested) `<template>` are `none`; marker-only `sitemap-opt-out` postprocessor, which only ever acts on `valid`; `SITEMAP_PAGE_MISSING` / `SITEMAP_OPTED_OUT_PAGE` / `SITEMAP_NOINDEX_PAGE` / `SITEMAP_MARKER_INVALID` gates and tests; commits `f6fead0`, `e3cb2d8`, `d5f9e65`, `bee1e47` | — (mutations recorded: ignoring the marker → `SITEMAP_PAGE_MISSING`; treating any omission as intentional → accidental-omission test red (`[]`); postprocessor off → `SITEMAP_OPTED_OUT_PAGE` on both locales; removing the coming-soon marker → `SITEMAP_NOINDEX_PAGE` en/es; `noindex: true` with default `sitemap` → schema refine failure; restoring case/trim folding → 5 named marker tests red; real build with `content="Exclude"` on coming-soon → exit 1 with `SITEMAP_MARKER_INVALID` + `SITEMAP_NOINDEX_PAGE` on `/coming-soon/` and `/es/coming-soon/`; traversing template contents → `sitemap-opt-out > keeps a URL whose only sitemap marker is inside nested templates` red; all restored) |
+| Router-safe slug rule | Implemented | `routerSafeSlugSchema` in `src/lib/content/slug.ts`, wired by `src/content.config.ts`; schema tests preserve dotted and Unicode slugs; commit `eeddff7` | — (mutations recorded: `Bad Slug/x` failed content sync with the named Router-safe slug rule; dropping the backslash/Windows-unsafe character class failed 7 named reject cases; restored) |
+| Initialiser value-flow provenance | Implemented | `documented-codes.test.ts` follows const/let initialisers, simple aliases, named object-literal properties and simple explicit returns from local functions; any collected value from an unresolvable or external call fails closed with `UNRESOLVED_FINDING_PROVENANCE` naming file, position and expression; virtual graph tests cover each boundary; commits `454a424`, `d89d6f1` | — (mutations recorded: fixture produced `ALIASED_UNDOCUMENTED_CODE` and both documentation parity assertions named it; restoring the silent return on an unresolved call failed `seo-lint module graph > fails closed when a local wrapper returns an external call result`; restored) |
+| i18n key parity test | Implemented | `src/i18n/parity.test.ts`; commits `21ef614`, `c84ed06` | — (mutations recorded: deleting `nav.home` → named failure; orphan `fr.json`; empty `"nav": {}`) |
+
+**Decided 2026-09-23 — sitemap opt-out semantics.** Sitemap inclusion and
+indexability are independent controls. `sitemap: false` excludes a page without
+changing robots, while `noindex: true` controls robots and requires an explicit
+`sitemap: false`; otherwise content validation fails the build.
+
+**Decided 2026-09-23 — strict sitemap marker contract.** The `meta[name="sitemap"]`
+HTML marker only activates exclusion in exactly one form: a single
+`<meta name="sitemap" content="exclude">` inside `<head>`, matched case- and
+whitespace-exactly after entity decoding. Any other shape a page can emit —
+wrong case, trailing whitespace, a near-miss value, a duplicate, a contradiction
+with another such declaration, or one placed outside `<head>` — is `invalid` and
+fails the build with `SITEMAP_MARKER_INVALID` rather than silently acting as
+either present or absent.
+
 ### D — Content and languages
 
 **Goal.** The content model supports real translations, and the bilingual core
@@ -89,7 +165,8 @@ becomes a genuine option rather than a requirement.
 **Deliverables**
 
 - Per-locale content bodies, not translated frontmatter on a shared body.
-- A tested path from the bilingual default to a single-language site.
+- A tested path from the bilingual default to a single-language site, including
+  the tests that today assume exactly `en` and `es`.
 - A documented flow for adding a locale.
 - The contract for a second content collection alongside `blog`.
 
@@ -100,8 +177,24 @@ renders at `/es/blog/<slug>/`; the documented monolingual conversion builds
 green; adding a third locale builds green. `seo-lint` clean and i18n key parity
 holding in all three.
 
-**Depends on.** C, because each of these changes what the route and sitemap
-gates see.
+**Depends on.** B. Per-locale bodies and the second-collection contract depend
+on nothing in C. The monolingual and third-locale mutations depend on C's
+attribute extraction and regional hreflang rows, because those mutations change
+exactly what the route and sitemap gates see.
+
+**Status at `16d276a`: Open**
+
+| Deliverable | Status | Evidence | Missing proof |
+|---|---|---|---|
+| Per-locale content bodies | Not built | `src/content.config.ts:28-46` translates frontmatter only; `src/pages/blog/[slug].astro` and `src/pages/es/blog/[slug].astro` render the same entry body | — |
+| Monolingual conversion path | Not built | `oppositeLocale` and route parsing are en/es-only (`src/lib/seo/locale.ts:55-58,79-88`); `t.test.ts`, `locale.test.ts`, `sitemap.test.ts`, `schemas/breadcrumb.test.ts`, `routes.test.ts` hardcode `es`; the adoption wizard §7 states no tested conversion exists | — |
+| Add-a-locale flow | Not built | wizard §7 covers bilingual and monolingual only | — |
+| Second-collection contract | Not built | only the guidance in `CLAUDE.md` | — |
+
+Prerequisite already in place: the adoption wizard's §7 inventory test and the
+i18n parity test derive their locale set from `LOCALES`, so they hold through a
+conversion (`b6e2deb`, `37cc8c6`; mutation recorded: `LOCALES=['es']` with `en.json`,
+`src/pages/es/` and the fallback removed → both suites green).
 
 ### E — Measured operability of skills
 
@@ -111,6 +204,8 @@ and that is measured rather than assumed.
 **Deliverables**
 
 - A routing mechanism an agent follows in practice.
+- A tracked record of clean-agent simulations: scenario, input, runtime, commit
+  tested, skills opened, forbidden pre-confirmation actions observed, result.
 - A skill corpus that fits the context budget this repository sets for itself.
 - An Astro binding layer for `form-slot`, which today stops at contract.
 
@@ -121,6 +216,16 @@ followed. Prose review is not an acceptance criterion here: a phase that only
 rewrites documentation fails this by construction.
 
 **Depends on.** B, for contracts worth routing to.
+
+**Status at `16d276a`: Open**
+
+| Deliverable | Status | Evidence | Missing proof |
+|---|---|---|---|
+| Adoption gate as the routing entry point | Implemented | `skills/site-build/references/adoption-wizard.md`; `CLAUDE.md` rule 0; `AGENTS.md`; commits `48caa77`, `501c715`, `30e6866`, `e377563`, `4d591f7`, `37cc8c6`, `1500b12` | behavioural proof lives outside the repository — see next row |
+| Structural contract test for the wizard | Implemented | `src/agent-contracts/adoption-wizard.test.ts` (states, 15 contract fields, S1–S10, routing, Round 1 B wording, §7 inventory) | — |
+| Tracked clean-agent simulation record | Not built | runs were performed while hardening the wizard, but no record is committed | — |
+| Context-budget fit | Not built | no measurement exists | — |
+| `form-slot` Astro binding | Not built | `skills/form-slot/SKILL.md` stops at contract | — |
 
 ### F — Deployment, workflows and supply chain
 
@@ -146,6 +251,11 @@ supply-chain changes human-reviewed. Optional workflows live outside
 `.github/workflows/` or trigger only on `workflow_dispatch`.
 
 **Depends on.** B, which decides which workflows exist at all.
+
+**Status at `16d276a`: Open — not audited row by row.** Two rows are known Not
+built: actions use mutable tags (`actions/checkout@v4`, `oven-sh/setup-bun@v2`,
+`marocchino/sticky-pull-request-comment@v2`), and `public/_headers` sets only
+`Cache-Control`. The remaining rows need an audit before they carry a status.
 
 ### G — Adoption contract
 
@@ -173,6 +283,18 @@ preference.** A capability matrix written before the phases that establish the
 capabilities is a document describing intentions, which is the failure this
 roadmap exists to prevent.
 
+**Status at `16d276a`: Open.** Nothing built, by design: G waits for B–F.
+
+## Known stale statements elsewhere
+
+Found while verifying the status tables; each belongs to the phase that owns the
+file, and none is fixed by this roadmap:
+
+- `docs/product/current-repository-map.md` still describes a separate route map
+  for sitemap hreflang; `astro.config.mjs` now delegates to `hreflangLinksFor()`
+  in `src/lib/seo/sitemap.ts`, which reads `ROUTE_KEYS` and `LOCALES` (B).
+- `src/lib/seo/types.ts:3` refers to a "Phase 4" that this roadmap does not have (B).
+
 ## Not scheduled
 
 Capability that is deliberately unbuilt, recorded so it is not mistaken for an
@@ -183,8 +305,14 @@ oversight:
   (`.agents/skills/`, `.claude/skills/`) is specified in
   `docs/product/agent-ecosystem-contract.md` and does not exist. Until it does,
   that contract describes a target, not a mechanism.
-- **A release automation recipe.** The template ships no automated release.
-  Whoever wants one adopts it deliberately.
+- **A release automation recipe.** The intended end state is a template that
+  ships no automated release, so whoever wants one adopts it deliberately. That
+  is now true: `release-please.yml` no longer ships in `.github/workflows/` (B
+  row "Side-effect automation withdrawn"). It survives as an opt-in example at
+  `docs/recipes/workflows/release-please.yml.example`, with its known R-34
+  auto-merge defect and the `release-type: node` fix documented for anyone who
+  adopts it — building a *hardened* recipe that ships by default remains
+  unscheduled.
 
 These have no phase because they have no committed date. Moving one into a phase
 is a product decision, not a scheduling detail.

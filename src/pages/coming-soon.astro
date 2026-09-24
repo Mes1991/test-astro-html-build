@@ -3,7 +3,6 @@ import "../styles/global.css";
 import Hero3D from "../components/coming-soon/Hero3D.astro";
 import AvatarCycler from "../components/coming-soon/AvatarCycler.astro";
 import { absoluteUrl, routeUrl } from "../lib/seo/url";
-import { DEFAULT_LOCALE } from "../lib/seo/types";
 import { siteSeo } from "../lib/seo/defaults";
 
 const title = "Coming soon — a new site built with this template";
@@ -12,18 +11,9 @@ const description =
 const ogImage = absoluteUrl("/og/default.png");
 const canonicalHref = routeUrl("/coming-soon/");
 
-/* This holding page ships in English only. Astro's i18n fallback still emits a
-   copy of it under every other locale prefix (`fallbackType: 'rewrite'`), so
-   those copies must stay out of the index — English content served at a
-   Spanish URL is a duplicate, not a translation. Translate this page and give
-   it a real per-locale route if you want it indexed in that locale.
-
-   `Astro.currentLocale` is the only reliable signal here: on a rewrite
-   fallback, `Astro.url.pathname` still reports the source route
-   (`/coming-soon/`) for both copies, while `currentLocale` correctly reports
-   `en` and `es`. */
-const isFallbackCopy = Astro.currentLocale !== DEFAULT_LOCALE;
-const robots = isFallbackCopy ? "noindex,follow" : "index,follow";
+/* Holding pages are explicit sitemap/index opt-outs in every locale. Replace
+   this directive only when this route becomes real launch content. */
+const robots = "noindex,follow";
 ---
 
 <!doctype html>
@@ -32,6 +22,7 @@ const robots = isFallbackCopy ? "noindex,follow" : "index,follow";
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content={robots} />
+    <meta name="sitemap" content="exclude" />
     <meta name="theme-color" content="#0b1220" />
     <title>{title}</title>
     <meta name="description" content={description} />

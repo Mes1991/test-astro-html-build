@@ -14,6 +14,7 @@ const {
   description = siteSeo.defaultDescription,
   canonical,
   noindex = false,
+  sitemap = true,
   image,
   type = 'website',
   locale = DEFAULT_LOCALE,
@@ -55,6 +56,7 @@ const bingToken = import.meta.env.PUBLIC_BING_VERIFICATION;
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="theme-color" content={siteSeo.themeColor} />
 <meta name="robots" content={robotsContent} />
+{!sitemap && <meta name="sitemap" content="exclude" />}
 {keywords && keywords.length > 0 && (
   <meta name="keywords" content={keywords.join(', ')} />
 )}

@@ -58,6 +58,8 @@ const articleSchema = buildBlogPosting({
   modifiedTime={data.dateModified}
   author={data.author}
   schema={articleSchema}
+  noindex={data.noindex}
+  sitemap={data.sitemap}
   image={{ src: typeof data.image === "string" ? data.image : data.image.src, alt: data.imageAlt }}
 >
   <Fragment slot="head">

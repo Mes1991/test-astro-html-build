@@ -71,7 +71,7 @@ Always verify the real scripts in `package.json` before assuming a command exist
 | `bun run preview` | Preview the production build locally |
 | `bun run check` | TypeScript / Astro type check |
 | `bun run test` | Run the vitest suite (use this, **not** `bun test`) |
-| `bun run audit` / `audit:mobile` | Build + Lighthouse CI |
+| `bun run audit` / `audit:mobile` | Build + Lighthouse CI — manual/opt-in only, not run in CI |
 
 ## Project structure
 

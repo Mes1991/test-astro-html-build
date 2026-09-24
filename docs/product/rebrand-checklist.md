@@ -115,6 +115,22 @@ esos archivos deben enlazar aquí, no repetir la lista.
   `image`, `imageAlt`; opcionales documentados en
   `docs/product/current-repository-map.md` §3.
 
+- La inclusión en el sitemap y la indexabilidad son controles independientes.
+  Declara `sitemap: false` para omitir las rutas en/es del sitemap sin cambiar
+  robots; declara `noindex: true` solo para controlar robots. El schema exige
+  combinar `noindex: true` con un `sitemap: false` explícito. No mantengas una
+  segunda lista de slugs en `astro.config.mjs`.
+- La marca `meta[name="sitemap"]` es una señal privada e interna de la
+  plantilla: los buscadores no le asignan ningún significado propio. Existe
+  solo para que `sitemap-opt-out` y `seo-lint` coincidan en qué páginas quedan
+  fuera del sitemap a propósito; robots/`noindex` siguen siendo la única
+  directiva real de indexación. La única forma válida es exactamente
+  `<meta name="sitemap" content="exclude">` dentro de `<head>`, sin
+  duplicados ni contradicciones. Cualquier otra variante — mayúsculas o
+  espacios distintos, un valor parecido pero no exacto, un duplicado, una
+  marca `exclude` junto a otra `include`, o la marca fuera de `<head>` — falla
+  con `SITEMAP_MARKER_INVALID` y nunca activa la exclusión.
+
 ## 8. Analytics opcional
 
 - `src/components/seo/GoogleAnalytics.astro` solo emite en producción y solo
@@ -157,7 +173,8 @@ distingue dos severidades:
 - Sitemap generado (`routes.ts`): `SITEMAP_URL_NOT_CANONICAL_FORM`,
   `SITEMAP_NON_HTML_ENTRY`, `SITEMAP_ALTERNATES_MISSING`,
   `SITEMAP_LOC_DANGLING`, `SITEMAP_LOC_NOT_CANONICAL`,
-  `SITEMAP_ALTERNATE_DANGLING`.
+  `SITEMAP_ALTERNATE_DANGLING`, `SITEMAP_PAGE_MISSING`,
+  `SITEMAP_OPTED_OUT_PAGE`, `SITEMAP_NOINDEX_PAGE`, `SITEMAP_MARKER_INVALID`.
 <!-- /seo-lint-codes:fail -->
 
 **WARN (se imprime, no rompe el build):**
@@ -191,6 +208,17 @@ rompe `bun run test` si divergen. También exige que la lista condicional
 declare las dos severidades posibles, así que un código que deje de ser
 condicional no puede quedarse acá en silencio. Los marcadores HTML que rodean
 las tres listas son los anclajes de ese test — no los quites.
+
+El analizador sigue literales de objeto y arreglo que representan hallazgos,
+alias de importación, inicializadores locales `const`/`let`, propiedades
+nombradas de literales de objeto y retornos explícitos simples de funciones
+locales. Si un valor recolectado proviene de una llamada cuyo retorno no puede
+resolverse a esas formas locales —incluidas las llamadas a módulos excluidos o
+externos—, falla de forma cerrada con `UNRESOLVED_FINDING_PROVENANCE` e indica
+archivo, posición y expresión. No intenta inferir reasignaciones,
+desestructuración ni accesos a propiedades calculadas: si una de esas formas
+llega al recolector sin una fuente compatible, el gate falla en lugar de
+aceptar un conjunto vacío de códigos.
 
 Un rebrand solo cuenta como terminado cuando ambos comandos (`bun run build`
 y `bun run test`) terminan en verde desde un checkout limpio.

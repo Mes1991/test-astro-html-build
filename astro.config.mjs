@@ -5,6 +5,7 @@ import sitemap from '@astrojs/sitemap';
 import partytown from '@astrojs/partytown';
 import react from '@astrojs/react';
 import seoLint from './src/integrations/seo-lint/index.ts';
+import sitemapOptOut from './src/integrations/sitemap-opt-out/index.ts';
 import { siteSeo } from './src/lib/seo/defaults.ts';
 import { hreflangLinksFor } from './src/lib/seo/sitemap.ts';
 
@@ -37,8 +38,8 @@ export default defineConfig({
     sitemap({
       filter: (page) => {
         if (page.includes('/og/') || page.includes('/api/')) return false;
-        // Drop error and holding pages — these don't belong in sitemaps.
-        const EXCLUDED = ['/404', '/coming-soon'];
+        // Drop error pages. Holding pages opt out through their HTML marker.
+        const EXCLUDED = ['/404'];
         if (EXCLUDED.some((p) => page.includes(p))) return false;
         return true;
       },
@@ -69,7 +70,9 @@ export default defineConfig({
       },
     }),
     react(),
-    // Must run after sitemap(): its build-done hook validates emitted XML.
+    // Must run after sitemap(): removes pages with an explicit sitemap marker.
+    sitemapOptOut(),
+    // Must run after sitemapOptOut(): its build-done hook validates final XML.
     seoLint(),
   ],
   vite: {
