@@ -104,19 +104,51 @@ Not applicable to run 2 (outside the blog-only, bilingual scope this simulation 
 webhook-triggered content; a `sitemap: false` landing page; whole-site scope; 404 and coming-soon
 pages; a search backend; and GitHub Actions or a deploy strategy.
 
+## Run 3 acceptance
+
+Run 3 uses the revised `static-site-search` skill (the PF-B skill fixes). It is scored against
+everything in "Run 2 acceptance", plus:
+
+- the contract summary is presented and an explicit human go-ahead is given before the first
+  write, and the first write is the confirmed contract in `DESIGN.md`;
+- all seven §1 questions are asked individually, each as its own prompt with its own
+  recommendation — no question marked answered by inference;
+- no unilateral deviation from the skill: a Component UI misfit is raised to the human, not
+  decided by the agent;
+- the coverage gate exists, derives its expected set from published posts and canonical routes
+  (never from Pagefind markers or output), and fails naming the URL under the
+  `data-pagefind-body` mutation;
+- the base-path matrix passes: root `/`, then `base: "/preview"` with `trailingSlash: "never"`,
+  then with `"always"`, with assets and links joined throughout;
+- the Playwright/Chromium browser scenarios pass (the minimum list in `static-site-search` §5);
+- the temporary browser probe is absent from the final candidate diff;
+- `bun run test`, `bun run check`, `bun run build` (seo-lint clean) and `git diff --check` are
+  green.
+
 ## Record format for the run
 
-Record each simulation run as a block with these fields, committed under this document or a
-linked artifact named here (never left only in a chat transcript):
+Record each simulation run as an auditable extract, committed under this document or a linked
+artifact named here (never left only in a chat transcript). The committed record must contain:
 
-- **Commit tested** — the PF-A commit/diff state used to build the disposable copy.
-- **Agent / runtime** — which agent and runtime executed the simulation.
-- **Transcript location** — where the full transcript is kept (path or link); PF-B's record here
-  is a summary, not a substitute for the transcript.
-- **Observed vs. expected, per bullet** — for every bullet in "Expected behavior before writing"
-  and "Expected result after authorizing a test implementation" above, record what was actually
-  observed and whether it matches.
-- **Result** — PASS or FAIL, with the specific failure condition triggered if FAIL.
+- the exact initial prompt given to the agent;
+- the seven contract questions as asked, in order;
+- the human's answers to each;
+- the contract summary presented back to the human;
+- the explicit authorization, quoted;
+- the moment of the first write (what it was, and what preceded it);
+- decisions and deviations from the skill;
+- the relevant commands and their observed results;
+- the commits created;
+- the observed vs. expected result against each acceptance criterion;
+- the size and SHA-256 of each original stream-json transcript, kept outside Git during the audit.
+
+**Why an extract, not the raw stream.** The raw stream-json transcript exceeds 500 KB per run, may
+include internal instructions the audit should not republish, and buries the evidence in tool-call
+noise. The full stream stays outside Git; its size and hash anchor the committed extract to it.
+
+Also record, as before: **Commit tested** — the PF-A commit/diff state used to build the disposable
+copy; **Agent / runtime** — which agent and runtime executed the simulation; and **Result** — PASS
+or FAIL, with the specific failure condition triggered if FAIL.
 
 ## Run records
 
@@ -127,12 +159,17 @@ linked artifact named here (never left only in a chat transcript):
 - **Agent / runtime** — Claude Code 2.1.281, headless (`claude -p`), `claude-sonnet-5`,
   `--permission-mode bypassPermissions`, `--strict-mcp-config` (no MCP servers),
   `--setting-sources project` (project settings only), hooks disabled.
-- **Transcript location** — `docs/product/pf-b-runs/run-1-transcript.md`. That committed file is an
-  extract (tool calls and assistant text only; the system prompt and tool results are omitted;
-  clone paths are redacted as `<clone>`), not the full transcript. The full raw stream-json
-  transcript existed only in a local session scratchpad and was not preserved in this repository.
-  "Record format for the run" above calls for the full transcript's location; this run does not
-  satisfy that — recorded as a gap in the status table below, not as compliance.
+- **Transcript extract and fingerprints** — `docs/product/pf-b-runs/run-1-transcript.md` is the
+  committed auditable extract (tool calls and assistant text only; the system prompt and tool
+  results are omitted; clone paths are redacted as `<clone>`). The original raw stream-json
+  transcripts are kept outside Git during the audit, fingerprinted here:
+  - turn 1 (`phase1`) — 163533 bytes, SHA-256
+    `8928bd9013e41ad812f077e105edfda2eeab7172127cc3efa33421c8d263229a`;
+  - turn 2 (`phase2`) — 15062 bytes, SHA-256
+    `d79860079cf5cbe3803d85cee975a3393573491b502ac12c3f6ae6507b4c38ff`.
+  Under the revised "Record format for the run", this record still does not meet the format: run 1
+  was stopped before a contract summary was presented or any authorization given, so those required
+  items cannot exist. Recorded as a gap in the status table below, not as compliance.
 - **Observed vs. expected, per bullet of "Expected behavior before writing" (previous skill
   version, in force at run time):**
   - *Load `site-build` then `static-site-search`, not all eight skills* — observed: the adoption
@@ -199,11 +236,28 @@ linked artifact named here (never left only in a chat transcript):
 - **Agent / runtime** — same as run 1: Claude Code 2.1.281, headless (`claude -p --model sonnet`,
   `claude-sonnet-5`), `--permission-mode bypassPermissions`, `--strict-mcp-config` (no MCP
   servers), `--setting-sources project`, hooks disabled. Session `2692d2f9-4db5-4fd5-894b-eb2aac4809fa`.
-- **Transcript location** — `docs/product/pf-b-runs/run-2-transcript.md`. As with run 1, that
-  committed file is an extract (top-level tool calls and assistant text only; the system prompt,
-  tool results and subagent internals are omitted; clone paths redacted as `<clone>`), not the
-  full transcript. The full raw stream-json transcript existed only in a local session
-  scratchpad and was not preserved in this repository — the same gap as run 1, recorded again in
+- **Transcript extract and fingerprints** — `docs/product/pf-b-runs/run-2-transcript.md` is the
+  committed auditable extract (top-level tool calls and assistant text only; the system prompt,
+  tool results and subagent internals are omitted; clone paths are redacted as `<clone>`). The
+  original raw stream-json transcripts are kept outside Git during the audit, fingerprinted here:
+  - turn 1 — 152782 bytes, SHA-256
+    `037fe56abbcbfa4b1f966cdf3b63a05bb3a256f1d26007ed94079fcad5ea6c03`;
+  - turn 2 — 6699 bytes, SHA-256
+    `d6f5de60086254484f120c86452da8a2c81d8373eefaf85333046fe8a2b5c24e`;
+  - turn 3 — 7782 bytes, SHA-256
+    `3e4ebce919485508b1e783dc83de6a0b3db5badf58d3087679769529d63fc6b6`;
+  - turn 4 — 6753 bytes, SHA-256
+    `84ad2dc6f5136ed570ba13c4f9d5971d4fe2e9ddd2a7010127f600f313a36611`;
+  - turn 5 — 10275 bytes, SHA-256
+    `6b7ddce47c7c03c07505c81448127386ce4c085c19ae529f5874bc563660f4ea`;
+  - turn 6 — 6851 bytes, SHA-256
+    `6927e6df4e929d55e2e3b30cda1f4200970f0b5370ef8c3fab55355b54efe4b6`;
+  - turn 7 — 649825 bytes, SHA-256
+    `f337f10337819bcc22042b418316e36390b00ca6ba74580dee919d17764e6d0a`;
+  - turn 8 — 696649 bytes, SHA-256
+    `67e27207e6c77469bfe051ec44d7bee28f25c5a4e86b2ce9be631380330c7f7a`.
+  Under the revised "Record format for the run", this record still does not meet the format: run 2
+  never received an explicit authorization, so that required item cannot exist. Recorded as a gap in
   the status table below, not as compliance.
 - **Harness note (Turn 8)** — the background subagent the orchestrator delegated for T2 (marking
   blog post pages) was terminated mid-task when its host session ended; it left an uncommitted
@@ -496,23 +550,33 @@ does not address (see "Findings for the skill" below).
   right by following the human's explicit instructions rather than the (at-the-time weaker) skill
   default. `1075459` codifies the draft/`data-pagefind-body`/`noindex` three-contracts-separate
   rule the human stated verbatim in Turn 7, matching what the agent implemented.
-- **Still unaddressed.** None of the five commits change §2/§4's Component UI guidance, so an
-  agent under time or design pressure has the same latitude to substitute the raw JS API without
-  asking — the skill states Component UI as the default path but has no explicit "ask before
-  deviating from this architecture" instruction the way it does for the seven contract questions.
-  None of the five commits add a step requiring the agent to state the build/preview-vs-`astro
-  dev` distinction to the human, or to summarize the confirmed contract, request an explicit
-  go-ahead, and write it to `DESIGN.md` first, the way the adoption wizard's own §9 requires,
-  before the first write. None add a documented fallback for §5's mandatory
-  real-browser checks when no browser-automation tool is available in the repository (the skill
-  still states these checks as flatly mandatory, with no guidance for what to do, or how to flag
-  the gap, when they cannot be performed — though to its credit both runs of the agent did disclose
-  the gap honestly rather than fabricating a pass). None add or require an automated coverage gate
-  for `data-pagefind-body` coverage — §5 still describes deriving and comparing the expected URL
-  set as a one-off manual verification step rather than a repeatable, machine-checked test, which
-  is exactly why this run's `data-pagefind-body`-removal mutation produced a silent, ungated
-  failure instead of a named one. The non-root `base` test that §5 already required at `9ca0617`
-  remains unimplemented by any run so far, and no later commit strengthens or clarifies it.
+- **Still unaddressed.** None of the five commits add a step requiring the agent to state the
+  build/preview-vs-`astro dev` distinction to the human before writing. The skill states it in §2
+  but nothing forces the agent to surface it, so this gap remains open. (The other gaps listed here
+  before this revision are now addressed in the skill; see the next bullet.)
+- **Addressed by this revision (PF-B skill fixes)** — new instructions added to
+  `skills/static-site-search/SKILL.md`, without changing run 1's or run 2's recorded verdicts:
+  - **Contract summary, explicit go-ahead, `DESIGN.md` first (§1).** After the seven answers and
+    before any write, install or delegation, present a summary of all seven answers and wait for
+    explicit human confirmation; an agent's own "contract confirmed" is not authorization, and the
+    first file write is the confirmed contract in `DESIGN.md` (adoption wizard §2/§9).
+  - **Every question asked individually (§1).** Ask each of the seven as its own prompt with its own
+    recommendation; when an earlier answer seems to settle one, restate it and ask for
+    confirmation; never mark a question answered by inference.
+  - **Component UI stop (§2).** The Component UI stays the default; if it cannot fit the existing
+    UI, stop and ask the human, naming the options — adapt the design, customize the templates
+    keeping their ARIA contract, or use the raw JS API only with explicit approval and
+    agent-owned, browser-proven accessibility.
+  - **Automated coverage gate (§5).** A test or build gate must derive the expected URL set from
+    published posts and canonical routes (never from `data-pagefind-body`, `dist/pagefind/` or the
+    index), compare bidirectionally, and fail naming each missing or unexpected URL under the
+    `data-pagefind-body` mutation.
+  - **Base-path matrix (§5).** Build and verify at root `/`, then `base: "/preview"` with
+    `trailingSlash: "never"`, then `"always"`, with assets and links joined and the config restored
+    afterwards.
+  - **Real-browser fallback (§5).** Browser behavior is proven with Playwright + Chromium, or a
+    temporary probe that never enters the candidate diff when the repo has no browser tooling; the
+    minimum browser scenarios are listed.
 
 ## PF-A + PF-B together close S1
 
@@ -548,9 +612,9 @@ blocker. Findings outside PF-B's scope go to the human, not auto-fixed.
 | Disposable copy prepared from a PF-A-complete state (run 1) | Implemented | Clone of `6649ab9` with `docs/product/pagefind-roadmap-*.md` removed, clone commit `24c6364`, `bun install` run, no remote — "Run records → Run 1" above | — |
 | Disposable copy prepared from a PF-A-complete state (run 2, revised skill) | Implemented | Clone of `9ca0617` with `docs/product/pagefind-roadmap-*.md` and `docs/product/pf-b-runs/run-1-transcript.md` removed, clone commit `32bc207`, `bun install` run, no remote — "Run records → Run 2" above | — |
 | Simulation run with the verbatim test prompt (run 1) | Implemented | Turns 1–2 executed against the verbatim prompt, clone working tree clean afterwards — "Run records → Run 1" above | — |
-| Full transcript preserved per "Record format for the run" (run 1) | Not built | `docs/product/pf-b-runs/run-1-transcript.md` is an extract only (tool calls and assistant text; system prompt and tool results omitted; clone paths redacted) | The full raw stream-json transcript was kept only in a local session scratchpad and was not preserved in this repository. |
+| Auditable extract recorded per "Record format for the run" (run 1) | Not built | `docs/product/pf-b-runs/run-1-transcript.md` is the committed extract; the original raw stream-json transcripts are fingerprinted in "Run records → Run 1" (turn 1: 163533 bytes; turn 2: 15062 bytes) | Run 1 was stopped before a contract summary or any authorization, so the record cannot contain those required items; the revised format is not met. |
 | Simulation run with the verbatim test prompt (run 2) | Implemented | Turns 1–8 (session `2692d2f9-4db5-4fd5-894b-eb2aac4809fa`) executed against the verbatim prompt through to a completed, committed implementation (`82eadfe`, `58fe708`) — "Run records → Run 2" above | — |
-| Full transcript preserved per "Record format for the run" (run 2) | Not built | `docs/product/pf-b-runs/run-2-transcript.md` is an extract only (top-level tool calls and assistant text; system prompt, tool results and subagent internals omitted; clone paths redacted) — same gap class as run 1 | The full raw stream-json transcript was kept only in a local session scratchpad and was not preserved in this repository. |
+| Auditable extract recorded per "Record format for the run" (run 2) | Not built | `docs/product/pf-b-runs/run-2-transcript.md` is the committed extract; the original raw stream-json transcripts are fingerprinted in "Run records → Run 2" (turns 1–8) | Run 2 never received an explicit authorization, so the record cannot contain that required item; the revised format is not met. |
 | Pre-write behavior observed and scored (run 1) | Implemented | Per-bullet record in "Run records → Run 1" above | — |
 | Pre-write behavior observed and scored (run 2) | Implemented | Per-bullet record in "Run records → Run 2" above — several bullets scored as not matching (pre-confirmation subagent delegation, adoption wizard unread, question 7 never separately asked, build/preview-vs-`astro dev` never explained) | — |
 | Post-authorization result observed and scored (run 1) | Not built | — | Run 1 was stopped before authorization (see "Run records → Run 1"); requires a run that reaches "Expected result after authorizing a test implementation". |
@@ -562,3 +626,9 @@ blocker. Findings outside PF-B's scope go to the human, not auto-fixed.
 | Run marked PASS or FAIL (run 2) | Implemented | Run 2: FAIL against "Run 2 acceptance" — three of six criteria unmet or partially unmet (question 7 not separately asked; Component UI substituted without asking; only the draft mutation performed, and the `data-pagefind-body`-removal mutation this verification ran independently does not fail for the intended reason; no real-browser verification pass) — "Run records → Run 2" above | — |
 | Codex adversarial review of the run | Implemented | Runs 1–2 records and the skill revisions reviewed across `6649ab9..796a2cd`: `NEEDS_ATTENTION` rounds fixed in `f6e1ffc`, `0fcc95d`, `9ca0617`, `026b511`, `4059657`, `796a2cd`; final targeted check `PASS`. Applies to the recorded runs; a future PASS run needs its own review | — |
 | Global roadmap guard review | Implemented | Every review confirmed `git diff --name-only 6649ab9..796a2cd -- package.json bun.lock astro.config.mjs src` empty, i18n parity 38/38 keys, locale sync and route map intact; orchestrator gates at `85ad52f`: `bun run test` 506/506, `bun run check` 0 errors, `bun run build` with seo-lint clean (10 pages) | — |
+| Disposable copy prepared from a PF-A-complete state (run 3, PF-B-fixed skill) | Not built | — | Run 3 has not been executed; requires a disposable copy built from the PF-B skill-fix state. |
+| Simulation run with the verbatim test prompt (run 3) | Not built | — | Run 3 has not been executed. |
+| Pre-write behavior observed and scored (run 3) | Not built | — | Run 3 has not been executed; must satisfy "Run 3 acceptance". |
+| Post-authorization result observed and scored (run 3) | Not built | — | Run 3 has not been executed; must satisfy "Run 3 acceptance". |
+| Auditable extract recorded per "Record format for the run" (run 3) | Not built | — | Run 3 has not been executed; the record must meet the revised format, including the contract summary and explicit authorization. |
+| Run marked PASS or FAIL (run 3) | Not built | — | Run 3 has not been executed; must satisfy "Run 3 acceptance". |

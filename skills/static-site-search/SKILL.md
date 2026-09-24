@@ -18,9 +18,11 @@ description: "Use when adding, changing, removing or debugging internal full-tex
 ## 1. Confirm the contract
 
 Before writing, ask these seven questions explicitly — do not infer answers from the request or
-from repository state — and state a recommendation with its reason for each one. Do not present
-technically equivalent alternatives without guidance, do not assume locales, and do not silently
-switch exclusions on or off.
+from repository state — and state a recommendation with its reason for each one. Ask each as its
+own prompt with its own recommendation, even when an earlier answer seems to settle it; if it
+does, restate the implied answer and ask the human to confirm it. Never mark a question answered
+by inference. Do not present technically equivalent alternatives without guidance, do not assume
+locales, and do not silently switch exclusions on or off.
 
 1. **Scope.** "Does search cover the blog, the whole site, or specific routes?" Recommend blog
    when the request comes from the post archive — the narrowest scope matching the request, so
@@ -76,6 +78,12 @@ switch exclusions on or off.
 If these answers already live in a `DESIGN.md` reaffirmed for the session, do not ask again. Do
 not activate search merely because a blog or search-looking control exists.
 
+After the seven answers, and before ANY write, install or delegation: present a contract summary
+of all seven answers and wait for the human's explicit confirmation. An agent's own "contract
+confirmed" is not authorization; silence or a follow-up question is not a yes (adoption wizard
+§2). Once confirmed, the first file write is the confirmed contract in `DESIGN.md`, as the
+wizard's §9 requires — never a task file, and never a dependency install first.
+
 ## 2. Preserve the architecture
 
 - Use Bun (`packageManager: "bun@1.2.13"` in `package.json`) and the official `pagefind` CLI. Do
@@ -87,8 +95,13 @@ not activate search merely because a blog or search-looking control exists.
 - Keep internal search, robots and sitemap independent. `bun run build` already runs `seo-lint`
   (`src/integrations/seo-lint/`); search inclusion must never be derived from `noindex`, sitemap,
   or canonical — different contracts, different signals.
-- Use Pagefind Component UI web components (Pagefind ≥ 1.5). Start with the default templates;
-  custom result templates must preserve their ARIA contract.
+- Use Pagefind Component UI web components (Pagefind ≥ 1.5) as the default. Start with the default
+  templates; custom result templates must preserve their ARIA contract. If the Component UI cannot
+  fit the existing UI — for example the archive's category tabs or cards — STOP and ask the human
+  instead of deciding. Name the options: adapt the design to the Component UI; customize the
+  Component UI templates while keeping their ARIA contract; or use the raw Pagefind JS API — the
+  last only with explicit approval, and then the agent owns accessibility (live-region
+  announcements, focus, keyboard) and must prove it in the browser tests (§5).
 
 `package.json`'s `build` script is `astro build` today, a single stage. Activating Pagefind means
 splitting it into an explicit second stage, with one build owner:
@@ -207,10 +220,14 @@ search works.
 
 ## 5. Verify the real capability
 
-Do not close on the existence of `dist/pagefind/`. Before indexing, derive the expected URL set
-from a source independent of Pagefind markers and output (published content entries × emitted
-locales, using `src/lib/seo/locale.ts`, for blog-only search; an explicit manifest for other
-scopes). Compare expected and actual URLs bidirectionally.
+Do not close on the existence of `dist/pagefind/`. Add a test or build gate that derives the
+expected URL set from the published content — the `blog` collection filtered by `!draft`, times
+the emitted locales, through the repo's canonical route helpers (`src/lib/seo/locale.ts`) — and
+NEVER from `data-pagefind-body`, `dist/pagefind/`, or the index itself: otherwise removing the
+mark shrinks "expected" and "actual" together and the gate passes for the wrong reason. Compare
+expected against the URLs actually present in the generated index, bidirectionally, and fail
+naming each missing or unexpected URL. Prove the gate with the mutation: remove
+`data-pagefind-body` from one expected post → the gate fails naming that URL; restore.
 
 Then query the generated index through Pagefind's public browser API and record evidence for: one
 unique term per included locale absent from the other; exact expected URLs and no unexpected URL;
@@ -224,11 +241,21 @@ must observe exactly one Pagefind process during the same run. Repeat for `bun r
 an alternative entrypoint that may call Pagefind once without becoming a second production-build
 owner. Restore the shim after the test.
 
-Separately, use a real browser on the Component UI to verify keyboard navigation, focus, accessible
-zero-results announcement, each locale's surface, and the agreed no-JS fallback — the search API
-alone cannot prove these. Test base handling at root, then under a configured `base` with
-`trailingSlash: 'never'` and again with `'always'` (this repo's `astro.config.mjs` currently sets
-`trailingSlash: 'always'`).
+Browser behavior is proven in a real browser — Playwright with Chromium — never from the search
+API alone. When the project has no browser tooling, use a temporary probe that never enters the
+candidate diff: keep it outside the versioned tree, or remove `@playwright/test`, the browsers, its
+config and any lockfile change after capturing the evidence; then verify the final diff contains
+only the implementation an adopter would ship. Minimum browser scenarios: a term only in a post
+body; EN/ES separation (`/blog/` shows no Spanish results, `/es/blog/` no English); category as a
+filter; keywords as searchable metadata with no keyword filter shown; a result with linked title,
+excerpt and localized date; a result with no optional metadata; an empty query shows all posts;
+zero results announced; full keyboard navigation; JavaScript disabled keeps the listing; root `/`;
+and `/preview` under both `trailingSlash` policies.
+
+Build and verify the base-path matrix: at root `/`, then with `base: "/preview"` and
+`trailingSlash: "never"`, then again with `trailingSlash: "always"`. Assets and links stay joined
+throughout — no `/previewpagefind/`, no double slash, no escape back to `/`. Restore the config
+afterwards.
 
 Mutate before accepting: remove `data-pagefind-body` from an expected page, break one emitted
 `html lang`, break the bundle/base path, add a second Pagefind owner. Each mutation must fail for
