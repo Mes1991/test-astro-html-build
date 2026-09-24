@@ -3,6 +3,7 @@ import { localeOfRoute, pathFor } from '../../lib/seo/locale';
 import { LOCALES, DEFAULT_LOCALE, type LocaleCode } from '../../lib/seo/types';
 import { exactPath, isCanonicalForm, routeKeyForUrl, sitemapPath } from '../../lib/seo/sitemap';
 import { langMatches, type Finding } from './lint';
+import { parse, parseFragment, type DefaultTreeAdapterTypes } from 'parse5';
 
 /**
  * Route-level SEO gates.
@@ -48,51 +49,77 @@ export interface RouteFinding extends Finding {
   route: string;
 }
 
-interface ParsedTag {
-  attributes: ReadonlyMap<string, string>;
-  content: string;
-}
+type DocumentNode = DefaultTreeAdapterTypes.Document;
+type ParentNode = DefaultTreeAdapterTypes.ParentNode;
+type ElementNode = DefaultTreeAdapterTypes.Element;
+type Node = DefaultTreeAdapterTypes.Node;
 
-function decodeMarkupValue(value: string): string {
-  const named: Record<string, string> = {
-    amp: '&',
-    apos: "'",
-    gt: '>',
-    lt: '<',
-    nbsp: '\u00a0',
-    quot: '"',
-  };
-  return value.replace(/&(?:#(\d+)|#x([\da-f]+)|([a-z]+));/gi, (entity, decimal, hex, name) => {
-    if (decimal) return String.fromCodePoint(Number.parseInt(decimal, 10));
-    if (hex) return String.fromCodePoint(Number.parseInt(hex, 16));
-    return named[name.toLowerCase()] ?? entity;
-  });
-}
+const documentCache = new Map<string, DocumentNode>();
+const DOCUMENT_CACHE_LIMIT = 32;
 
-function extractTags(markup: string, tagName: string): ParsedTag[] {
-  const escapedName = tagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const startTag = new RegExp(`<\\s*${escapedName}(?=[\\s/>])([^>]*)>`, 'gi');
-  const closeTag = new RegExp(`<\\/\\s*${escapedName}\\s*>`, 'i');
-  const tags: ParsedTag[] = [];
-
-  for (const match of markup.matchAll(startTag)) {
-    const attributes = new Map<string, string>();
-    for (const attribute of match[1].matchAll(
-      /([^\s"'<>\/=]+)\s*(?:=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g,
-    )) {
-      attributes.set(
-        attribute[1].toLowerCase(),
-        decodeMarkupValue(attribute[2] ?? attribute[3] ?? attribute[4] ?? ''),
-      );
-    }
-
-    const afterStart = (match.index ?? 0) + match[0].length;
-    const close = closeTag.exec(markup.slice(afterStart));
-    const content = close ? decodeMarkupValue(markup.slice(afterStart, afterStart + close.index)) : '';
-    tags.push({ attributes, content });
+function parsedDocument(html: string): DocumentNode {
+  const cached = documentCache.get(html);
+  if (cached) {
+    documentCache.delete(html);
+    documentCache.set(html, cached);
+    return cached;
   }
 
-  return tags;
+  const document = parse(html);
+  documentCache.set(html, document);
+  if (documentCache.size > DOCUMENT_CACHE_LIMIT) {
+    documentCache.delete(documentCache.keys().next().value!);
+  }
+  return document;
+}
+
+function isElement(node: Node): node is ElementNode {
+  return 'tagName' in node;
+}
+
+function elementsIn(root: ParentNode): ElementNode[] {
+  const elements: ElementNode[] = [];
+  const visit = (parent: ParentNode): void => {
+    for (const child of parent.childNodes) {
+      if (!isElement(child)) continue;
+      elements.push(child);
+      // parse5 stores a template's contents in a separate DocumentFragment.
+      // Its childNodes therefore represent only effective DOM descendants.
+      visit(child);
+    }
+  };
+  visit(root);
+  return elements;
+}
+
+function attributesOf(element: ElementNode): ReadonlyMap<string, string> {
+  return new Map(element.attrs.map(({ name, value }) => [name, value]));
+}
+
+function hasAncestor(element: ElementNode, tagName: string): boolean {
+  let parent = element.parentNode;
+  while (parent) {
+    if (isElement(parent) && parent.tagName === tagName) return true;
+    parent = 'parentNode' in parent ? parent.parentNode : null;
+  }
+  return false;
+}
+
+function documentElements(html: string, tagName?: string): ElementNode[] {
+  return elementsIn(parsedDocument(html)).filter((element) => !tagName || element.tagName === tagName);
+}
+
+function headElements(html: string, tagName: string): ElementNode[] {
+  return documentElements(html, tagName).filter((element) => hasAncestor(element, 'head'));
+}
+
+function textContent(node: ParentNode): string {
+  let text = '';
+  for (const child of node.childNodes) {
+    if (child.nodeName === '#text' && 'value' in child) text += child.value;
+    else if (isElement(child)) text += textContent(child);
+  }
+  return text;
 }
 
 /**
@@ -108,23 +135,24 @@ export function routeFromDistFile(relPath: string): string {
 
 /** The `lang` attribute on `<html>`, or null when absent. */
 export function declaredLang(html: string): string | null {
-  return html.match(/<html[^>]*\slang="([^"]+)"/i)?.[1]?.trim() ?? null;
+  const root = documentElements(html, 'html')[0];
+  return root ? attributesOf(root).get('lang')?.trim() ?? null : null;
 }
 
 /** The `href` of `<link rel="canonical">`, or null when absent. */
 export function declaredCanonical(html: string): string | null {
-  const tag = extractTags(html, 'link').find(
-    ({ attributes }) => attributes.get('rel')?.toLowerCase() === 'canonical',
+  const tag = headElements(html, 'link').find(
+    (element) => attributesOf(element).get('rel')?.toLowerCase() === 'canonical',
   );
-  return tag?.attributes.get('href')?.trim() ?? null;
+  return tag ? attributesOf(tag).get('href')?.trim() ?? null : null;
 }
 
 /** The `content` of `<meta property="og:url">`, or null when absent. */
 export function declaredOgUrl(html: string): string | null {
-  const tag = extractTags(html, 'meta').find(
-    ({ attributes }) => attributes.get('property')?.toLowerCase() === 'og:url',
+  const tag = headElements(html, 'meta').find(
+    (element) => attributesOf(element).get('property')?.toLowerCase() === 'og:url',
   );
-  return tag?.attributes.get('content')?.trim() ?? null;
+  return tag ? attributesOf(tag).get('content')?.trim() ?? null : null;
 }
 
 /**
@@ -136,8 +164,8 @@ export function declaredOgUrl(html: string): string | null {
  */
 export function internalRouteLinks(html: string): string[] {
   const out = new Set<string>();
-  for (const m of html.matchAll(/<a\b[^>]*\shref="([^"]*)"/gi)) {
-    const href = m[1].trim();
+  for (const element of documentElements(html, 'a')) {
+    const href = (attributesOf(element).get('href') ?? '').trim();
     if (!href.startsWith('/') || href.startsWith('//')) continue;
     const path = href.split('?')[0].split('#')[0];
     if (path === '') continue;
@@ -184,7 +212,8 @@ export interface PageAlternate {
  */
 export function declaredAlternates(html: string): PageAlternate[] {
   const out: PageAlternate[] = [];
-  for (const { attributes } of extractTags(html, 'link')) {
+  for (const element of headElements(html, 'link')) {
+    const attributes = attributesOf(element);
     if (attributes.get('rel')?.toLowerCase() !== 'alternate' || !attributes.has('hreflang')) continue;
     out.push({
       lang: attributes.get('hreflang')?.trim() ?? '',
@@ -234,30 +263,11 @@ export function alternateProblems(
  * to the most restrictive value, which is how search engines read them too.
  */
 export function isIndexable(html: string): boolean {
-  const directives = extractTags(html, 'meta')
-    .filter(({ attributes }) => attributes.get('name')?.toLowerCase() === 'robots')
-    .map(({ attributes }) => attributes.get('content') ?? '');
+  const directives = headElements(html, 'meta')
+    .map(attributesOf)
+    .filter((attributes) => attributes.get('name')?.toLowerCase() === 'robots')
+    .map((attributes) => attributes.get('content') ?? '');
   return !directives.some((content) => /\bnoindex\b/i.test(content));
-}
-
-/**
- * Strip comments and raw-text/inert blocks from markup, wherever in the
- * document they occur, so a documented example inside a comment, script,
- * style, or template is never read as real markup.
- */
-function effectiveMarkup(html: string): string {
-  const uncommented = html.replace(/<!--[\s\S]*?-->/g, '');
-  return uncommented
-    .replace(
-      /<(script|style|title|textarea|template|noscript|xmp|iframe|noembed|noframes)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,
-      '',
-    )
-    .replace(/<plaintext\b[^>]*>[\s\S]*$/i, '');
-}
-
-/** Only metadata parsed from the document head is effective — see `effectiveMarkup`. */
-function effectiveHeadMarkup(html: string): string {
-  return effectiveMarkup(html).match(/<head(?=[\s>])[^>]*>([\s\S]*?)<\/head\s*>/i)?.[1] ?? '';
 }
 
 /** `sitemapMarkerState`'s three outcomes. */
@@ -290,14 +300,12 @@ function analyzeSitemapMarker(html: string): { state: SitemapMarkerState; reason
   const isDeclaration = (attributes: ReadonlyMap<string, string>): boolean =>
     (attributes.get('name') ?? '').trim().toLowerCase() === 'sitemap';
 
-  const wholeDocument = extractTags(effectiveMarkup(html), 'meta').filter(({ attributes }) =>
-    isDeclaration(attributes),
-  );
+  const wholeDocument = documentElements(html, 'meta')
+    .map((element) => ({ element, attributes: attributesOf(element) }))
+    .filter(({ attributes }) => isDeclaration(attributes));
   if (wholeDocument.length === 0) return { state: 'none' };
 
-  const inHead = extractTags(effectiveHeadMarkup(html), 'meta').filter(({ attributes }) =>
-    isDeclaration(attributes),
-  );
+  const inHead = wholeDocument.filter(({ element }) => hasAncestor(element, 'head'));
 
   if (wholeDocument.length > 1) {
     return {
@@ -337,18 +345,24 @@ export function isSitemapExcluded(html: string): boolean {
 /** Parse the `<url>` entries — loc plus hreflang alternates — out of a sitemap. */
 export function parseSitemap(xml: string): SitemapEntry[] {
   const entries: SitemapEntry[] = [];
-  for (const { content: body } of extractTags(xml, 'url')) {
-    const loc = extractTags(body, 'loc')[0]?.content.trim();
-    if (!loc) continue;
-    const alternates = extractTags(body, 'xhtml:link').flatMap(({ attributes }) =>
-      attributes.has('hreflang')
-        ? [{
-            lang: attributes.get('hreflang')?.trim() ?? '',
-            href: attributes.get('href')?.trim() ?? '',
-          }]
-        : [],
-    );
-    entries.push({ loc, alternates });
+  const fragment = parseFragment(xml);
+  for (const url of elementsIn(fragment).filter((element) => element.tagName === 'url')) {
+    const descendants = elementsIn(url);
+    const loc = descendants.find((element) => element.tagName === 'loc');
+    const locValue = loc ? textContent(loc).trim() : '';
+    if (!locValue) continue;
+    const alternates = descendants
+      .filter((element) => element.tagName === 'xhtml:link')
+      .flatMap((element) => {
+        const attributes = attributesOf(element);
+        return attributes.has('hreflang')
+          ? [{
+              lang: attributes.get('hreflang')?.trim() ?? '',
+              href: attributes.get('href')?.trim() ?? '',
+            }]
+          : [];
+      });
+    entries.push({ loc: locValue, alternates });
   }
   return entries;
 }

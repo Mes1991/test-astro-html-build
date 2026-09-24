@@ -7,6 +7,7 @@ import {
   declaredLang,
   declaredOgUrl,
   isIndexable,
+  internalRouteLinks,
   isSitemapExcluded,
   lintLocaleRoutes,
   lintLocalizedRouteCoverage,
@@ -62,6 +63,33 @@ describe('page attribute readers', () => {
     expect(declaredCanonical(html)).toBe(`${SITE}/search/?a=1&b=2`);
   });
 
+  it('extracts a canonical containing a quoted greater-than sign and keeps its gates active', () => {
+    const canonical = `${SITE}/blog/?q=a>b`;
+    const html =
+      `<html lang="en"><head><link rel="canonical" href="${canonical}">` +
+      `<meta property="og:url" content="${SITE}/blog/"></head><body></body></html>`;
+    expect(declaredCanonical(html)).toBe(canonical);
+    expect(lintLocaleRoutes([{ route: '/blog/', html }], new Set(), SITE)).toContainEqual(
+      expect.objectContaining({
+        code: 'OG_URL_CANONICAL_MISMATCH',
+        message: `og:url is ${SITE}/blog/ but the canonical is ${canonical}.`,
+      }),
+    );
+    expect(
+      lintSitemapRoutes(
+        [{ loc: `${SITE}/blog/`, alternates: [] }],
+        [{ route: '/blog/', html }],
+        SITE,
+      ).map((finding) => finding.code),
+    ).toContain('SITEMAP_LOC_NOT_CANONICAL');
+  });
+
+  it('decodes invalid numeric character references to the replacement character without throwing', () => {
+    expect(() => declaredCanonical('<link rel="canonical" href="/&#9999999999;">')).not.toThrow();
+    expect(declaredCanonical('<link rel="canonical" href="/&#9999999999;">')).toBe('/�');
+    expect(declaredCanonical('<link rel="canonical" href="/&#0;">')).toBe('/�');
+  });
+
   it('extracts og:url with reordered uppercase attributes, an unquoted value and entities', () => {
     const html = `<META CONTENT=${SITE}/blog/?a&amp;b PROPERTY=OG:URL>`;
     expect(declaredOgUrl(html)).toBe(`${SITE}/blog/?a&b`);
@@ -104,6 +132,42 @@ describe('page attribute readers', () => {
           '<script>const example = `<meta name="sitemap" content="exclude">`;</script></head>',
       ),
     ).toBe(false);
+  });
+
+  it('ignores canonical and og:url markup in comments, scripts, templates and noscript', () => {
+    const html =
+      '<html lang="en"><head>' +
+      '<!-- <link rel="canonical" href="/comment/"><meta property="og:url" content="/comment/"> -->' +
+      '<script>`<link rel="canonical" href="/script/"><meta property="og:url" content="/script/">`</script>' +
+      '<template><link rel="canonical" href="/template/"><meta property="og:url" content="/template/"></template>' +
+      '<noscript><link rel="canonical" href="/noscript/"><meta property="og:url" content="/noscript/"></noscript>' +
+      '</head><body></body></html>';
+    expect(declaredCanonical(html)).toBeNull();
+    expect(declaredOgUrl(html)).toBeNull();
+  });
+
+  it('ignores robots and alternate markup in comments, scripts, templates and noscript', () => {
+    const hidden =
+      '<meta name="robots" content="noindex">' +
+      '<link rel="alternate" hreflang="es" href="/es/">';
+    const html =
+      '<html lang="en"><head>' +
+      `<!-- ${hidden} --><script>\`${hidden}\`</script>` +
+      `<template>${hidden}</template><noscript>${hidden}</noscript>` +
+      '</head><body></body></html>';
+    expect(isIndexable(html)).toBe(true);
+    expect(declaredAlternates(html)).toEqual([]);
+  });
+
+  it('ignores internal links and html-like markup in inert content', () => {
+    const hiddenLink = '<a href="/hidden">Hidden</a>';
+    const html =
+      '<html><head><script>\`<html lang="es">\`</script></head><body>' +
+      `<!-- ${hiddenLink} --><script>\`${hiddenLink}\`</script>` +
+      `<template>${hiddenLink}</template><noscript>${hiddenLink}</noscript>` +
+      '<a href="/visible/">Visible</a></body></html>';
+    expect(declaredLang(html)).toBeNull();
+    expect(internalRouteLinks(html)).toEqual(['/visible/']);
   });
 });
 
@@ -148,6 +212,17 @@ describe('sitemapMarkerState', () => {
     ['a marker only inside a script', '<head><script>const html = \'<meta name="sitemap" content="exclude">\';</script></head>'],
   ])('reports %s as none', (_case, html) => {
     expect(sitemapMarkerState(`<html>${html}</html>`)).toBe('none');
+  });
+
+  it('reports sitemap markers in comments, scripts, templates, nested templates and noscript as none', () => {
+    const marker = '<meta name="sitemap" content="exclude">';
+    const html =
+      '<html><head>' +
+      `<!-- ${marker} --><script>\`${marker}\`</script>` +
+      `<template>${marker}<template>${marker}</template></template>` +
+      `<noscript>${marker}</noscript>` +
+      '</head><body></body></html>';
+    expect(sitemapMarkerState(html)).toBe('none');
   });
 });
 

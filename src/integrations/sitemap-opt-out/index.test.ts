@@ -110,4 +110,28 @@ describe('sitemap page-level opt-out', () => {
       lintSitemapDiscovery(parseSitemap(xml), pages, SITE).map((f) => f.code),
     ).toEqual(['SITEMAP_MARKER_INVALID', 'SITEMAP_MARKER_INVALID']);
   });
+
+  it('keeps a URL whose only sitemap marker is inside nested templates', async () => {
+    const dist = await mkdtemp(path.join(tmpdir(), 'sitemap-opt-out-nested-template-'));
+    await mkdir(path.join(dist, 'nested-template'), { recursive: true });
+    const html =
+      '<html><head><template><template></template>' +
+      '<meta name="sitemap" content="exclude"></template></head><body></body></html>';
+    await writeFile(path.join(dist, 'nested-template', 'index.html'), html);
+    await writeFile(
+      path.join(dist, 'sitemap-0.xml'),
+      `<urlset><url><loc>${SITE}/nested-template/</loc></url></urlset>`,
+    );
+
+    const integration = sitemapOptOut();
+    await (integration.hooks['astro:config:done'] as Function)({ config: { site: SITE } });
+    await (integration.hooks['astro:build:done'] as Function)({
+      dir: pathToFileURL(dist + path.sep),
+    });
+
+    const xml = await readFile(path.join(dist, 'sitemap-0.xml'), 'utf8');
+    expect(xml).toContain(`${SITE}/nested-template/`);
+    expect(lintSitemapDiscovery(parseSitemap(xml), [{ route: '/nested-template/', html }], SITE))
+      .toEqual([]);
+  });
 });
