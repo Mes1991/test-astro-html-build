@@ -286,6 +286,22 @@ version, in force at run time):**
   restatement of the seven confirmed answers and no pause for a final "go" signal distinct from
   answering the individual questions.
 
+**Classification: this is a full `CLAUDE.md` rule 0 / adoption-contract violation, not a missing
+summary.** `skills/site-build/references/adoption-wizard.md` requires a contract displayed in
+chat with explicit confirmation before any write (§2 `CONTRACT_REVIEW`, ~33-46), forbids moving
+to `IMPLEMENTATION` on an inferred approval (~44-46), and requires the confirmed contract's first
+file write to be the `## Adoption contract` section in `DESIGN.md` (§9, ~287-295) — never a task
+file. `CLAUDE.md` rule 0 (~22-28) forbids delegating to any subagent, including read-only
+reconnaissance, before that confirmation. Run 2 breached all four at once: it never opened the
+wizard, launched a background `Agent` for repo reconnaissance in Turn 1 before the first question
+was even answered (`run-2-transcript.md` ~26-36), never displayed a contract summary or asked
+for an explicit go-ahead, and its first file write was `odd/tasks/blog-pagefind-search.md`
+(`run-2-transcript.md` ~183-201), not `DESIGN.md`. Skill commit `25136c8` fixes the
+wizard-skip-and-pre-confirmation-delegation half of this violation; the contract-summary,
+explicit-go-ahead, and `DESIGN.md`-first requirements are still not stated anywhere in
+`skills/static-site-search/SKILL.md` (see "Still unaddressed" under "Findings for the skill"
+below).
+
 **Observed vs. expected, per bullet of "Expected result after authorizing a test
 implementation"** — verified independently in the disposable clone at `58fe708`, not merely
 read off the agent's self-report:
@@ -415,11 +431,15 @@ read off the agent's self-report:
   rebuild → route and word present → remove fixture, rebuild) and by the clean `git status`/
   `git diff` at `58fe708` showing no residual fixture file.
 
-**Failure conditions (roadmap-b) — checked directly, not triggered in their literal form, with
-one caveat:**
+**Failure conditions (roadmap-b) — checked directly: one triggered, three not triggered in their
+literal form (one of those three with a caveat):**
 
-- *Starts installing before asking the contract questions* — not triggered: `bun add --dev
-  pagefind` happens only after "Contrato confirmado (7/7)" in Turn 7.
+- *Starts installing before asking the contract questions* — **triggered**: `bun add --dev
+  pagefind` (Turn 7, `run-2-transcript.md` ~198) runs only after the agent announces "Contrato
+  confirmado (7/7)," but question 7 (no-JS fallback) was never asked as its own question — it was
+  inferred from the human's Q4 answer (`run-2-transcript.md` ~116-118) and only acknowledged, not
+  asked. Installation therefore starts before all seven contract questions are actually asked,
+  regardless of the agent's own "7/7" claim.
 - *Ends up with two ambiguous search implementations* — not triggered: the local filter was fully
   removed, not left coexisting.
 - *Adds `postbuild` in addition to a chained `build`* — not triggered: a single chained
@@ -483,8 +503,9 @@ does not address (see "Findings for the skill" below).
   asking — the skill states Component UI as the default path but has no explicit "ask before
   deviating from this architecture" instruction the way it does for the seven contract questions.
   None of the five commits add a step requiring the agent to state the build/preview-vs-`astro
-  dev` distinction to the human, or to summarize the confirmed contract and request an explicit
-  go-ahead before the first write. None add a documented fallback for §5's mandatory
+  dev` distinction to the human, or to summarize the confirmed contract, request an explicit
+  go-ahead, and write it to `DESIGN.md` first, the way the adoption wizard's own §9 requires,
+  before the first write. None add a documented fallback for §5's mandatory
   real-browser checks when no browser-automation tool is available in the repository (the skill
   still states these checks as flatly mandatory, with no guidance for what to do, or how to flag
   the gap, when they cannot be performed — though to its credit both runs of the agent did disclose
@@ -536,7 +557,7 @@ blocker. Findings outside PF-B's scope go to the human, not auto-fixed.
 | Pre-write behavior observed and scored (run 2) | Implemented | Per-bullet record in "Run records → Run 2" above — several bullets scored as not matching (pre-confirmation subagent delegation, adoption wizard unread, question 7 never separately asked, build/preview-vs-`astro dev` never explained) | — |
 | Post-authorization result observed and scored (run 1) | Not built | — | Run 1 was stopped before authorization (see "Run records → Run 1"); requires a run that reaches "Expected result after authorizing a test implementation". |
 | Post-authorization result observed and scored (run 2) | Implemented | Per-bullet record in "Run records → Run 2" above, each bullet independently re-verified in the clone (not read off the agent's self-report alone) — several bullets scored as not matching or untested (Component UI vs. raw JS API, non-root `base`, bidirectional expected-URL-set comparison, browser tests) | — |
-| Failure conditions checked, pre-write portion (starts installing before asking) | Implemented | Run 1: no install occurred, run stopped at Round 2's questions before any write. Run 2: `bun add --dev pagefind` occurs only after "Contrato confirmado (7/7)" in Turn 7 — "Run records → Run 2" above | — |
+| Failure conditions checked, pre-write portion (starts installing before asking) | Implemented | Run 1: no install occurred, run stopped at Round 2's questions before any write. Run 2: **triggered** — `bun add --dev pagefind` starts only after the agent announces "Contrato confirmado (7/7)" in Turn 7, but question 7 was never asked as its own question (only inferred from the Q4 answer), so installation begins before all seven questions are actually asked — "Run records → Run 2" above | — |
 | Failure conditions checked, post-authorization portion (dual ambiguous search, `postbuild` added) | Implemented | Run 2: local filter fully removed (no dual search engines); single chained `build:astro && search:index` script, no `postbuild` key — independently confirmed in `package.json` and `BlogArchive.astro` at `58fe708`, "Run records → Run 2" above | — |
 | Failure conditions checked, post-authorization portion (success declared without querying the index) | Implemented | Run 2: the literal condition was not triggered — the agent did query the live index for several behaviors, independently reproduced — but its closing summary omits two index queries skill §5 requires (bidirectional expected-URL-set comparison, `data-pagefind-body`-removal mutation); this verification performed the latter independently and found no automated gate catches it — "Run records → Run 2" above | A repeatable, machine-checked coverage gate for `data-pagefind-body` does not exist in this template; §5's verification remains a manual, one-off step. |
 | Run marked PASS or FAIL (run 1) | Implemented | Run 1: FAIL — skill defect (contract questions incomplete: locales assumed, exclusion silent, no recommendations, title+URL minimum), not an agent failure — "Run records → Run 1" above | Scoped to the previous skill version only; not evidence for or against the revised contract. |
