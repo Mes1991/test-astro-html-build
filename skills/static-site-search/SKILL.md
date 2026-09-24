@@ -79,12 +79,13 @@ If these answers already live in a `DESIGN.md` reaffirmed for the session, do no
 not activate search merely because a blog or search-looking control exists.
 
 After the seven answers, and before ANY write, install or delegation: present a contract summary
-of all seven answers and wait for the human's explicit confirmation. An agent's own "contract
-confirmed" is not authorization; silence or a follow-up question is not a yes (adoption wizard
-§2). Once confirmed, the first file write is the confirmed contract in `DESIGN.md`, as the
-wizard's §9 requires — never a task file, and never a dependency install first. Before
-implementing, also state to the human that Pagefind is verified through `bun run build` /
-`bun run search:preview`, not `astro dev` — `astro dev` has no finished index.
+of all seven answers — the summary itself must state that Pagefind is verified through
+`bun run build` / `bun run search:preview`, not `astro dev` (`astro dev` has no finished index);
+this is part of the summary, not a separate later step — and wait for the human's explicit
+confirmation. An agent's own "contract confirmed" is not authorization; silence or a follow-up
+question is not a yes (adoption wizard §2). Once confirmed, the first file write is the confirmed
+contract in `DESIGN.md`, as the wizard's §9 requires — never a task file, and never a dependency
+install first.
 
 ## 2. Preserve the architecture
 
@@ -164,7 +165,10 @@ it from `noindex` or `sitemap`. Do not use the reserved filter keys `any`, `all`
 ## 4. Add UI without a framework island
 
 Use the Pagefind Component UI assets generated in `dist/pagefind/`. Derive paths from Astro's
-`BASE_URL` so the component works whether the site is served at root or under a configured `base`:
+`BASE_URL` so the component's path logic stays base-aware; this does not by itself verify subpath
+deployment — the template supports root deployment only, and a non-root `base` is NOT_SUPPORTED
+until `implementation-roadmap.md` phase F ("Template subpath deployment contract") is Implemented
+(see §5). Verify search at root `/`:
 
 Inline in `BlogArchive` (scope: blog) — the card listing (§1 Q7) is already the no-JS fallback, so
 no `<noscript>` link is added here:
@@ -236,9 +240,11 @@ expected post → the gate fails naming that URL; restore.
 
 Then query the generated index through Pagefind's public browser API and record evidence for: one
 unique term per included locale absent from the other; exact expected URLs and no unexpected URL;
-canonical trailing-slash form and a non-root `base`; title/URL plus only the contract's declared
-metadata and filters; header/footer sentinel absent from snippets; Unicode and diacritics; zero
-results; deleting a post and rebuilding removes its term and URL; Pagefind executes exactly once.
+canonical trailing-slash form at root `/` (a non-root `base` is NOT_SUPPORTED by the template until
+phase F is Implemented — see below — and is not verified here); title/URL plus only the contract's
+declared metadata and filters; header/footer sentinel absent from snippets; Unicode and diacritics;
+zero results; deleting a post and rebuilding removes its term and URL; Pagefind executes exactly
+once.
 
 Prove single ownership: walk the command graph reachable from `bun run build` (including lifecycle
 hooks and integrations) and confirm it reaches Pagefind exactly once; a PATH shim/counting wrapper
@@ -254,9 +260,11 @@ only the implementation an adopter would ship. Minimum browser scenarios: a term
 body; EN/ES separation (`/blog/` shows no Spanish results, `/es/blog/` no English); category as a
 filter; keywords as searchable metadata with no keyword filter shown; a result with linked title,
 excerpt and localized date; a result with no optional metadata; an empty query shows all posts;
-zero results announced; visible focus while navigating results; a focus trap while the modal is
-open, if a modal was chosen; focus returned to the trigger or search field on close; full keyboard
-navigation; JavaScript disabled keeps the listing; and root `/`.
+zero results announced; visible focus while navigating results, for either UI; if a modal was
+chosen, focus is trapped while it is open and returns to the trigger that opened it on close
+(Escape, a backdrop click, or the close button); if inline, focus returns to the search field after
+selecting or closing results; full keyboard navigation; JavaScript disabled keeps the listing; and
+root `/`.
 
 The template currently supports root deployment only (see `implementation-roadmap.md` phase F,
 "Template subpath deployment contract"); verify search at root `/`. The `/preview` matrix — both

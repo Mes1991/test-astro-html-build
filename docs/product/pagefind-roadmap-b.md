@@ -63,7 +63,8 @@ test implementation:
 - the UI uses the Component UI, not legacy `PagefindUI` or React;
 - `dist/pagefind/` is not committed and not copied to `public/`;
 - EN and ES results are not mixed;
-- a non-root `base` works;
+- root deployment works; a non-root `base` is NOT_SUPPORTED by the template (phase F) and is not
+  scored;
 - a real query demonstrates the expected URL set bidirectionally, the agreed exclusions, and the
   agreed metadata/filters;
 - browser tests demonstrate keyboard navigation, focus, zero-results announcement, and the
@@ -416,7 +417,11 @@ read off the agent's self-report:
   and no test — by the agent or by this verification — configures a non-root `base` and rebuilds
   against it. Neither `odd/tasks/blog-pagefind-search.md` nor the transcript mentions base-path
   testing at all; it is absent even from the agent's own "Disclosed gap" section, unlike the
-  browser-test gap it did disclose. Recorded as untested, not merely unconfirmed.
+  browser-test gap it did disclose. Recorded as untested, not merely unconfirmed. This historical
+  "not met" score is unchanged; the underlying bullet was later re-scoped ("Expected result after
+  authorizing a test implementation," above) to "root deployment works; a non-root `base` is
+  NOT_SUPPORTED by the template (phase F) and is not scored," so a future run no longer scores this
+  bullet as a base-path failure.
 - *A real query demonstrates the expected URL set bidirectionally, the agreed exclusions, and the
   agreed metadata/filters* — partially matches. Independently reproduced and confirmed in this
   verification: `bun run test` 522/522 (`src/lib/blog/search-result-format.test.ts`'s 16 cases,
@@ -555,15 +560,15 @@ does not address (see "Findings for the skill" below).
 - **Addressed by this revision (PF-B skill fixes)** — new instructions added to
   `skills/static-site-search/SKILL.md`, without changing run 1's or run 2's recorded verdicts:
   - **Contract summary, explicit go-ahead, `DESIGN.md` first (§1).** After the seven answers and
-    before any write, install or delegation, present a summary of all seven answers and wait for
-    explicit human confirmation; an agent's own "contract confirmed" is not authorization, and the
-    first file write is the confirmed contract in `DESIGN.md` (adoption wizard §2/§9).
+    before any write, install or delegation, present a summary of all seven answers — the summary
+    itself must state that Pagefind is verified through `bun run build` / `bun run search:preview`,
+    not `astro dev` (which has no finished index), closing the gap this record previously listed as
+    unaddressed — and wait for explicit human confirmation; an agent's own "contract confirmed" is
+    not authorization, and the first file write is the confirmed contract in `DESIGN.md` (adoption
+    wizard §2/§9).
   - **Every question asked individually (§1).** Ask each of the seven as its own prompt with its own
     recommendation; when an earlier answer seems to settle one, restate it and ask for
     confirmation; never mark a question answered by inference.
-  - **Build/preview vs. `astro dev` (§1).** Before implementing, the agent must state to the human
-    that Pagefind is verified through `bun run build` / `bun run search:preview`, not `astro dev`
-    (which has no finished index) — closing the gap this record previously listed as unaddressed.
   - **Component UI stop (§2).** The Component UI stays the default; if it cannot fit the existing
     UI, stop and ask the human, naming the options — adapt the design, customize the templates
     keeping their ARIA contract, or use the raw JS API only with explicit approval and
@@ -577,9 +582,10 @@ does not address (see "Findings for the skill" below).
   - **Real-browser fallback and focus scenarios (§5).** Browser behavior is proven with Playwright
     + Chromium, or a temporary probe that never enters the candidate diff when the repo has no
     browser tooling; the minimum browser scenarios now explicitly include visible focus while
-    navigating results, a focus trap while the modal is open (if a modal was chosen), and focus
-    returned to the trigger or search field on close, alongside the existing zero-results
-    announcement.
+    navigating results in either UI; if a modal was chosen, focus trapped while it is open and
+    returned to the trigger that opened it on close (Escape, backdrop click, or close button); if
+    inline, focus returned to the search field after selecting or closing results; alongside the
+    existing zero-results announcement.
 
 - **Base-path matrix — verified as a pre-existing template failure, not a skill gap.** The
   orchestrator reproduced this on 2026-09-24 in a disposable clone of the template (PF-B run 2
