@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import seoLint, { checkOgImage404, findSitemaps } from './index';
+import seoLint, { checkOgImage404, findSitemaps, walkAssets } from './index';
 import { pathToFileURL } from 'node:url';
 
 const DEFAULT_ORIGIN = 'https://example.com';
@@ -31,6 +31,16 @@ describe('checkOgImage404', () => {
     const html = '<meta property="og:image" content="https://example.com/og/home.png">';
     const findings = await checkOgImage404(html, dist, DEFAULT_ORIGIN);
     expect(findings.length).toBe(0);
+  });
+});
+
+describe('walkAssets', () => {
+  it('includes extensionless emitted files in the asset inventory', async () => {
+    const dist = await mkdtemp(path.join(tmpdir(), 'seo-assets-'));
+    await mkdir(path.join(dist, 'downloads'), { recursive: true });
+    await writeFile(path.join(dist, 'downloads', 'NOTICE'), 'asset');
+
+    expect(await walkAssets(dist)).toEqual(['/downloads/NOTICE']);
   });
 });
 
