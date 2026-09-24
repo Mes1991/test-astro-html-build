@@ -148,18 +148,18 @@ Findings outside PF-C's scope go to the human, not auto-fixed.
 | Browser tests (keyboard, focus, zero-results announcement, EN/ES, no-JS fallback) | Not built | — | Recorded browser-test run covering all properties, including UI-specific focus proof: if a modal was chosen, a focus trap while open and focus returned to the trigger on close (Escape, backdrop, close button); if inline, focus returned to the search field after selecting or closing results; visible focus while navigating results in either case. |
 | Root deployment verified (subpath matrix NOT_SUPPORTED until phase F) | Not built | — | Root required; one recorded build with verification evidence at root `/`. The `/preview` sub-cases are subpath NOT_SUPPORTED until `implementation-roadmap.md` phase F, "Template subpath deployment contract," is Implemented — never scored as PASS before then. |
 | Repository gates green | Not built | — | `bun run test`, `bun run check`, `bun run build` (seo-lint clean), `git diff --check` output, no staged residue. |
-| Remove `data-pagefind-body` from an included post | Not built | The coverage check names the missing URL. | Mutation run and restore recorded. |
-| Include a page declared out of scope | Not built | Fails, naming the unexpected URL. | Mutation run and restore recorded. |
-| Change an ES post to `lang="en"` | Not built | The ES sentinel term cannot appear in the EN index. | Mutation run and restore recorded. |
-| Change only `noindex` or `sitemap` | Not built | Search presence does not change without a separate `search` decision. | Mutation run and restore recorded. |
-| Exclude an indexable page from search | Not built | It remains in robots/sitemap per its own contract, but does not appear in Pagefind. | Mutation run and restore recorded. |
-| Delete a post and rebuild | Not built | Its URL and unique term disappear; no stale shards remain. | Mutation run and restore recorded. |
-| Add `postbuild`/integration/hook re-invoking Pagefind | Not built | The production-graph probe and the process counter both fail; `search:preview` remains valid. | Mutation run and restore recorded. |
+| Remove `data-pagefind-body` from an included post | Not built | — | Required result: The coverage check names the missing URL. Mutation run and restore recorded. |
+| Include a page declared out of scope | Not built | — | Required result: Fails, naming the unexpected URL. Mutation run and restore recorded. |
+| Change an ES post to `lang="en"` | Not built | — | Required result: The ES sentinel term cannot appear in the EN index. Mutation run and restore recorded. |
+| Change only `noindex` or `sitemap` | Not built | — | Required result: Search presence does not change without a separate `search` decision. Mutation run and restore recorded. |
+| Exclude an indexable page from search | Not built | — | Required result: It remains in robots/sitemap per its own contract, but does not appear in Pagefind. Mutation run and restore recorded. |
+| Delete a post and rebuild | Not built | — | Required result: Its URL and unique term disappear; no stale shards remain. Mutation run and restore recorded. |
+| Add `postbuild`/integration/hook re-invoking Pagefind | Not built | — | Required result: The production-graph probe and the process counter both fail; `search:preview` remains valid. Mutation run and restore recorded. |
 | Build at root `/` (subpath matrix NOT_SUPPORTED until phase F) | Not built | — | Mutation run and restore recorded at root `/`. The `/preview` never/always sub-cases are subpath NOT_SUPPORTED until `implementation-roadmap.md` phase F, "Template subpath deployment contract," is Implemented — never scored as PASS before then. |
-| Unique term only in header/footer | Not built | Does not appear in results or snippets. | Mutation run and restore recorded. |
-| Remove mandatory metadata | Not built | The result-metadata check fails. | Mutation run and restore recorded. |
-| Search `diseño`, `café`, `ñ`/Unicode | Not built | Returns correct pages without mojibake. | Mutation run and restore recorded. |
-| Disable JavaScript | Not built | Content and navigation remain accessible through the fallback. | Mutation run and restore recorded. |
-| Search a nonexistent term | Not built | UI announces zero results, retains none. | Mutation run and restore recorded. |
+| Unique term only in header/footer | Not built | — | Required result: Does not appear in results or snippets. Mutation run and restore recorded. |
+| Remove mandatory metadata | Not built | — | Required result: The result-metadata check fails. Mutation run and restore recorded. |
+| Search `diseño`, `café`, `ñ`/Unicode | Not built | — | Required result: Returns correct pages without mojibake. Mutation run and restore recorded. |
+| Disable JavaScript | Not built | — | Required result: Content and navigation remain accessible through the fallback. Mutation run and restore recorded. |
+| Search a nonexistent term | Not built | — | Required result: UI announces zero results, retains none. Mutation run and restore recorded. |
 | Codex adversarial review (skill-owned §8 questions, applied to this activation) | Not built | — | Recorded verdict (`PASS` / `PASS_WITH_FINDINGS` / `NEEDS_ATTENTION`) with file/line and repro per finding. |
 | Global roadmap guard review | Not built | — | Recorded verdict confirming no phase B/C contract, gate, or route-map invariant is broken. |
