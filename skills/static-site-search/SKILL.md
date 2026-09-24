@@ -20,32 +20,39 @@ technically equivalent alternatives without guidance, do not assume locales, and
 switch exclusions on or off.
 
 1. **Scope.** "Does search cover the blog, the whole site, or specific routes?" Recommend blog
-   when the request comes from the post archive.
+   when the request comes from the post archive — the narrowest scope matching the request, so
+   nothing gets indexed the product never asked to search.
 2. **Locales.** "Should search exist in every active locale, or only some?" Recommend one search
-   surface per locale with same-language results: Pagefind loads the index matching `<html lang>`
-   and searches only same-language pages. For this template: `/blog/` searches English only,
-   `/es/blog/` Spanish only; translate the placeholder, empty state and labels. Never assume the
-   answer from the site's current locale set.
+   surface per locale with same-language results, because Pagefind loads the index matching
+   `<html lang>` and searches only same-language pages. For this template: `/blog/` searches
+   English only, `/es/blog/` Spanish only; translate the placeholder, empty state and labels.
+   Never assume the answer from the site's current locale set.
 3. **UI.** "Inline, dedicated page, or global modal?" Recommend inline in the archive when scope
-   is blog; a global modal or `/search/` when scope is the whole site; a dedicated page for
-   selected routes unless the product requires otherwise.
+   is blog — the card listing already renders there. For whole-site scope, recommend a global
+   modal reachable from every page: Pagefind documents `<pagefind-modal>` as trapping focus while
+   open and closing on Escape, a backdrop click, or its own close button (still browser-tested per
+   §4/§5, not assumed from the docs). Recommend a dedicated `/search/` page instead only when the
+   product needs shareable or bookmarkable result URLs — a modal's state is not addressable by URL.
 4. **Existing filter.** "Is the `BlogArchive.astro` filter kept, replaced, or integrated with
    Pagefind?" For `BlogArchive`, recommend replacing the local text search with Pagefind, keeping
-   category/tags as Pagefind filters; never leave two fields returning different results for the
-   same query.
+   category/keywords as Pagefind filters, because leaving both live risks two fields returning
+   different results for the same query.
 5. **Results.** "What metadata and filters does each result need?" Mandatory minimum: title,
-   excerpt, and URL — the Pagefind search API returns `excerpt`, `plain_excerpt`, `url`, and
-   `meta.title` for every result. For blog, recommend showing the date and category, and exposing
-   tags as filters; add an image only if the product asks for one.
+   excerpt, and URL, because that is all the Pagefind search API returns per result (`excerpt`,
+   `plain_excerpt`, `url`, `meta.title`) — there is nothing less to omit. For blog, recommend
+   showing the date and category, and exposing keywords as filters; add an image only if the
+   product asks for one. Keywords are not localized per locale (unlike `category`), so a keyword
+   filter on the Spanish surface shows values as authored; translating them, or adding a separate
+   `tags` field, is a distinct schema change the human must confirm, never implied here.
 6. **Exclusions within scope.** "Within the confirmed routes, is there content that must not
-   appear?" For blog-only scope, recommend no extra exclusion: index only articles deliberately
-   marked with `data-pagefind-body`, since pages without the mark are excluded by that mark alone.
-   Do not raise 404 or coming-soon pages for a blog-only scope — they are outside that scope, not
-   an exclusion inside it. Never derive an exclusion from `noindex`, sitemap, or canonical.
+   appear?" For blog-only scope, recommend no extra exclusion, because indexing already follows
+   `data-pagefind-body` alone: pages without the mark are excluded by that mark alone. Do not
+   raise 404 or coming-soon pages for a blog-only scope — they are outside that scope, not an
+   exclusion inside it. Never derive an exclusion from `noindex`, sitemap, or canonical.
 7. **No-JavaScript fallback.** "What remains available without JavaScript?" For `BlogArchive`,
-   recommend keeping the full HTML card listing visible; do not invent a fallback page. A link
-   fallback applies only when the search component visually replaces the listing, and its
-   destination depends on the confirmed scope.
+   recommend keeping the full HTML card listing visible, because it already exists and needs no
+   new fallback page. A link fallback applies only when the search component visually replaces
+   the listing, and its destination depends on the confirmed scope.
 
 If these answers already live in a `DESIGN.md` reaffirmed for the session, do not ask again. Do
 not activate search merely because a blog or search-looking control exists.
@@ -112,7 +119,7 @@ metadata and filters from visible emitted values:
     data-pagefind-meta="image[src], image_alt[alt]"
   />}
   {category && <span data-pagefind-filter="category">{category}</span>}
-  {tags?.map((tag) => <span data-pagefind-filter="tag">{tag}</span>)}
+  {keywords?.map((keyword) => <span data-pagefind-filter="keyword">{keyword}</span>)}
   <Content />
 </article>
 ```
@@ -124,6 +131,27 @@ it from `noindex` or `sitemap`. Do not use the reserved filter keys `any`, `all`
 
 Use the Pagefind Component UI assets generated in `dist/pagefind/`. Derive paths from Astro's
 `BASE_URL` so the component works whether the site is served at root or under a configured `base`:
+
+Inline in `BlogArchive` (scope: blog) — the card listing (§1 Q7) is already the no-JS fallback, so
+no `<noscript>` link is added here:
+
+```astro
+---
+const rawBase = import.meta.env.BASE_URL;
+const base = rawBase.endsWith("/") ? rawBase : `${rawBase}/`;
+const bundle = `${base}pagefind/`;
+---
+
+<link href={`${bundle}pagefind-component-ui.css`} rel="stylesheet" />
+<script is:inline src={`${bundle}pagefind-component-ui.js`} type="module"></script>
+
+<pagefind-config bundle-path={bundle} base-url={base}></pagefind-config>
+<pagefind-searchbox></pagefind-searchbox>
+```
+
+A replacement page or modal trigger — one that visually replaces the content it searches — needs
+the `<noscript>` link, with a canonical, base-aware `fallbackHref` matching the confirmed scope,
+never built by raw string concatenation:
 
 ```astro
 ---
@@ -146,13 +174,8 @@ const { fallbackHref, fallbackLabel } = Astro.props;
 <noscript><a href={fallbackHref}>{fallbackLabel}</a></noscript>
 ```
 
-The `<noscript>` link only applies when the search component visually replaces the content it
-searches — a dedicated page or a modal trigger. When search is added inline to `BlogArchive`, the
-full card listing (§1 Q7) already is the no-JS fallback; do not also add this link there. Where it
-does apply, pass a canonical, base-aware `fallbackHref` — never build it by raw string
-concatenation — whose destination matches the confirmed scope. Place the stylesheet and script
-through the page's existing head slot when possible, and place `<pagefind-config>` before the UI
-components.
+Place the stylesheet and script through the page's existing head slot when possible, and place
+`<pagefind-config>` before the UI components.
 
 If the confirmed UI is a global modal, `<pagefind-modal>` is documented to open over the page
 content, trap focus while open, and close on Escape, a backdrop click, or its own close button —
@@ -194,8 +217,8 @@ the intended reason and be restored.
 
 For a blog-only bilingual activation, additionally verify: a term that only appears in the post
 body (not in any card metadata) is found; `/es/blog/` returns no English posts; `/blog/` returns
-no Spanish posts; a post with no category still appears; a post with several tags appears once
-with every tag as a filter; each result shows title, excerpt and URL; full keyboard navigation
+no Spanish posts; a post with no category still appears; a post with several keywords appears once
+with every keyword as a filter; each result shows title, excerpt and URL; full keyboard navigation
 reaches and activates a result; if a modal was chosen, it closes on Escape; with JavaScript
 disabled the full card listing stays accessible; adding a post and rebuilding makes it findable;
 deleting a post and rebuilding removes it; and removing `data-pagefind-body` from a post expected
