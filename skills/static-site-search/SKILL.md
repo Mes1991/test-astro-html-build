@@ -34,22 +34,25 @@ switch exclusions on or off.
    (Figma, screenshots, `DESIGN.md`), derive the recommendation from where it places search and
    cite that frame; the defaults below apply only when no design shows search. Recommend inline in
    the archive when scope is blog — the card listing already renders there. For whole-site
-   scope, recommend a global modal reachable from every page: Pagefind documents `<pagefind-modal>` as trapping focus while
-   open and closing on Escape, a backdrop click, or its own close button (still browser-tested per
-   §4/§5, not assumed from the docs). Recommend a dedicated `/search/` page instead only when the
-   product needs shareable or bookmarkable result URLs — a modal's state is not addressable by URL.
+   scope, recommend a global modal reachable from every page: Pagefind documents
+   `<pagefind-modal>` as trapping focus while open and closing on Escape, a backdrop click, or its
+   own close button (still browser-tested per §4/§5, not assumed from the docs). Recommend a
+   dedicated `/search/` page instead only when the product needs shareable or bookmarkable result
+   URLs — a modal's state is not addressable by URL.
 4. **Existing filter.** "Is the `BlogArchive.astro` filter kept, replaced, or integrated with
-   Pagefind?" For `BlogArchive`, recommend replacing the local text search with Pagefind, keeping
-   category/keywords as Pagefind filters, because leaving both live risks two fields returning
-   different results for the same query.
+   Pagefind?" For `BlogArchive`, recommend replacing the local text search with Pagefind — one
+   field, one result source — because leaving both live risks two fields returning different
+   results for the same query. The HTML card listing stays as the initial state and the no-JS
+   fallback; an empty query shows every post.
 5. **Results.** "What metadata and filters does each result need?" Mandatory minimum: title,
    excerpt, and URL, because a result without its matching excerpt cannot show why it matched;
    the Pagefind search API returns all three for every result (`url`, `excerpt`/`plain_excerpt`,
    `meta.title`, alongside other keys such as `sub_results`). For blog, recommend
-   showing the date and category, and exposing keywords as filters; add an image only if the
-   product asks for one. Keywords are not localized per locale (unlike `category`), so a keyword
-   filter on the Spanish surface shows values as authored; translating them, or adding a separate
-   `tags` field, is a distinct schema change the human must confirm, never implied here.
+   showing the date and category, with category as a Pagefind filter; add an image only if the
+   product asks for one. Index `keywords` as searchable metadata, not as visible filters: Pagefind
+   searches custom metadata by default, while filters suit a small set of exact, selectable values.
+   Keywords are not localized per locale (unlike `category`); translating them, turning them into
+   filters, or adding a separate `tags` taxonomy is a distinct decision the human must confirm.
 6. **Exclusions within scope.** "Within the confirmed routes, is there content that must not
    appear?" For blog-only scope, recommend no extra exclusion, because indexing already follows
    `data-pagefind-body` alone: pages without the mark are excluded by that mark alone. Do not
@@ -125,7 +128,7 @@ metadata and filters from visible emitted values:
     data-pagefind-meta="image[src], image_alt[alt]"
   />}
   {category && <span data-pagefind-filter="category">{category}</span>}
-  {keywords?.map((keyword) => <span data-pagefind-filter="keyword">{keyword}</span>)}
+  {keywords.length > 0 && <span hidden data-pagefind-meta={`keywords:${keywords.join(", ")}`}></span>}
   <Content />
 </article>
 ```
@@ -223,9 +226,9 @@ the intended reason and be restored.
 
 For a blog-only bilingual activation, additionally verify: a term that only appears in the post
 body (not in any card metadata) is found; `/es/blog/` returns no English posts; `/blog/` returns
-no Spanish posts; a post with no category still appears; a post with several keywords appears once
-with every keyword as a filter; each result shows title, excerpt and URL; full keyboard navigation
-reaches and activates a result; if a modal was chosen, it closes on Escape; with JavaScript
+no Spanish posts; a post with no category still appears; a term that only appears in a post's
+keywords finds it, with no keyword filter shown; each result shows title, excerpt and URL; full
+keyboard navigation reaches and activates a result; if a modal was chosen, it closes on Escape; with JavaScript
 disabled the full card listing stays accessible; adding a post and rebuilding makes it findable;
 deleting a post and rebuilding removes it; and removing `data-pagefind-body` from a post expected
 in scope fails the coverage gate, naming that post's URL.
