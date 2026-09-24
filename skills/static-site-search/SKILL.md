@@ -50,9 +50,11 @@ switch exclusions on or off.
    `meta.title`, alongside other keys such as `sub_results`). For blog, recommend showing the date
    and category, with category as a Pagefind filter. The URL is the title link's target, not visible
    text; the date is localized to the page's locale; a result missing date or category still
-   renders. The default result template shows only the linked title and excerpt, so date and
-   category need a custom template that keeps its ARIA contract. Leave images out unless the product
-   asks (`show-images` defaults to `false`). Index `keywords` as searchable metadata, not as visible
+   renders. The default result template shows the linked title, the excerpt and up to three
+   sub-results (Pagefind's `hide-sub-results` defaults to `false`); date and category still need a
+   custom template that keeps its ARIA contract. Decide explicitly whether sub-results are kept or
+   hidden (`hide-sub-results`) as part of this answer. Leave images out unless the product asks
+   (`show-images` defaults to `false`). Index `keywords` as searchable metadata, not as visible
    filters: Pagefind searches custom metadata by default, while filters suit a small set of exact,
    selectable values. Keywords are not localized per locale (unlike `category`); translating them,
    turning them into filters, or adding a separate `tags` taxonomy is a distinct decision the human
@@ -124,7 +126,7 @@ decision means two ambiguous searches.
 Put `data-pagefind-body` only on the content regions in the confirmed scope. Once one page uses it,
 every included page must use it; pages without it are excluded. For blog-only search, mark the
 rendered post article, not `BaseLayout`, the header, footer or archive listing. Add explicit
-metadata and filters from visible emitted values:
+metadata and filters from emitted values:
 
 ```astro
 <article data-pagefind-body>
