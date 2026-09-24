@@ -70,11 +70,12 @@ Este riesgo queda documentado aquí para que la unidad de implementación de
 
 Puramente documental. Estado real verificado:
 
-- **Existe:** `skills/` con las 7 skills reales del catálogo (`astro-craft`,
+- **Existe:** `skills/` con las 8 skills reales del catálogo (`astro-craft`,
   `design-ingestion`, `form-slot`, `project-setup`, `site-build`,
-  `static-site-seo`, `visual-gate`), cada una con su `SKILL.md` y sus
-  `references/` completos. Hoy un agente limpio abre cada una directamente
-  por su ruta canónica: `skills/<nombre>/SKILL.md`.
+  `static-site-search`, `static-site-seo`, `visual-gate`), cada una con su
+  `SKILL.md` (y sus `references/` completos, salvo `static-site-search`, que
+  hoy no tiene subdirectorio propio de contratos). Hoy un agente limpio abre
+  cada una directamente por su ruta canónica: `skills/<nombre>/SKILL.md`.
 - **No existe todavía:** `skills/registry.yaml`, `scripts/agent-setup.mjs`,
   `scripts/agent-check.mjs`, el directorio `.agents/skills/`, ni entradas de
   `.gitignore` para `.agents/skills/`/`.claude/skills/`. La distribución

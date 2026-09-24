@@ -67,7 +67,7 @@ Detente si falta una decisión que cambie el producto, se requiere acceso extern
 | CMS / scheduling / uploads | No existen hoy | Extensiones opt-in explícitas, deny-by-default | Pendiente |
 | JavaScript | Motion y WebGL obligatorios en varias páginas | Opt-in y progresivo | Pendiente |
 | SEO / seo-lint / OG | Parcialmente implementado; gaps conocidos, incluyendo configuración/origen y materialización de `tools/seo.mjs` (ver `current-repository-map.md` §4) | Config-driven, verificable, sin origen hard-coded | Pendiente de cierre |
-| Distribución de skills | `skills/` contiene las 7 skills reales con contenido completo; no existe `skills/registry.yaml` ni sincronización a `.agents/`/`.claude/`. Un agente limpio abre cada skill directamente por ruta canónica: `skills/<nombre>/SKILL.md` | `skills/` canónico + distribución automática; Codex/OpenCode consumirían `.agents/skills/`; Claude consumiría `.claude/skills/`; Orca queda fuera del contrato como configuración personal | Trabajo futuro, ver `docs/product/agent-ecosystem-contract.md` |
+| Distribución de skills | `skills/` contiene las 8 skills reales con contenido completo; no existe `skills/registry.yaml` ni sincronización a `.agents/`/`.claude/`. Un agente limpio abre cada skill directamente por ruta canónica: `skills/<nombre>/SKILL.md` | `skills/` canónico + distribución automática; Codex/OpenCode consumirían `.agents/skills/`; Claude consumiría `.claude/skills/`; Orca queda fuera del contrato como configuración personal | Trabajo futuro, ver `docs/product/agent-ecosystem-contract.md` |
 
 ## Router de skills
 
@@ -86,11 +86,12 @@ Un agente limpio abre la skill **directamente por su ruta canónica**:
 | Figma, screenshot o diseño externo | `design-ingestion` |
 | Formulario sin integración existente | `form-slot` |
 | Comparación visual o cierre responsive | `visual-gate` |
+| Búsqueda interna full-text sobre HTML ya construido (Pagefind) | `static-site-search` — opt-in, requiere contrato confirmado antes de instalar nada |
 
 Ese gate tiene precedencia; las demás filas aplican después del contrato confirmado (o en modo
 solo lectura durante el intake).
 
-Estas 7 son las únicas skills que existen hoy en `skills/`.
+Estas 8 son las únicas skills que existen hoy en `skills/`.
 
 > **Futuro / no instalado:** un skill de auditoría de seguridad (`security-audit`,
 > basado en el proyecto de Cloudflare) está evaluado como gate de release

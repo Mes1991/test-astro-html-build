@@ -45,7 +45,7 @@ recipes. For rebranding, use [`docs/product/rebrand-checklist.md`](./docs/produc
 
 ## Agent skills
 
-`skills/` is the canonical source — it holds the 7 real skills that exist today.
+`skills/` is the canonical source — it holds the 8 real skills that exist today.
 **A clean agent opens a skill directly by its canonical path,
 `skills/<name>/SKILL.md`.** That is the operative mechanism today; there is no
 automatic distributor yet.

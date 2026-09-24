@@ -28,6 +28,7 @@ test-astro-html-build no debería ser una demo visual recargada ni un repositori
 ### Extensiones opt-in
 
 - Segundo idioma con contenido, slugs, canonical y `hreflang` reales por locale.
+- Búsqueda interna full-text sobre el HTML ya construido (Pagefind), vía la skill `static-site-search`: sin instalar nada, sin activar nada, hasta que el contrato de esa skill quede confirmado.
 - CMS o fuente remota concreta.
 - Formularios e integración con un proveedor.
 - Analytics, GTM y consentimiento, deny-by-default.
@@ -55,8 +56,9 @@ Las skills forman una biblioteca consultable, no un prompt monolítico. El agent
 | `visual-gate` | Core de aceptación | Comparación visual y responsive final | Lógica o configuración sin UI |
 | `design-ingestion` | Extensión | Llega Figma, captura o mockup | Trabajo sin referencia visual |
 | `form-slot` | Extensión | Diseño incluye un formulario sin integración | Sitios sin formularios |
+| `static-site-search` | Extensión | Se confirma la necesidad de búsqueda full-text interna sobre HTML ya construido | Sitios sin ese requisito; el filtro local de tarjetas de `BlogArchive.astro` ya cubre otro caso de uso |
 
-Estas 7 son las skills reales que existen hoy en `skills/`, cada una con contenido completo. La separación conceptual es buena, pero no se debe cargar el bundle completo: el material ronda decenas de miles de palabras. `site-build` por sí solo ronda 3 500 palabras. También debe resolverse el contrato de `tools/seo.mjs`: la documentación lo referencia, pero el snapshot proporcionado no incluye ese archivo como herramienta autónoma.
+Estas 8 son las skills reales que existen hoy en `skills/`, cada una con contenido completo. La separación conceptual es buena, pero no se debe cargar el bundle completo: el material ronda decenas de miles de palabras. `site-build` por sí solo ronda 3 500 palabras. También debe resolverse el contrato de `tools/seo.mjs`: la documentación lo referencia, pero el snapshot proporcionado no incluye ese archivo como herramienta autónoma.
 
 ### Adopción futura opcional: `security-audit` de Cloudflare
 

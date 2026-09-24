@@ -20,7 +20,7 @@ triggering is happening — this index and its by-path route are the reliable me
 runtime, and automatic triggering, where it exists, is an addition on top of it, not a replacement for
 it.
 
-**Load 1–3 skills per phase, just before the phase they govern — never all seven up front.** A skill
+**Load 1–3 skills per phase, just before the phase they govern — never all eight up front.** A skill
 is a workflow for the step you are about to do, not a manual to read cover to cover before starting.
 `site-build` is the exception in the sense that it is usually the first one opened, because it says
 which of the others apply and in what order; from there, open only the one or two that own the step
@@ -28,7 +28,7 @@ in front of you. The table below doubles as the hand-off map: `site-build` names
 each of its steps, so moving from one phase to the next means closing the skill you were using and
 opening the one `site-build` names for the step after it — not keeping every skill open at once.
 
-## The seven skills
+## The eight skills
 
 | Skill | Canonical path | Use when |
 |---|---|---|
@@ -39,6 +39,7 @@ opening the one `site-build` names for the step after it — not keeping every s
 | `form-slot` | [`form-slot/SKILL.md`](./form-slot/SKILL.md) | A page has a form that does not exist in the provider's builder yet. |
 | `static-site-seo` | [`static-site-seo/SKILL.md`](./static-site-seo/SKILL.md) | Creating, renaming, translating or removing a page, or touching its head or structured data. |
 | `visual-gate` | [`visual-gate/SKILL.md`](./visual-gate/SKILL.md) | Proving a built page against a reference, or checking it at every width. |
+| `static-site-search` | [`static-site-search/SKILL.md`](./static-site-search/SKILL.md) | Adding, changing or debugging internal full-text search (Pagefind) over already-built HTML — opt-in, not core. |
 
 ## The contracts
 

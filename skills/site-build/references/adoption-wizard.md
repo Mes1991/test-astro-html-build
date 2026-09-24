@@ -180,7 +180,7 @@ site might want, is not.
 | login/account | identity provider and data, or removal |
 | booking/calendar | real system or an alternative call to action |
 | map | embed/provider, external link, or a static image |
-| search | data source and indexing |
+| search | data source and indexing — real activation follows the `static-site-search` skill's own contract, confirmed separately |
 | analytics/tag manager | opt-in, provider and id — deny-by-default, see `site-build` §3 |
 | CMS | source, schema, available credentials |
 
