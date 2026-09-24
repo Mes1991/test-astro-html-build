@@ -8,6 +8,7 @@ import {
   declaredOgUrl,
   isIndexable,
   internalRouteLinks,
+  isValidHreflang,
   isSitemapExcluded,
   lintLocaleRoutes,
   lintLocalizedRouteCoverage,
@@ -397,6 +398,39 @@ describe('lintLocalizedRouteCoverage', () => {
       `<link rel="alternate" hreflang="es-mx" href="${SITE}/es/services/" />`;
     expect(lintLocalizedRouteCoverage(pair(alts), SITE)).toEqual([]);
   });
+
+  it.each([
+    ['trailing hyphen', 'es-'],
+    ['non-BCP-47 suffix', 'es-NOT_A_TAG'],
+    ['non-ASCII subtag', 'es-💩'],
+    ['empty subtag', 'es--MX'],
+  ])('rejects malformed hreflang with %s and does not count it as coverage', (_case, tag) => {
+    const alts =
+      `<link rel="alternate" hreflang="en" href="${SITE}/services/" />` +
+      `<link rel="alternate" hreflang="${tag}" href="${SITE}/es/services/" />`;
+    const findings = lintLocalizedRouteCoverage(pair(alts), SITE);
+    expect(findings[0].message).toContain(`invalid hreflang="${tag}"`);
+    expect(findings[0].message).toContain('no hreflang="es"');
+  });
+
+  it.each([
+    ['es', 'es'],
+    ['es-MX', 'es'],
+    ['zh-Hant-TW', 'zh'],
+    ['x-default', 'x-default'],
+  ])(
+    'accepts well-formed hreflang %s',
+    (tag, configuredLocale) => {
+      expect(isValidHreflang(tag)).toBe(true);
+      expect(
+        alternateProblems(
+          [{ lang: tag, href: '/target/' }],
+          new Map([[configuredLocale, '/target/']]),
+          new Set(['/target/']),
+        ),
+      ).toEqual([]);
+    },
+  );
 
   it('keeps configured regional locales of one language distinct', () => {
     const expected = new Map([['es-ES', '/es/'], ['es-MX', '/mx/']]);
@@ -940,6 +974,21 @@ describe('Phase A alternate set regressions', () => {
   it.each(cases)('rejects registered HTML %s', (_, alts) => { expect(lintLocalizedRouteCoverage(htmlPages([...alts]), SITE).map((f) => f.code)).toContain('LOCALIZED_ROUTE_WITHOUT_ALTERNATES'); });
   it.each(cases)('rejects registered sitemap %s', (_, alts) => { expect(lintSitemapRoutes([{ loc: `${SITE}/blog/`, alternates: [...alts] }], pages, SITE).map((f) => f.code)).toContain('SITEMAP_ALTERNATES_MISSING'); });
   it('preserves empty sitemap attributes for set validation', () => { expect(parseSitemap(`<url><loc>${SITE}/blog/</loc><xhtml:link hreflang="" href=""/></url>`)[0].alternates).toEqual([{lang: '', href: ''}]); });
+  it.each(['es-', 'es-NOT_A_TAG', 'es-💩', 'es--MX'])(
+    'rejects malformed sitemap hreflang %s without counting it as coverage',
+    (tag) => {
+      const malformed = urls.map((alternate) =>
+        alternate.lang === 'es' ? { ...alternate, lang: tag } : alternate,
+      );
+      const findings = lintSitemapRoutes(
+        [{ loc: `${SITE}/blog/`, alternates: malformed }],
+        pages,
+        SITE,
+      );
+      expect(findings[0].message).toContain(`invalid hreflang="${tag}"`);
+      expect(findings[0].message).toContain('no hreflang="es"');
+    },
+  );
 });
 
 describe('Phase A emitted path regressions', () => {

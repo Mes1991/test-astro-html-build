@@ -223,6 +223,18 @@ export function declaredAlternates(html: string): PageAlternate[] {
   return out;
 }
 
+/**
+ * The BCP 47 subset accepted for hreflang coverage.
+ *
+ * Extensions and private-use subtags are deliberately outside this gate: the
+ * site locale contract only needs language, optional script/region, and
+ * variants. `x-default` is the one non-language value defined by hreflang.
+ */
+export function isValidHreflang(tag: string): boolean {
+  if (tag.toLowerCase() === 'x-default') return true;
+  return /^(?:[a-z]{2,3}|[a-z]{4,8})(?:-[a-z]{4})?(?:-(?:[a-z]{2}|\d{3}))?(?:-(?:[a-z0-9]{5,8}|\d[a-z0-9]{3}))*$/i.test(tag);
+}
+
 /** Validate every declaration, never just a count or the first matching link. */
 export function alternateProblems(
   alternates: PageAlternate[],
@@ -236,11 +248,13 @@ export function alternateProblems(
   // A regional tag (`es-MX`) covers a bare locale (`es`) only when no configured
   // locale names it exactly, so `es-ES` and `es-MX` stay distinct locales.
   const covers = (tag: string, locale: string) =>
-    exact(tag, locale) ||
-    (locale !== 'x-default' && !locale.includes('-') && langMatches(tag, locale) &&
-      !locales.some((other) => exact(tag, other)));
+    isValidHreflang(tag) &&
+    (exact(tag, locale) ||
+      (locale !== 'x-default' && !locale.includes('-') && langMatches(tag, locale) &&
+        !locales.some((other) => exact(tag, other))));
   for (const alt of alternates) {
     if (!alt.lang) problems.push('alternate declares no hreflang');
+    else if (!isValidHreflang(alt.lang)) problems.push(`invalid hreflang="${alt.lang}"`);
     else if (!locales.some((locale) => covers(alt.lang, locale))) {
       problems.push(`unexpected hreflang="${alt.lang}"`);
     }
