@@ -38,8 +38,9 @@ switch exclusions on or off.
    category/keywords as Pagefind filters, because leaving both live risks two fields returning
    different results for the same query.
 5. **Results.** "What metadata and filters does each result need?" Mandatory minimum: title,
-   excerpt, and URL, because that is all the Pagefind search API returns per result (`excerpt`,
-   `plain_excerpt`, `url`, `meta.title`) — there is nothing less to omit. For blog, recommend
+   excerpt, and URL, because a result without its matching excerpt cannot show why it matched;
+   the Pagefind search API returns all three for every result (`url`, `excerpt`/`plain_excerpt`,
+   `meta.title`, alongside other keys such as `sub_results`). For blog, recommend
    showing the date and category, and exposing keywords as filters; add an image only if the
    product asks for one. Keywords are not localized per locale (unlike `category`), so a keyword
    filter on the Spanish surface shows values as authored; translating them, or adding a separate
