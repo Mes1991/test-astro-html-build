@@ -115,9 +115,11 @@ esos archivos deben enlazar aquí, no repetir la lista.
   `image`, `imageAlt`; opcionales documentados en
   `docs/product/current-repository-map.md` §3.
 
-- Para excluir una entrada del descubrimiento, declara `sitemap: false` en su
-  frontmatter. Eso omite las rutas en/es del sitemap y emite `noindex` en ambas;
-  no mantengas una segunda lista de slugs en `astro.config.mjs`.
+- La inclusión en el sitemap y la indexabilidad son controles independientes.
+  Declara `sitemap: false` para omitir las rutas en/es del sitemap sin cambiar
+  robots; declara `noindex: true` solo para controlar robots. El schema exige
+  combinar `noindex: true` con un `sitemap: false` explícito. No mantengas una
+  segunda lista de slugs en `astro.config.mjs`.
 
 ## 8. Analytics opcional
 
@@ -162,7 +164,7 @@ distingue dos severidades:
   `SITEMAP_NON_HTML_ENTRY`, `SITEMAP_ALTERNATES_MISSING`,
   `SITEMAP_LOC_DANGLING`, `SITEMAP_LOC_NOT_CANONICAL`,
   `SITEMAP_ALTERNATE_DANGLING`, `SITEMAP_PAGE_MISSING`,
-  `SITEMAP_OPTED_OUT_PAGE`.
+  `SITEMAP_OPTED_OUT_PAGE`, `SITEMAP_NOINDEX_PAGE`.
 <!-- /seo-lint-codes:fail -->
 
 **WARN (se imprime, no rompe el build):**

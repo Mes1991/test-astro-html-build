@@ -129,22 +129,15 @@ diagnostic. Key parity proven by deleting a key and watching the suite fail.
 | Language match by primary subtag (content, `inLanguage`) | Implemented | `langMatches` at `src/integrations/seo-lint/lint.ts:176-185`, used at `routes.ts:266-285`; test `lint.test.ts` (es vs es-MX) | producer mutation not recorded |
 | Regional variants in hreflang alternate coverage | Not built | `routes.ts:153-165` compares `hreflang` by exact string against `LOCALES` | — |
 | Asset classification by emitted inventory | Implemented | `walkAssets` in `src/integrations/seo-lint/index.ts:95-111`, consumed at `routes.ts:366-400`; tests `routes.test.ts:429-493` (file-shaped routes, dotted slugs, Unicode names) | extensionless-file producer mutation not recorded |
-| Sitemap discovery opt-out | Implemented | `sitemap: false` content contract; `sitemap-opt-out` postprocessor; `SITEMAP_PAGE_MISSING` / `SITEMAP_OPTED_OUT_PAGE` gates and tests | Mutation: example post disappeared from both locale sitemap URLs with a clean build; disabling the postprocessor failed on both URLs with `SITEMAP_OPTED_OUT_PAGE` |
+| Sitemap discovery opt-out | Implemented | Independent `sitemap` / `noindex` content controls; explicit HTML exclusion marker; marker-only `sitemap-opt-out` postprocessor; `SITEMAP_PAGE_MISSING` / `SITEMAP_OPTED_OUT_PAGE` / `SITEMAP_NOINDEX_PAGE` gates and tests | Mutations cover marker detection, accidental sitemap omission, postprocessor removal, listed noindex pages, and invalid content combinations |
 | Router-safe slug rule | Implemented | `src/lib/content/slug.ts`, wired by `src/content.config.ts`; schema tests preserve dotted and Unicode slugs | Mutation: `Bad Slug/x` failed content sync with the named Router-safe slug rule |
 | Initialiser value-flow provenance | Implemented | `documented-codes.test.ts` follows const/let initialisers, simple aliases, and named object-literal properties; virtual graph tests cover each boundary | Mutation fixture produced `ALIASED_UNDOCUMENTED_CODE`; both documentation parity assertions named it |
 | i18n key parity test | Implemented | `src/i18n/parity.test.ts`; commits `21ef614`, `c84ed06` | — (mutations recorded: deleting `nav.home` → named failure; orphan `fr.json`; empty `"nav": {}`) |
 
-**Open human decision — sitemap opt-out semantics.** As built, `sitemap: false`
-in a blog entry's frontmatter does two things: it removes the entry from the
-sitemap *and* renders both locale pages `noindex`. The seo-lint gates depend on
-that coupling: `SITEMAP_PAGE_MISSING` requires every indexable page to be in the
-sitemap, and `SITEMAP_OPTED_OUT_PAGE` rejects a `noindex` page that is still in
-it. The consequence is that an adopter cannot keep a page indexable while
-leaving it out of the sitemap (a campaign landing page, say). The alternative is
-two independent switches: sitemap exclusion and `noindex`. That means relaxing
-`SITEMAP_PAGE_MISSING` to accept a declared exclusion. This is a product choice,
-not a defect. Until someone decides, the coupled behaviour is the contract and
-this row counts as Implemented.
+**Decided 2026-09-23 — sitemap opt-out semantics.** Sitemap inclusion and
+indexability are independent controls. `sitemap: false` excludes a page without
+changing robots, while `noindex: true` controls robots and requires an explicit
+`sitemap: false`; otherwise content validation fails the build.
 
 ### D — Content and languages
 

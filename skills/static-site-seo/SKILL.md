@@ -74,7 +74,7 @@ output as a whole) and `routes.ts` (routes and the generated sitemap).
 - the generated sitemap, from `routes.ts`: `SITEMAP_URL_NOT_CANONICAL_FORM`,
   `SITEMAP_NON_HTML_ENTRY`, `SITEMAP_ALTERNATES_MISSING`, `SITEMAP_LOC_DANGLING`,
   `SITEMAP_LOC_NOT_CANONICAL`, `SITEMAP_ALTERNATE_DANGLING`,
-  `SITEMAP_PAGE_MISSING`, `SITEMAP_OPTED_OUT_PAGE`
+  `SITEMAP_PAGE_MISSING`, `SITEMAP_OPTED_OUT_PAGE`, `SITEMAP_NOINDEX_PAGE`
 <!-- /seo-lint-codes:fail -->
 
 **`warn` — printed to the build log only; the build still succeeds:**
@@ -119,11 +119,13 @@ Three things that are still easy to get wrong, even with the build doing the reg
 
 - **Read the build output, not just its exit code.** A `warn` line does not fail the build and is
   therefore the easiest thing in this workflow to ship past.
-- **Blog posts opt out through frontmatter, not a config allowlist.** Set `sitemap: false` on an
-  entry to mark both locale pages `noindex` and omit both generated URLs. Static holding/resource
-  routes remain excluded by `sitemap()`'s `filter`. The route gates fail if an indexable page is
-  missing (`SITEMAP_PAGE_MISSING`) or a noindex opt-out is published anyway
-  (`SITEMAP_OPTED_OUT_PAGE`).
+- **Blog posts control sitemap inclusion and indexability independently in frontmatter.** Set
+  `sitemap: false` to emit the sitemap-exclusion marker and omit both locale URLs without changing
+  robots. Set `noindex: true` only for indexability; the content schema requires an explicit
+  `sitemap: false` with it. Static resource routes remain excluded by `sitemap()`'s `filter`, while
+  holding pages emit the same HTML exclusion marker. The route gates reject an unmarked indexable
+  page missing from the sitemap (`SITEMAP_PAGE_MISSING`), a marked page that is still listed
+  (`SITEMAP_OPTED_OUT_PAGE`), or a listed noindex page (`SITEMAP_NOINDEX_PAGE`).
 - **A locale added to `i18n.locales` in `astro.config.mjs` with no matching entry in
   `src/lib/seo/locale.ts`** no longer builds clean. Astro's `fallback` still emits the new locale's
   pages, and `lintLocalizedRouteCoverage` (`routes.ts`) then sees a route emitted in more than one
@@ -176,9 +178,11 @@ pages and in the sitemap.
 One of those it still does not do. **`robots.txt` is never read** — nothing checks for a
 `Sitemap:` line or for crawler access, so that one stays read-and-apply, using
 `references/seo-site.md` §2 as the checklist. Sitemap discovery is checked in both directions:
-`SITEMAP_PAGE_MISSING` catches an indexable emitted page that was dropped, while
-`SITEMAP_OPTED_OUT_PAGE` catches a noindex page that was included. For blog content,
-`sitemap: false` is the single declaration that drives both noindex HTML and sitemap omission.
+`SITEMAP_PAGE_MISSING` catches an unmarked indexable emitted page that was dropped,
+`SITEMAP_OPTED_OUT_PAGE` catches a page with the sitemap-exclusion marker that was included, and
+`SITEMAP_NOINDEX_PAGE` catches a noindex page that was included. For blog content, `sitemap: false`
+controls only sitemap omission and `noindex` controls only robots; using `noindex: true` requires an
+explicit `sitemap: false` or content validation fails.
 
 **It says nothing about most of what the contracts cover.** It cannot see Core Web Vitals, judge
 whether a passage is quotable, validate a schema type's properties beyond parsing as JSON, or know

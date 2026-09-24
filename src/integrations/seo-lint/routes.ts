@@ -240,6 +240,31 @@ export function isIndexable(html: string): boolean {
   return !directives.some((content) => /\bnoindex\b/i.test(content));
 }
 
+/**
+ * Only metadata parsed from the document head is effective. Remove comments
+ * and raw-text/inert blocks before looking for the marker so examples inside a
+ * comment, script, style, or template cannot opt a page out accidentally.
+ */
+function effectiveHeadMarkup(html: string): string {
+  const uncommented = html.replace(/<!--[\s\S]*?-->/g, '');
+  const head = uncommented.match(/<head(?=[\s>])[^>]*>([\s\S]*?)<\/head\s*>/i)?.[1] ?? '';
+  return head
+    .replace(
+      /<(script|style|title|textarea|template|noscript|xmp|iframe|noembed|noframes)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,
+      '',
+    )
+    .replace(/<plaintext\b[^>]*>[\s\S]*$/i, '');
+}
+
+/** True when the page head explicitly opts out of sitemap discovery. */
+export function isSitemapExcluded(html: string): boolean {
+  return extractTags(effectiveHeadMarkup(html), 'meta').some(
+    ({ attributes }) =>
+      attributes.get('name')?.trim().toLowerCase() === 'sitemap' &&
+      attributes.get('content')?.trim().toLowerCase() === 'exclude',
+  );
+}
+
 /** Parse the `<url>` entries — loc plus hreflang alternates — out of a sitemap. */
 export function parseSitemap(xml: string): SitemapEntry[] {
   const entries: SitemapEntry[] = [];
@@ -523,8 +548,9 @@ export function lintSitemapRoutes(
 }
 
 /**
- * Reverse sitemap discovery gates. Indexable HTML belongs in the sitemap;
- * noindex is the explicit page-level opt-out and must remain absent from it.
+ * Reverse sitemap discovery gates. Sitemap inclusion and indexability are
+ * independent: an explicit marker permits omission, while noindex pages must
+ * never be published in the sitemap.
  */
 export function lintSitemapDiscovery(
   entries: SitemapEntry[],
@@ -536,25 +562,32 @@ export function lintSitemapDiscovery(
 
   for (const page of pages) {
     const published = sitemapPaths.has(publicPath(routePath(page.route)));
-    if (!isIndexable(page.html)) {
-      if (published) {
-        findings.push({
-          route: page.route,
-          code: 'SITEMAP_OPTED_OUT_PAGE',
-          severity: 'fail',
-          message: 'Page declares noindex but is still published in the sitemap.',
-        });
-      }
-      continue;
+    const indexable = isIndexable(page.html);
+    const excluded = isSitemapExcluded(page.html);
+    if (excluded && published) {
+      findings.push({
+        route: page.route,
+        code: 'SITEMAP_OPTED_OUT_PAGE',
+        severity: 'fail',
+        message: 'Page declares sitemap exclusion but is still published in the sitemap.',
+      });
     }
-    if (!published) {
+    if (!indexable && published) {
+      findings.push({
+        route: page.route,
+        code: 'SITEMAP_NOINDEX_PAGE',
+        severity: 'fail',
+        message: 'Page declares noindex but is still published in the sitemap.',
+      });
+    }
+    if (indexable && !excluded && !published) {
       findings.push({
         route: page.route,
         code: 'SITEMAP_PAGE_MISSING',
         severity: 'fail',
         message:
-          'Indexable page is missing from the generated sitemap. Include it or declare an ' +
-          'explicit noindex sitemap opt-out.',
+          'Indexable page is missing from the generated sitemap. Include the page in the ' +
+          'sitemap or declare sitemap: false.',
       });
     }
   }

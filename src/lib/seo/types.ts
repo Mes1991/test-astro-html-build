@@ -31,6 +31,7 @@ export interface SeoProps {
   description: string;
   canonical?: string;
   noindex?: boolean;
+  sitemap?: boolean;
   image?: OgImageInput;
   type?: OgType;
   locale?: LocaleCode;

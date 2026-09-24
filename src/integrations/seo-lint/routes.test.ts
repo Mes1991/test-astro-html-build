@@ -7,6 +7,7 @@ import {
   declaredLang,
   declaredOgUrl,
   isIndexable,
+  isSitemapExcluded,
   lintLocaleRoutes,
   lintLocalizedRouteCoverage,
   lintSitemapDiscovery,
@@ -19,12 +20,16 @@ import {
 const SITE = siteSeo.siteUrl;
 
 /** Minimal page shell — only the bits the route gates read. */
-function page(route: string, opts: { lang: string; canonical?: string; robots?: string }): GeneratedPage {
+function page(
+  route: string,
+  opts: { lang: string; canonical?: string; robots?: string; sitemapExcluded?: boolean },
+): GeneratedPage {
   const robots = opts.robots ? `<meta name="robots" content="${opts.robots}" />` : '';
+  const sitemap = opts.sitemapExcluded ? '<meta name="sitemap" content="exclude" />' : '';
   const canonical = opts.canonical ? `<link rel="canonical" href="${opts.canonical}" />` : '';
   return {
     route,
-    html: `<!doctype html><html lang="${opts.lang}"><head>${robots}${canonical}</head><body></body></html>`,
+    html: `<!doctype html><html lang="${opts.lang}"><head>${robots}${sitemap}${canonical}</head><body></body></html>`,
   };
 }
 
@@ -84,6 +89,21 @@ describe('page attribute readers', () => {
   it('extracts robots directives with reordered uppercase attributes and mixed quoting', () => {
     const html = "<META CONTENT='index, follow' NAME=ROBOTS><meta CONTENT=noindex NAME='robots'>";
     expect(isIndexable(html)).toBe(false);
+  });
+
+  it('extracts sitemap exclusions across attribute order, case and quoting variants', () => {
+    expect(isSitemapExcluded("<head><META CONTENT='EXCLUDE' NAME=SITEMAP></head>")).toBe(true);
+    expect(isSitemapExcluded('<head><meta content=exclude name="sitemap"></head>')).toBe(true);
+    expect(isSitemapExcluded('<head><meta name="sitemap" content="include"></head>')).toBe(false);
+  });
+
+  it('ignores sitemap markers in comments and raw-text content', () => {
+    expect(
+      isSitemapExcluded(
+        '<head><!-- <meta name="sitemap" content="exclude"> -->' +
+          '<script>const example = `<meta name="sitemap" content="exclude">`;</script></head>',
+      ),
+    ).toBe(false);
   });
 });
 
@@ -447,11 +467,46 @@ describe('lintSitemapRoutes', () => {
     expect(lintSitemapRoutes(entries, pages, SITE)).toEqual([]);
   });
 
-  it('does not require an explicitly noindex page in the sitemap', () => {
+  it('accepts an indexable unmarked page included in the sitemap', () => {
+    expect(
+      lintSitemapDiscovery(
+        [{ loc: `${SITE}/blog/`, alternates: [] }],
+        [pages[2]],
+        SITE,
+      ),
+    ).toEqual([]);
+  });
+
+  it('accepts an indexable sitemap exclusion that is absent from the sitemap', () => {
+    const excluded = page('/campaign/', {
+      lang: 'en',
+      canonical: `${SITE}/campaign/`,
+      robots: 'index, follow',
+      sitemapExcluded: true,
+    });
+    expect(isIndexable(excluded.html)).toBe(true);
+    expect(lintSitemapDiscovery([], [excluded], SITE)).toEqual([]);
+  });
+
+  it('flags an absent indexable page whose only sitemap marker is commented out', () => {
+    const html =
+      '<html lang="en"><head><meta name="robots" content="index, follow">' +
+      '<!-- <meta name="sitemap" content="exclude"> --></head><body></body></html>';
+    expect(isSitemapExcluded(html)).toBe(false);
+    expect(lintSitemapDiscovery([], [{ route: '/commented-marker/', html }], SITE)).toEqual([
+      expect.objectContaining({
+        route: '/commented-marker/',
+        code: 'SITEMAP_PAGE_MISSING',
+      }),
+    ]);
+  });
+
+  it('accepts a noindex sitemap exclusion that is absent from the sitemap', () => {
     const optedOut = page('/private/', {
       lang: 'en',
       canonical: `${SITE}/private/`,
       robots: 'noindex, nofollow',
+      sitemapExcluded: true,
     });
     expect(lintSitemapDiscovery([], [optedOut], SITE)).toEqual([]);
   });
@@ -461,25 +516,44 @@ describe('lintSitemapRoutes', () => {
     expect(findings).toContainEqual(expect.objectContaining({
       route: '/blog/',
       code: 'SITEMAP_PAGE_MISSING',
-      message: expect.stringContaining('missing from the generated sitemap'),
+      message: expect.stringContaining('Include the page in the sitemap or declare sitemap: false'),
     }));
   });
 
-  it('flags a noindex opt-out that remains in the sitemap', () => {
-    const optedOut = page('/private/', {
+  it('flags a noindex page that remains in the sitemap', () => {
+    const noindex = page('/private/', {
       lang: 'en',
       canonical: `${SITE}/private/`,
       robots: 'noindex, nofollow',
     });
     const findings = lintSitemapDiscovery(
       [{ loc: `${SITE}/private/`, alternates: [] }],
-      [optedOut],
+      [noindex],
       SITE,
     );
     expect(findings).toContainEqual(expect.objectContaining({
       route: '/private/',
-      code: 'SITEMAP_OPTED_OUT_PAGE',
+      code: 'SITEMAP_NOINDEX_PAGE',
       message: expect.stringContaining('declares noindex'),
+    }));
+  });
+
+  it('flags a sitemap exclusion that remains in the sitemap', () => {
+    const excluded = page('/campaign/', {
+      lang: 'en',
+      canonical: `${SITE}/campaign/`,
+      robots: 'index, follow',
+      sitemapExcluded: true,
+    });
+    const findings = lintSitemapDiscovery(
+      [{ loc: `${SITE}/campaign/`, alternates: [] }],
+      [excluded],
+      SITE,
+    );
+    expect(findings).toContainEqual(expect.objectContaining({
+      route: '/campaign/',
+      code: 'SITEMAP_OPTED_OUT_PAGE',
+      message: expect.stringContaining('declares sitemap exclusion'),
     }));
   });
 

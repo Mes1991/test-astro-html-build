@@ -38,8 +38,8 @@ export default defineConfig({
     sitemap({
       filter: (page) => {
         if (page.includes('/og/') || page.includes('/api/')) return false;
-        // Drop error and holding pages — these don't belong in sitemaps.
-        const EXCLUDED = ['/404', '/coming-soon'];
+        // Drop error pages. Holding pages opt out through their HTML marker.
+        const EXCLUDED = ['/404'];
         if (EXCLUDED.some((p) => page.includes(p))) return false;
         return true;
       },
@@ -70,7 +70,7 @@ export default defineConfig({
       },
     }),
     react(),
-    // Must run after sitemap(): removes pages that explicitly render noindex.
+    // Must run after sitemap(): removes pages with an explicit sitemap marker.
     sitemapOptOut(),
     // Must run after sitemapOptOut(): its build-done hook validates final XML.
     seoLint(),

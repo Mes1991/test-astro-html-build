@@ -2,7 +2,7 @@ import type { AstroIntegration } from 'astro';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { findSitemaps, resolveDistPath, walkHtml } from '../seo-lint/index';
-import { isIndexable, routeFromDistFile } from '../seo-lint/routes';
+import { isSitemapExcluded, routeFromDistFile } from '../seo-lint/routes';
 import { routeUrl } from '../../lib/seo/url';
 
 /** Remove generated `<url>` blocks whose exact loc is explicitly excluded. */
@@ -14,7 +14,7 @@ export function removeSitemapUrls(xml: string, excluded: ReadonlySet<string>): s
 }
 
 /**
- * Apply page-level noindex declarations to the generated sitemap. This runs
+ * Apply explicit page-level sitemap exclusions to the generated sitemap. This runs
  * after `@astrojs/sitemap` and before seo-lint, so the validator checks the
  * exact XML that will ship.
  */
@@ -31,7 +31,7 @@ export default function sitemapOptOut(): AstroIntegration {
         const distPath = resolveDistPath(dir);
         const excluded = new Set<string>();
         for (const file of await walkHtml(distPath)) {
-          if (isIndexable(await readFile(file, 'utf8'))) continue;
+          if (!isSitemapExcluded(await readFile(file, 'utf8'))) continue;
           excluded.add(routeUrl(routeFromDistFile(path.relative(distPath, file)), site));
         }
         if (excluded.size === 0) return;
