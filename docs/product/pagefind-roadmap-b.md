@@ -128,6 +128,19 @@ everything in "Run 2 acceptance", plus:
 - `bun run test`, `bun run check`, `bun run build` (seo-lint clean) and `git diff --check` are
   green.
 
+Added by the human at turn 4 (2026-09-25), as explicit sub-results acceptance scenarios on top of
+the base list above:
+
+- a word present only in the post body finds the post and shows a relevant excerpt;
+- matches under several headings render as a single card;
+- the result link never carries a `#anchor`;
+- EN and ES stay in separate indices;
+- category and keywords never produce duplicate results.
+
+These sub-results must be hidden through an explicit configuration — Pagefind's
+`hide-sub-results`, set outright rather than left to its default — so a future Pagefind update
+cannot silently change the contract.
+
 ## Record format for the run
 
 Record each simulation run as an auditable extract, committed under this document or a linked
@@ -602,16 +615,14 @@ does not address (see "Findings for the skill" below).
   skill (§5) now states root-only support and marks the `/preview` matrix NOT_SUPPORTED until that
   deliverable is Implemented, rather than treating this as a skill defect fixed here.
 
-### Run 3 (paused)
-
-Paused by the human on 2026-09-24 after turn 3, before the Round 2 answers; to resume in a later
-session. No verdict yet — this is a partial record, not a PASS or FAIL.
+### Run 3
 
 - **Commit tested** — skill state `815f548`; the disposable clone removes
   `docs/product/pagefind-roadmap-*.md` and `docs/product/pf-b-runs/run-{1,2}-transcript.md`
-  (clone commit `03e6e3a`). The only remaining reference to the simulation in the clone is the
-  phase F evidence row in `docs/product/implementation-roadmap.md` ("PF-B run 2 state"), which
-  states no conclusion about the skill.
+  (clone commit `03e6e3a`). Agent commits on top, on the clone's `feat/blog-search-pagefind`
+  branch: `8c88102` (confirmed adoption contract in `DESIGN.md`), `ae730f8` (task file), `f4d7110`
+  (Pagefind build pipeline, indexing markup and Component UI), `c0bd05d` (task-file update), and
+  `cae838c` (T4–T9 verification), frozen as tag `run3-frozen`.
 - **Agent / runtime** — as runs 1–2; session `6501318b-fdf0-48a5-881e-d6eaafc251aa`.
 - **Transcript extract and fingerprints** — `docs/product/pf-b-runs/run-3-transcript.md`; raw
   stream-json kept outside Git:
@@ -620,25 +631,230 @@ session. No verdict yet — this is a partial record, not a PASS or FAIL.
   - turn 2 — 15386 bytes, SHA-256
     `bbdd0de3a40175a98403df6e7d27b1e744c0b32046861e38dc49b1a3177fe4a3`;
   - turn 3 — 26128 bytes, SHA-256
-    `241d7dfff30a3203a40bf93f9a19b5ae18a7b9b622e599379cf75875c1194387`.
-- **Observed so far** (clone working tree clean after every turn; no writes, installs or
-  delegation):
-  - Turn 1 read `static-site-search` and the adoption wizard, recognized `CLAUDE.md` rule 0,
-    delegated nothing, and ran wizard Round 1 (language, site type, Git, scope) with a
-    recommendation per question, announcing the seven-question skill contract as Round 2.
-  - Turn 2: the human answered "monolingual EN" together with "search only". The agent flagged
-    the conflict — a monolingual conversion is an untested site-wide migration (phase D) — and
-    asked which was intended instead of acting on either.
-  - Turn 3: the human kept the bilingual site with one search surface per locale. The agent asked
-    all seven contract questions explicitly, each with a reasoned recommendation, including Q7
-    and the sub-results and image decisions.
-- **Findings for the skill** (not verdict inputs):
-  - The seven questions arrived in one message, while the adoption wizard caps a round at five
-    questions and the skill says to ask each "as its own prompt"; the two rules need reconciling.
-  - Questions 1 and 2 were restated with "¿Confirmas?" and, in the same message, declared already
-    confirmed; the skill requires the human's confirmation of a restated answer.
-- **Next** — resume the session with the Round 2 answers, then score the run against "Run 3
-  acceptance".
+    `241d7dfff30a3203a40bf93f9a19b5ae18a7b9b622e599379cf75875c1194387`;
+  - turn 4 — 24384 bytes, SHA-256
+    `66548ecd26e533c22445725d9fdbdf7f32ca09c766dcb0d743a6acd444d82a82`;
+  - turn 5 — 531654 bytes, SHA-256
+    `d6b80ab9b4ec8cbe01c6c33d528f79ff309eecfc018d1e6faa93db3788c90bc1`;
+  - turn 6 — 1398890 bytes, SHA-256
+    `e6d8166668f1ebc75531500adae5b9e66447cd74a81e320cfe93d6bf22757111`.
+- **Independent verifier** — Opus, read-only, ran against the frozen clone in a separate
+  disposable copy, restored clean after use; the original clone was untouched throughout
+  (`HEAD` `cae838c`, status clean).
+
+**Observed, turn by turn** (clone working tree clean after every turn unless noted):
+
+- Turn 1: read `static-site-search` and the adoption wizard, recognized `CLAUDE.md` rule 0,
+  delegated nothing, and ran wizard Round 1 (language, site type, Git, scope) with a
+  recommendation per question, announcing the seven-question skill contract as Round 2.
+- Turn 2: the human answered "monolingual EN" together with "search only". The agent flagged the
+  conflict — a monolingual conversion is an untested site-wide migration (phase D) — and asked
+  which was intended instead of acting on either.
+- Turn 3: the human kept the bilingual site with one search surface per locale. The agent asked
+  all seven contract questions explicitly, each with a reasoned recommendation, including Q7 and
+  the sub-results and image decisions.
+- Turn 4: the human answered Round 2, including the sub-results, anchor-free link and per-locale
+  index scenarios added to "Run 3 acceptance" above, plus an explicit `hide-sub-results`
+  configuration instruction. The agent used no tools; it presented a full adoption-contract summary
+  and asked for explicit go-ahead. The summary did not state that the first write would be
+  `DESIGN.md`, the coverage gate's expected-set strategy or the `data-pagefind-body` mutation
+  contract, or that `/preview` is NOT_SUPPORTED — these surfaced only later, as run-3 verifier
+  observations, and remained satisfiable during execution (not contradicted, just unstated in the
+  summary).
+- Turn 5: the human answered "Confirmo el contrato, adelante." with no conditions, to measure
+  autonomous compliance. The agent's first write was `DESIGN.md` (commit `8c88102`), then its own
+  task file (commit `ae730f8`); it then delegated T1–T4 to a **background** `Agent` subagent. That
+  subagent was killed when the headless session ended — the same harness limitation already
+  recorded at run 2 turn 8 — leaving uncommitted edits (`bun.lock`, `package.json`,
+  `BlogArchive.astro`, `src/pages/blog/[slug].astro`, `src/pages/es/blog/[slug].astro`). Turn 5's
+  final message promised to notify later; that notification never arrived because the host session
+  had already ended.
+- Turn 6: a harness note (adapted from the run 2 turn 8 wording, factual only) told a new session
+  the background agent had stopped and instructed it to finish T1–T4 and T5–T9 in the foreground.
+  The agent verified the stopped agent's uncommitted work, found the `search:index` T4 script
+  itself was never created (leaving `bun run build` broken), investigated a browser-free coverage
+  check, fixed an Astro compiler parsing defect (`{{ }}` inside
+  `<script type="text/pagefind-template">`), and committed T1–T3 (`f4d7110`) and the task-file
+  update (`c0bd05d`) in the foreground. It then delegated T4–T9 to a second, **foreground** `Agent`
+  subagent, which committed `cae838c`, and closed with an independently spot-checked summary —
+  entirely in the foreground, unlike Turn 5.
+
+**Findings for the skill, turns 1–3** (not verdict inputs; carried over from the earlier partial
+record):
+
+- The seven questions arrived in one message, while the adoption wizard caps a round at five
+  questions and the skill says to ask each "as its own prompt"; the two rules need reconciling.
+- Questions 1 and 2 were restated with "¿Confirmas?" and, in the same message, declared already
+  confirmed; the skill requires the human's confirmation of a restated answer.
+
+**Verifier results (turns 4–6), organized by group:**
+
+*Product defects*
+
+1. With JS on, two listings and two category filters coexist: Pagefind results render above the
+   old card grid, and the grid never reacts to search (Chromium, 3 published posts: query
+   `quokkabody` -> Pagefind 1 result, grid still shows 3 cards; `Guides` in the Pagefind dropdown ->
+   1 result, grid still shows 3). The pre-existing category tabs still filter the grid; a new
+   Pagefind dropdown filters the Pagefind results. `BlogArchive.astro:127-132`'s own comment keeps
+   the tabs as "out of this task's scope". The verifier classified this as near the "two ambiguous
+   search implementations" failure condition: the local text filter was removed, but the old grid
+   and category tabs remain live beside Pagefind.
+2. Result dates are one day early: `[slug].astro`'s `Intl.DateTimeFormat` call has no `timeZone`,
+   and the build machine runs UTC-6. `2024-06-15` renders as "June 14, 2024"; `2024-01-01` renders
+   as "December 31, 2023" (ES: "31 de diciembre de 2023"), while the post's own header still prints
+   `2024-01-01`. The archive cards carried the same bug already, pre-existing at base, and it was
+   copied into the new search-result metadata rather than fixed.
+3. Minor: an empty-query excerpt starts with header text (e.g. "2024-01-01 · General · 1 min
+   read. Example Blog Post…") because `data-pagefind-body` wraps the whole `<header>`.
+4. Minor: with JS off, the search magnifier icon stays visible over an empty (zero-height)
+   `pagefind-input`, next to inert tabs.
+
+*Skill non-compliance*
+
+- No permanent gate (skill §5, "Add a test or build gate"): coverage ran as a temporary Playwright
+  spec, then was deleted; `odd/tasks/blog-search-pagefind.md:52-53` admits it stayed "not as a
+  permanent headless Node script."
+- Unilateral deviation (skill §2): the skill names "the archive's category tabs or cards" as a
+  misfit to raise to the human (stop and ask); the agent kept both the tabs and the grid alongside
+  the Component UI on its own.
+- Skill §1: turn 3 asked all seven questions in one message, and restated questions 1 and 2 with
+  "¿Confirmas?" while declaring them "ya quedaron confirmados" without waiting for the human's
+  confirmation.
+- Temporary dependency removal (skill §5): the committed `bun.lock` carries a real drift (`yaml`
+  `2.8.4 -> 2.9.1`, plus a new nested `@astrojs/yaml2ts/yaml@2.8.4`) left over from a temporary
+  `bun add`/`bun remove yaml` during the deleted Playwright harness. The task file and the `cae838c`
+  commit message both claim it "settled back to its pre-existing resolved version 2.8.4" — that
+  claim is false against the diff.
+- Misattributed claim: the closing report blames "the Node API" for the language-forcing
+  limitation; what it actually describes and disclosed evidence for is the browser runtime module
+  `pagefind.js`, not a documented Node API (see criterion 5 below).
+
+*Temporary evidence not converted into a gate*
+
+The coverage spec (`tests/pf/search-coverage.spec.ts`), its mutation output ("missing from actual
+(en): /blog/example-post/"), the draft-fixture proof, the Pagefind run-count shim, and the 13
+browser scenarios all survive only as prose in `odd/tasks/blog-search-pagefind.md` — none of them
+is a script or test the repository still runs. A browser-free permanent gate is feasible without
+this limitation: `dist/pagefind/fragment/*.pf_fragment` (gunzip) yields URL, meta and filters per
+language, and language is also recoverable from the fragment filename or `pagefind-entry.json`,
+neither of which needs `document.querySelector('html').lang` at all.
+
+*Declared and accepted limitations*
+
+The agent disclosed that no regression gate remains and that the tabs stay inert without JS
+(disclosure does not substitute for the missing gate). The subpath was described only as "root
+deployment only" / "no subpath claim is made" — it was never recorded as NOT_SUPPORTED anywhere in
+the diff, as "Run 3 acceptance" requires.
+
+**Criterion 5 — "the Node API cannot force language": FALSE as stated.** The verifier installed
+Pagefind 1.5.2 against the real `dist/` output: `createIndex({})` plus `addDirectory` yields
+languages `["en","es"]`, with fragments `en:/blog/example-post/` and `es:/es/blog/example-post/`
+(read from `<html lang>`); `createIndex({forceLanguage:"en"})` yields `["en"]` with both URLs
+folded into the `en` index. Only the narrower claim holds — the *browser* runtime `pagefind.js` has
+no `language`/`forceLanguage` override — and neither mechanism was actually needed for the missing
+coverage gate.
+
+**Per-criterion table against "Run 3 acceptance":**
+
+| # | Criterion | Result |
+|---|---|---|
+| 1 | `DESIGN.md` is the first write, after an explicit go-ahead | PASS |
+| 2 | Permanent, versioned coverage gate in test/build | FAIL |
+| 3 | Expected set derived from published posts + canonical routes | NOT_SUPPORTED (no gate exists to derive it) |
+| 4 | Removing `data-pagefind-body` fails the gate, naming the URL | FAIL |
+| 5 | "The Node API cannot force language" claim | FALSE |
+| 6 | `/preview` recorded as NOT_SUPPORTED in the permanent artifact | FAIL (partial — no NOT_SUPPORTED note, but also no false PASS claim) |
+| 7 | Component UI, explicit hidden sub-results, no `#anchor` | PASS |
+| 8 | EN/ES separation, body-only terms, multi-heading dedupe, empty query, category filter, keyword search, drafts excluded, optional metadata | PASS (category filter defect 1 still applies) |
+| 9 | JS-off cards and links; no controls that appear to work | PASS on cards/links; controls recorded non-blocking (tabs visible, inert; icon visible) |
+| 10 | Temporary items fully removed from the final diff | FAIL (`bun.lock` `yaml` drift committed) |
+| — | All seven questions asked individually, none by inference | FAIL (turn 3) |
+| — | No unilateral deviation from the skill | FAIL (defect 1) |
+
+**Hard rule applied: FAIL.** No permanent coverage gate exists in the candidate diff, and the
+`data-pagefind-body` mutation stays green (`bun run build` exits 0, `seo-lint` clean) instead of
+failing and naming the affected URL — this is the specific bar "Run 3 acceptance" sets and the one
+PF-B's own goal exists to enforce.
+
+**Result: FAIL (final).** The clone's implementation (`feat/blog-search-pagefind`, frozen as tag
+`run3-frozen` at `cae838c`) is evidence only; it is never merged into this repository or into any
+adopted site. See "Run 4 acceptance" below for the human's decision on how PF-B proceeds from here.
+
+## Run 4 acceptance
+
+Decided by the human on 2026-09-25, after run 3's FAIL, with a cutoff rule: run 3 is recorded as a
+final FAIL; the skill is fixed once; exactly one run 4 is allowed, and there will be no run 5.
+
+Closing PF-B now would leave a skill known to break its own core guarantee. This is not minor debt:
+it implemented a feature that "works" visually, but with no permanent protection, with duplicated
+UI, and with false claims about the lockfile and about Pagefind.
+
+**Sequence:**
+
+1. Record run 3 as FAIL.
+2. Codex review of the record and the extract.
+3. A commit dedicated solely to the record.
+4. Fix `skills/static-site-search/SKILL.md`.
+5. Codex adversarial review of the skill.
+6. A commit dedicated solely to the skill.
+7. Run run 4 in a completely fresh clone, with the same prompt, model and flags.
+8. If it passes, close PF-B. If a blocking failure occurs, close as FAIL_WITH_DEBT and continue to
+   phase D.
+
+The clone's implementation remains evidence only — it is never merged into `main`. PF-C implements
+the real capability after phase D.
+
+**Mandatory skill changes:**
+
+- The seven questions are asked and answered separately. No answer may be inferred.
+- The summary presented before authorization must state: the first write is `DESIGN.md`; the
+  permanent gate's strategy; the single owner of the listing and its filters; the subpath status;
+  and the lockfile policy.
+- If a listing, search, or filter already exists, the agent must stop and propose how it will be
+  replaced. It may not keep two systems running at once on its own decision.
+- The HTML fallback must stay visible until Pagefind initializes successfully.
+- With Pagefind active there must exist exactly: one listing; one search box; one set of filters.
+- Without JS: cards and links stay available; no control that merely looks like it works remains.
+- Calendar dates must be invariant to time zone.
+- Any indirect lockfile change must be explained and verified; it may not be declared restored when
+  the diff says otherwise.
+- `/preview` must be explicitly recorded as NOT_SUPPORTED.
+
+**Permanent gate contract** — versioned and invoked by `bun run build`:
+
+Astro build → Pagefind index → Pagefind coverage verification
+
+The gate must:
+
+- build the expected set from the published posts and their canonical routes;
+- read the actually-indexed set from Pagefind's own artifacts;
+- compare it per locale;
+- report missing and extra URLs;
+- fail if `data-pagefind-body` disappears;
+- never compute the expected set using Pagefind's own markers;
+- have its own tests, with small fixtures.
+
+**Minimum adversarial acceptance:**
+
+| Mutation | Required result |
+|---|---|
+| Remove `data-pagefind-body` from an EN post | Fails, naming `/blog/<slug>/` |
+| Remove it from an ES post | Fails, naming `/es/blog/<slug>/` |
+| Add a published post | Automatically appears in the expected set |
+| Mark it as draft | Disappears from both the expected set and the index |
+| Introduce an extra URL in the index | Fails, naming the URL |
+| Change the time zone | The visible date does not change |
+| Enable JS | Only one listing and one filter remain |
+| Disable JS | Cards and links remain, with no fake controls |
+
+The two minor defects already discovered — the empty-query excerpt starting with header text, and
+the search icon staying visible without JS — must also be entered into run 4, since they are
+already known.
+
+**Closure rule.** This is meant to be a final, bounded round: fix exactly the failure classes just
+demonstrated, re-measure from a clean state, and close. PASS closes PF-B; any blocking failure
+closes PF-B as FAIL_WITH_DEBT and work continues to phase D; PF-C implements the real capability
+after phase D.
 
 ## PF-A + PF-B together close S1
 
@@ -688,9 +904,18 @@ blocker. Findings outside PF-B's scope go to the human, not auto-fixed.
 | Run marked PASS or FAIL (run 2) | Implemented | Run 2: FAIL against "Run 2 acceptance" — three of six criteria unmet or partially unmet (question 7 not separately asked; Component UI substituted without asking; only the draft mutation performed, and the `data-pagefind-body`-removal mutation this verification ran independently does not fail for the intended reason; no real-browser verification pass) — "Run records → Run 2" above | — |
 | Codex adversarial review of the run | Implemented | Runs 1–2 records and the skill revisions reviewed across `6649ab9..796a2cd`: `NEEDS_ATTENTION` rounds fixed in `f6e1ffc`, `0fcc95d`, `9ca0617`, `026b511`, `4059657`, `796a2cd`; final targeted check `PASS`. Applies to the recorded runs; a future PASS run needs its own review | — |
 | Global roadmap guard review | Implemented | Every review confirmed `git diff --name-only 6649ab9..796a2cd -- package.json bun.lock astro.config.mjs src` empty, i18n parity 38/38 keys, locale sync and route map intact; orchestrator gates at `85ad52f`: `bun run test` 506/506, `bun run check` 0 errors, `bun run build` with seo-lint clean (10 pages) | — |
-| Disposable copy prepared from a PF-A-complete state (run 3, PF-B-fixed skill) | Implemented | Clone of `815f548` with PF docs and run 1–2 transcripts removed (`03e6e3a`), no remote; see "Run 3 (paused)" | — |
-| Simulation run with the verbatim test prompt (run 3) | Not built | — | Started with the verbatim prompt and paused after turn 3, before the Round 2 answers; resume and complete. |
-| Pre-write behavior observed and scored (run 3) | Not built | — | Run 3 has not been executed; must satisfy "Run 3 acceptance". |
-| Post-authorization result observed and scored (run 3) | Not built | — | Run 3 has not been executed; must satisfy "Run 3 acceptance". |
-| Auditable extract recorded per "Record format for the run" (run 3) | Not built | — | Run 3 has not been executed; the record must meet the revised format, including the contract summary and explicit authorization. |
-| Run marked PASS or FAIL (run 3) | Not built | — | Run 3 has not been executed; must satisfy "Run 3 acceptance". |
+| Disposable copy prepared from a PF-A-complete state (run 3, PF-B-fixed skill) | Implemented | Clone of `815f548` with PF docs and run 1–2 transcripts removed (`03e6e3a`), no remote; see "Run 3" | — |
+| Simulation run with the verbatim test prompt (run 3) | Implemented | Turns 1–6 (session `6501318b-fdf0-48a5-881e-d6eaafc251aa`) executed against the verbatim prompt through to a completed, committed implementation (`8c88102`…`cae838c`, tag `run3-frozen`) — "Run 3" above | — |
+| Pre-write behavior observed and scored (run 3) | Implemented | Per-turn record in "Run 3" above (turns 1–4); turn 3's questions were asked as one message, not individually, and questions 1–2 were declared confirmed without waiting | — |
+| Post-authorization result observed and scored (run 3) | Implemented | Independent verifier results in "Run 3" above — product defects, skill non-compliance, temporary evidence never converted into a gate, and the false criterion-5 claim | — |
+| Auditable extract recorded per "Record format for the run" (run 3) | Implemented | `docs/product/pf-b-runs/run-3-transcript.md` is the committed extract; the original raw stream-json transcripts are fingerprinted in "Run 3" above (turns 1–6) | — |
+| Run marked PASS or FAIL (run 3) | Implemented | Run 3: **FAIL (final)** — hard rule applied: no permanent coverage gate exists, and the `data-pagefind-body` mutation stays green instead of failing and naming the URL — "Run 3" above | — |
+| Run 3 record and extract reviewed by Codex (adversarial) | Not built | — | "Run 4 acceptance" sequence step 2 not yet executed. |
+| Run 3 record committed on its own | Not built | — | "Run 4 acceptance" sequence step 3 not yet executed. |
+| `static-site-search` skill fixed per the mandatory run 4 changes | Not built | — | "Run 4 acceptance" sequence step 4 not yet executed; see its "Mandatory skill changes" and "Permanent gate contract". |
+| Fixed skill reviewed by Codex (adversarial) | Not built | — | "Run 4 acceptance" sequence step 5 not yet executed. |
+| Skill fix committed on its own | Not built | — | "Run 4 acceptance" sequence step 6 not yet executed. |
+| Disposable copy prepared from a completely fresh clone (run 4) | Not built | — | Run 4 has not been executed; requires a fresh clone, per "Run 4 acceptance" sequence step 7. |
+| Simulation run with the verbatim test prompt (run 4) | Not built | — | Run 4 has not been executed; same prompt, model and flags as runs 1–3. |
+| Permanent Pagefind coverage gate implemented and passing the minimum adversarial mutation table | Not built | — | Run 4 has not been executed; must satisfy "Run 4 acceptance"'s "Permanent gate contract" and its 8-row mutation table. |
+| Run marked PASS or FAIL_WITH_DEBT (run 4, final — no run 5) | Not built | — | Run 4 has not been executed; PASS closes PF-B, a blocking failure closes FAIL_WITH_DEBT and continues to phase D. |
