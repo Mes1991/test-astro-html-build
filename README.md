@@ -24,7 +24,7 @@ of this README describes the final target state unless
 
 `skills/` at the repository root is the **single canonical source** for the
 AI-agent skill library (build recipes, SEO/toolchain/accessibility contracts, and
-more) — it holds 7 real skills today. It is not a prompt — it is a consultable
+more) — it holds 8 real skills today. It is not a prompt — it is a consultable
 catalog: `AGENTS.md` → "Router de skills" tells an agent which one to load per
 situation. **A clean agent opens a skill directly by its canonical path,
 `skills/<name>/SKILL.md`** — this is the operative mechanism today; there is no
