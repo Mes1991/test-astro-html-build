@@ -4,10 +4,11 @@ This directory is the single authored source for the project's workflow skills a
 contracts. Everything here is written to be read by an agent and by a person.
 
 **The operative mechanism today: open a skill directly by its canonical path,
-`skills/<name>/SKILL.md`.** In a clean clone of this repository there is no generator, no registry
-and no runtime-specific adapter installed — the table below is the index of paths to open by hand
-(or to have an agent open by hand), and that is not a fallback for something else, it is the current
-way this pack is consumed.
+`skills/<name>/SKILL.md`.** A clean clone of this repository ships `skills/registry.yaml` and the
+`agent:setup`/`agent:check` scripts, but no runtime-specific adapter is installed until
+`bun run agent:setup -- <target>` runs (see [`distribution.md`](./distribution.md)). The table below
+is the index of paths to open by hand (or to have an agent open by hand), and that by-path mechanism
+always works, with or without adapters.
 
 **How to use it.** When a task matches a row below, read that file before writing code, not after:
 the rules in these are not reconstructable from the code that follows them.

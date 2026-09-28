@@ -1,4 +1,4 @@
-# Rebrand Checklist — test-astro-html-build
+# Rebrand Checklist — astro-7-html-template by TFM
 
 Checklist canónico y único para personalizar este template. Sustituye al
 checklist descrito en una versión anterior de `AGENTS.md` (obsoleta, ver
@@ -102,7 +102,7 @@ esos archivos deben enlazar aquí, no repetir la lista.
   declarados en `i18n.locales` de `astro.config.mjs` (`CLAUDE.md` regla 3).
 - El bilingüe en/es es hoy **obligatorio en el núcleo**, no una extensión
   opt-in (ver `docs/product/current-repository-map.md` §7 y `AGENTS.md` →
-  "Estado transitorio"). No quites un locale sin actualizar
+  "Estado actual vs. objetivo"). No quites un locale sin actualizar
   `astro.config.mjs`, `locale.ts` y ambos diccionarios a la vez.
 
 ## 7. Contenido de ejemplo

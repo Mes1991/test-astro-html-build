@@ -1,11 +1,11 @@
-# test-astro-html-build — contrato de producto y arquitectura de skills
+# astro-7-html-template by TFM — contrato de producto y arquitectura de skills
 
 Estado: propuesta para la siguiente iteración  
 Fecha: 2026-09-16
 
 ## Decisión ejecutiva
 
-test-astro-html-build no debería ser una demo visual recargada ni un repositorio que obliga a cada agente a leer decenas de miles de tokens. Debe quedar como una base Astro estática, pequeña y comprobable, con SEO, accesibilidad, contenido y configuración bien resueltos. Las capacidades costosas o específicas de un cliente deben activarse como extensiones.
+astro-7-html-template no debería ser una demo visual recargada ni un repositorio que obliga a cada agente a leer decenas de miles de tokens. Debe quedar como una base Astro estática, pequeña y comprobable, con SEO, accesibilidad, contenido y configuración bien resueltos. Las capacidades costosas o específicas de un cliente deben activarse como extensiones.
 
 ## Cómo debe quedar el producto
 
@@ -56,9 +56,12 @@ Las skills forman una biblioteca consultable, no un prompt monolítico. El agent
 | `visual-gate` | Core de aceptación | Comparación visual y responsive final | Lógica o configuración sin UI |
 | `design-ingestion` | Extensión | Llega Figma, captura o mockup | Trabajo sin referencia visual |
 | `form-slot` | Extensión | Diseño incluye un formulario sin integración | Sitios sin formularios |
+| `seo-research` | Extensión | Keywords, intención de búsqueda, SERP o competidores antes de escribir o reestructurar páginas | Cambios sin decisión de contenido |
+| `faq-content` | Extensión | Escribir, editar, traducir, eliminar o auditar un FAQ visible y su JSON-LD `FAQPage` | Otros tipos de schema (→ `static-site-seo`) |
+| `svg-assets` | Extensión | Crear, editar, importar o revisar un logo, favicon, icono o ilustración SVG | Extraer iconos de una fuente de diseño (→ `design-ingestion`) |
 | `static-site-search` | Extensión | Se confirma la necesidad de búsqueda full-text interna sobre HTML ya construido | Sitios sin ese requisito; el filtro local de tarjetas de `BlogArchive.astro` ya cubre otro caso de uso |
 
-Estas 11 son las skills reales que existen hoy en `skills/` (la tabla arriba no lista las tres más recientes — `faq-content`, `seo-research`, `svg-assets` — ver `skills/README.md` para el catálogo completo y actualizado), cada una con contenido completo. La separación conceptual es buena, pero no se debe cargar el bundle completo: el material ronda decenas de miles de palabras. `site-build` por sí solo ronda 3 500 palabras. También debe resolverse el contrato de `tools/seo.mjs`: la documentación lo referencia, pero el snapshot proporcionado no incluye ese archivo como herramienta autónoma.
+Estas 11 son las skills reales que existen hoy en `skills/`, cada una con contenido completo; `skills/README.md` mantiene el catálogo detallado. La separación conceptual es buena, pero no se debe cargar el bundle completo: el material ronda decenas de miles de palabras. `site-build` por sí solo ronda 3 500 palabras. Los contratos genéricos de `static-site-seo` mencionan un `tools/seo.mjs` autónomo que no existe ni está planificado; el validador real es `src/integrations/seo-lint/`, dentro de `bun run build` (ver `current-repository-map.md` §4).
 
 ### Adopción futura opcional: `security-audit` de Cloudflare
 
@@ -70,7 +73,7 @@ Si se adopta en el futuro, condiciones mínimas:
 2. Pinear una revisión concreta y registrar fuente, licencia y versión; no seguir `main` silenciosamente.
 3. Revisar el contenido antes de confiar en él como instrucciones.
 4. Ejecutar el modo completo solo con un agente que soporte subagentes paralelos y con sandbox real: sin red, entorno allowlisted, límites de recursos y escritura solo en scratch.
-5. Priorizar, para test-astro-html-build, `CLIENT-SIDE`, `SUPPLY-CHAIN-AND-RELEASE`, configuración/deploy y manejo de contenido; omitir clases nativas o de kernel que no apliquen.
+5. Priorizar, para astro-7-html-template, `CLIENT-SIDE`, `SUPPLY-CHAIN-AND-RELEASE`, configuración/deploy y manejo de contenido; omitir clases nativas o de kernel que no apliquen.
 6. Guardar sus reportes fuera del prompt ordinario. Las tareas normales reciben únicamente los hallazgos relevantes.
 
 Fuente oficial: <https://github.com/cloudflare/security-audit-skill>

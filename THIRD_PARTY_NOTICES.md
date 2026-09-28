@@ -159,4 +159,4 @@ if any of them was imported from elsewhere, its provenance needs recording befor
 | Draco upstream `NOTICE` file | **Unverified** — none accompanied the binaries |
 | Transitive dependency licenses | **Not reviewed** |
 | Placeholder SVG/PNG provenance | **Assumed original, unverified** |
-| MIT copyright holder | Currently "test-astro-html-build contributors" — a human decision if a named holder is wanted |
+| MIT copyright holder | "TFM" (decided 2026-09-28) |

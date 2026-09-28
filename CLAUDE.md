@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-test-astro-html-build is an **AI-first Astro static site template**. It is meant to be driven by AI
+astro-7-html-template (by TFM) is an **AI-first Astro static site template**. It is meant to be driven by AI
 coding agents, not hand-edited by humans.
 
 **Current state** — the template ships blog-only: the home page flow is

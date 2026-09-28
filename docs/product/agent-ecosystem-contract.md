@@ -1,4 +1,4 @@
-# test-astro-html-build — contrato del ecosistema portable de agentes
+# astro-7-html-template by TFM — contrato del ecosistema portable de agentes
 
 Estado: decisiones humanas ratificadas, 2026-09-16 — ese acto de ratificación
 fue documental únicamente, sin tocar script, dependencia ni `package.json`.
@@ -7,7 +7,7 @@ después, el 2026-09-28 — ver "Estado de implementación" abajo.
 
 Este documento es la fuente autoritativa de Unidad 0. Complementa, no
 sustituye, a `docs/product/template-contract.md` (contrato de producto) y al
-futuro `skills/registry.yaml` (metadata de skills — no existe todavía, ver
+`skills/registry.yaml` (metadata de skills — ya existe, ver
 "Estado de implementación"). En caso de conflicto sobre distribución de
 skills entre agentes, este documento gana.
 
@@ -42,7 +42,7 @@ skills entre agentes, este documento gana.
    `.agents/skills/` y `.claude/skills/`, contaminando su contexto con
    instrucciones ajenas a su propio adaptador.
 8. Orca permanece **fuera del contrato del template** — configuración personal
-   de máquina (`.orca/`), no una dependencia que el producto test-astro-html-build asuma.
+   de máquina (`.orca/`), no una dependencia que el producto astro-7-html-template asuma.
 
 ## Qué NO decide este contrato todavía
 
@@ -165,8 +165,8 @@ matriz.
 
 ## Referencia cruzada
 
-- `AGENTS.md` → tabla "Estado transitorio", fila "Distribución de skills".
-- `skills/registry.yaml` (futuro, no existe todavía) → bloque `distribution:`
-  y `human_decisions_pending`, una vez se cree.
+- `AGENTS.md` → tabla "Estado actual vs. objetivo", fila "Distribución de skills".
+- `skills/registry.yaml` → lista de skills instaladas (`skills:`); hoy no tiene
+  bloques `distribution:` ni `human_decisions_pending`.
 - `docs/product/template-contract.md` → "Decisiones humanas todavía
   necesarias" (actualizado para remitir aquí).

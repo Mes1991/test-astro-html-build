@@ -80,7 +80,7 @@ step means this file's next section is the only structural rule the project has.
 genuinely better hand-written: no install, no toolchain to keep current, nothing to break between
 now and the next edit. The failure is not choosing it — it is choosing it silently and then
 building four pages that way. **Scope boundary:** this product is specifically an Astro static
-template. When the target project is test-astro-html-build itself, the Astro build is already authoritative and
+template. When the target project is astro-7-html-template itself, the Astro build is already authoritative and
 this branch does not apply; the hand-written branch is for a genuinely separate, non-Astro
 one-pager.
 

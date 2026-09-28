@@ -1,4 +1,4 @@
-# AGENTS.md — test-astro-html-build
+# AGENTS.md — astro-7-html-template by TFM
 
 Este archivo debe mantenerse corto. Los detalles viven en `docs/product/` y en skills cargadas bajo demanda.
 
@@ -6,7 +6,7 @@ Para editar identidad/marca, ver el checklist canónico: [`docs/product/rebrand-
 
 ## Objetivo
 
-Construir y mantener una plantilla Astro estática, robusta, accesible, SEO-ready y barata de operar con agentes. El núcleo es monolingüe, neutral respecto a CMS y hosting, y funciona sin JavaScript para contenido y navegación esenciales.
+Construir y mantener una plantilla Astro estática, robusta, accesible, SEO-ready y barata de operar con agentes. El núcleo objetivo es monolingüe, neutral respecto a CMS y hosting, y funciona sin JavaScript para contenido y navegación esenciales — ver "Estado actual vs. objetivo" para lo que ya rige hoy y lo que sigue pendiente.
 
 ## Fuentes de verdad
 
@@ -20,16 +20,34 @@ En caso de conflicto, usa este orden:
 
 Registra conflictos de nivel inferior, aplica la fuente superior y continúa si el alcance sigue claro.
 
-## Invariantes del núcleo
+## Estado actual vs. objetivo
+
+El repositorio de hoy y el producto objetivo (`docs/product/template-contract.md`) todavía no coinciden. Antes de asumir cualquier invariante de la sección siguiente, confirma cuál rige hoy:
+
+| Tema | Estado actual (verificado) | Objetivo |
+|---|---|---|
+| Configuración pública | Dispersa: `siteSeo` en `src/lib/seo/defaults.ts`, `site` en `astro.config.mjs`, wordmark hardcodeado en `BaseLayout.astro`/`SiteHeader.astro` | `src/site.config.ts` única |
+| Idiomas | en/es obligatorio, paridad de claves entre `src/i18n/en.json`/`es.json` (`CLAUDE.md` regla 4) | Monolingüe por defecto; i18n opt-in real |
+| Mapa de rutas | `src/lib/seo/locale.ts` (`ROUTE_KEYS`/`localizedSlugs`) es la única fuente; `astro.config.mjs` deriva hreflang de ahí (`CLAUDE.md` regla 3) | Igual — ya cerrado |
+| Stack visual (GSAP, Lenis, React, Three.js) | Obligatorio y cableado en `BaseLayout.astro`, 404, coming-soon | Opt-in, extraíble |
+| SEO / seo-lint | Implementado en `src/integrations/seo-lint/`, corre dentro de `bun run build` | Config-driven; `tools/seo.mjs` que citan contratos genéricos no existe ni está planificado |
+| Distribución de skills | `skills/` con las 11 skills reales, `registry.yaml`, `scripts/agent-setup.mjs`/`agent-check.mjs` ya existen; adaptadores por agente generados y opcionales | Igual — ya implementado (`docs/product/agent-ecosystem-contract.md`) |
+| Validación | `bun run build` (incluye seo-lint), `bun run test` (vitest), `bun run check`, `bun run audit:content` tras el build | Igual — ya vigente |
+
+Más detalle y más temas (analytics, CMS, JavaScript, accesibilidad): `docs/product/current-repository-map.md`.
+
+## Invariantes objetivo
+
+Esta es la meta del producto, no un reporte de lo ya implementado — usa la tabla de arriba para saber cuáles ya rigen hoy.
 
 - Astro estático y TypeScript estricto.
-- **Bun** es el gestor de paquetes definitivo (`bun.lock` es el único lockfile permitido); no pnpm, npm ni yarn. Node con rango explícito (`engines` en `package.json`).
-- `src/site.config.ts` es la única configuración pública del sitio.
-- Monolingüe por defecto; i18n es una extensión real, nunca rutas vacías o contenido falso.
-- Contrato de contenido vendor-neutral; el adaptador local es el default.
-- Sin CMS, analytics/GTM, scheduling, uploads, React, WebGL, GSAP o smooth-scroll obligatorios.
-- JavaScript opt-in y progresivo.
-- SEO, accesibilidad y reduced motion forman parte de aceptación.
+- **Bun** es el gestor de paquetes definitivo (`bun.lock` es el único lockfile permitido); no pnpm, npm ni yarn. Node con rango explícito (`engines` en `package.json`) — ya vigente hoy.
+- `src/site.config.ts` como única configuración pública del sitio — pendiente.
+- Monolingüe por defecto; i18n como extensión real, nunca rutas vacías o contenido falso — pendiente; hoy en/es es obligatorio.
+- Contrato de contenido vendor-neutral; el adaptador local es el default — ya vigente hoy.
+- Sin CMS, analytics/GTM, scheduling, uploads, React, WebGL, GSAP o smooth-scroll obligatorios — pendiente; hoy el stack visual y GA están cableados.
+- JavaScript opt-in y progresivo — pendiente.
+- SEO, accesibilidad y reduced motion forman parte de aceptación — ya vigente hoy.
 - No codifiques URLs de producción, marcas o secretos.
 
 ## Forma de trabajar
@@ -50,31 +68,11 @@ Registra conflictos de nivel inferior, aplica la fuente superior y continúa si 
 
 Detente si falta una decisión que cambie el producto, se requiere acceso externo no autorizado, aparecen secretos o la tarea excede su unidad. No te detengas por metadata histórica que contradiga un brief actual claro.
 
-## Estado transitorio
-
-- `docs/product/template-contract.md` describe el **producto objetivo**. Los "Invariantes del núcleo" de arriba son esa meta, no un reporte de lo que ya existe.
-- El repositorio todavía puede contener rutas bilingües obligatorias y dependencias legacy (GSAP, Lenis, React, Three.js) hasta que sus unidades de migración correspondientes queden implementadas y validadas. Bun **no** es parte de esta lista: es la decisión final del gestor de paquetes, no una migración pendiente.
-- Antes de ejecutar cualquier comando, cada tarea debe inspeccionar `package.json` y el estado real del repositorio — no asumas los scripts objetivo de la sección "Validación" sin confirmarlos.
-- No afirmes que la configuración única `src/site.config.ts` o cualquier otra migración pendiente ya existen hasta que su diff y sus validaciones estén completados y registrados.
-- Para el estado actual verificado (comandos reales, estructura, Content Collections, seo-lint, OG, variables de entorno, rutas/i18n vigentes, accesibilidad/reduced-motion/performance), consulta `docs/product/current-repository-map.md`.
-
-| Tema | Estado actual del repositorio | Producto objetivo | Unidad que lo cierra |
-|---|---|---|---|
-| Configuración pública | Dispersa (`siteSeo` en `src/lib/seo/defaults.ts`, `astro.config.mjs`, wordmark hardcodeado) | `src/site.config.ts` única | Pendiente, posterior a Unidad 1 |
-| Idiomas | en/es obligatorio con paridad de claves | Monolingüe por defecto; i18n extensión opt-in real | Pendiente |
-| Stack visual (GSAP, Lenis, React, Three.js) | Obligatorio y cableado en `BaseLayout.astro`, 404, coming-soon | Opt-in, extraíble | Pendiente |
-| Analytics | GA + Partytown presentes y activos | Extensión opt-in, deny-by-default | Pendiente |
-| CMS / scheduling / uploads | No existen hoy | Extensiones opt-in explícitas, deny-by-default | Pendiente |
-| JavaScript | Motion y WebGL obligatorios en varias páginas | Opt-in y progresivo | Pendiente |
-| SEO / seo-lint / OG | Parcialmente implementado; gaps conocidos, incluyendo configuración/origen y materialización de `tools/seo.mjs` (ver `current-repository-map.md` §4) | Config-driven, verificable, sin origen hard-coded | Pendiente de cierre |
-| Distribución de skills | `skills/` contiene las 11 skills reales con contenido completo, `skills/registry.yaml` y los scripts `scripts/agent-setup.mjs`/`scripts/agent-check.mjs` ya existen. Un agente limpio sigue pudiendo abrir cada skill directamente por ruta canónica: `skills/<nombre>/SKILL.md`; los adaptadores generados son opcionales | `skills/` canónico + distribución automática; Codex/OpenCode consumen `.agents/skills/`; Claude consume `.claude/skills/`; Orca queda fuera del contrato como configuración personal | Implementado, ver `docs/product/agent-ecosystem-contract.md` y `skills/distribution.md` |
-
 ## Router de skills
 
-Un agente limpio abre la skill **directamente por su ruta canónica**:
-`skills/<nombre>/SKILL.md` — ese mecanismo sigue siendo válido y es el que siempre funciona.
-`skills/registry.yaml` y los scripts de distribución (`scripts/agent-setup.mjs`,
-`scripts/agent-check.mjs`) ya existen y generan adaptadores opcionales por agente
+Un agente limpio abre la skill **directamente por su ruta canónica**: `skills/<nombre>/SKILL.md` —
+ese mecanismo siempre funciona. `skills/registry.yaml` y los scripts de distribución
+(`scripts/agent-setup.mjs`, `scripts/agent-check.mjs`) generan adaptadores opcionales por agente
 (`.agents/skills/`, `.claude/skills/`); ver `skills/distribution.md` para los comandos y qué
 cambian y qué no.
 
@@ -83,8 +81,9 @@ cambian y qué no.
 | Construir, reconstruir, adoptar o extender de forma amplia un sitio con este template — en cualquier formulación, incluido un link de diseño sin instrucciones | site-build §0 → skills/site-build/references/adoption-wizard.md, ANTES de cualquier otra skill o escritura |
 | Inicio o extensión amplia de sitio | `site-build` |
 | Toolchain, idiomas o estructura inicial | `project-setup` |
-| Investigación de keywords, intención de búsqueda, gaps de contenido, SERP o competidores, antes de escribir o reestructurar páginas | `seo-research` |
+| Investigación de keywords, intención de búsqueda, gaps de contenido, SERP o competidores | `seo-research` |
 | Página, layout, componente o estilos Astro | `astro-craft` |
+| Accesibilidad de una página o componente (landmarks, teclado, foco, contraste, formularios) | `astro-craft` → `skills/astro-craft/references/accessibility.md` |
 | Rutas, head, canonical, schema, sitemap o robots | `static-site-seo` |
 | Escribir, editar, traducir, eliminar o auditar un FAQ visible y su JSON-LD `FAQPage` | `faq-content` |
 | Figma, screenshot o diseño externo | `design-ingestion` |
@@ -94,13 +93,16 @@ cambian y qué no.
 | Búsqueda interna full-text sobre HTML ya construido (Pagefind) | `static-site-search` — opt-in, requiere contrato confirmado antes de instalar nada |
 
 Ese gate tiene precedencia; las demás filas aplican después del contrato confirmado (o en modo
-solo lectura durante el intake).
+solo lectura durante el intake). Estas 11 son las skills reales que existen hoy en `skills/`.
 
-Estas 11 son las skills reales que existen hoy en `skills/`.
+### Sin skill dedicada
 
-> **Futuro / no instalado:** un skill de auditoría de seguridad (`security-audit`,
-> basado en el proyecto de Cloudflare) está evaluado como gate de release
-> opt-in, pero no está instalado ni forma parte del catálogo anterior. Ver
+- **Animación con scroll o video.** No hay componente reutilizable. `astro-craft` (componentes/motion) es el recurso más cercano; cualquier dependencia pesada nueva requiere confirmación humana explícita del alcance antes de instalarla.
+- **3D interactivo.** `src/components/coming-soon/Hero3D.astro` es un ejemplo directo con Three.js (sin R3F), no un componente reutilizable. No lo generalices sin decisión humana.
+- **Despliegue específico de host.** No hay receta por host. Ver "Deployment" en `README.md` y `public/_headers`.
+
+> **Futuro / no instalado:** un skill de auditoría de seguridad (`security-audit`, de Cloudflare)
+> está evaluado como gate de release opt-in futuro; no está instalado. Ver
 > `docs/product/template-contract.md` → "Adopción futura opcional".
 
 Una skill es una ruta de trabajo, no permiso adicional. Las reglas del repositorio y del sandbox prevalecen.
@@ -122,43 +124,31 @@ Una skill es una ruta de trabajo, no permiso adicional. Las reglas del repositor
 
 ## Validación
 
-Usa los scripts reales de `package.json` — verifícalos, no los asumas. Comandos vigentes hoy:
+Usa los scripts reales de `package.json` — verifícalos, no los asumas. Comandos mínimos, en el mismo orden que corre CI (`.github/workflows/ci.yml`):
 
 ```text
 bun install --frozen-lockfile
-bun run dev
 bun run test
 bun run check
 bun run build
-```
-
-No existe `seo:check` ni `lint` como script de `package.json`. `bun run build` ya incluye la validación SEO (`seo-lint`) y puede fallar el build.
-
-Comandos reales adicionales (verifica igual el `package.json` vigente antes de asumirlos):
-
-```text
-bun run agent:setup -- <codex|claude|opencode|all>
-bun run agent:check -- <codex|claude|opencode|all>
 bun run audit:content
-node scripts/seo-faq-audit.mjs dist
-node scripts/svg-audit.mjs [paths...]
 ```
 
-`agent:setup`/`agent:check` distribuyen adaptadores opcionales por agente (ver `skills/distribution.md`).
-`bun run audit:content` corre `seo-faq-audit.mjs` sobre `dist/` y `svg-audit.mjs` sobre `public` y `src`;
-no forma parte de `bun run build` (necesita `dist/` ya generado), pero CI lo ejecuta como gate después
-del build en `.github/workflows/ci.yml`. Córrelo tras `bun run build` antes de declarar terminado.
+`bun run build` ya incluye la validación SEO (`seo-lint`, puede fallar el build). `bun run
+audit:content` corre después del build (necesita `dist/`): `seo-faq-audit.mjs` + `svg-audit.mjs`;
+CI lo ejecuta como gate posterior al build. No existen `seo:check` ni `lint` como scripts.
+`bun run audit`/`audit:mobile` (Lighthouse) son manuales/opt-in — ningún workflow los ejecuta.
+
+Comandos de distribución de skills (`agent:setup`/`agent:check`) y qué cambian:
+`skills/distribution.md`.
 
 No inventes éxito. Si un comando todavía no existe, registra el gap en vez de sustituirlo silenciosamente.
-
-`bun run audit` / `audit:mobile` (Lighthouse) son manuales/opt-in: ningún workflow en
-`.github/workflows/` los ejecuta (decisión R-15).
 
 ## Seguridad
 
 - Nunca leas o escribas credenciales.
 - Red deshabilitada durante builds y tests salvo fase explícita.
-- El skill de auditoría de Cloudflare (`security-audit`), cuando se adopte, debe ejecutarse como gate separado con sandbox y presupuesto propios, no en cada cambio; hoy no está instalado (ver "Router de skills").
+- El skill de auditoría de Cloudflare (`security-audit`) no está instalado hoy; si se adopta, debe correr como gate separado con sandbox propio, no en cada cambio.
 - Un hallazgo solo es confirmado con traza de fuente, reproducción acotada e impacto. Lo no verificado queda como `needs_validation`.
 
 ## Terminado significa
