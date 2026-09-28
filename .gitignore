@@ -33,3 +33,6 @@ debug.log
 
 # Session-scoped documentation (not canonical product docs)
 docs/sessions/
+
+# Organic Driven Development task tracking (local working notes, mirrored in Engram)
+odd/
