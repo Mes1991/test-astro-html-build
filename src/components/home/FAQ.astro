@@ -32,31 +32,28 @@ const entries = getFaqEntries(locale);
 
     <div class="flex flex-col faq-list">
       {entries.map((entry, i) => (
-        <div class={`q-item ${i === 0 ? "open border-t" : ""} border-b border-brand-surface-dark/10 py-[22px] cursor-pointer`}>
-          <div class="flex justify-between items-center font-display font-bold text-xl text-brand-surface-dark tracking-[-0.01em] gap-5">
+        <details class={`q-item ${i === 0 ? "border-t" : ""} border-b border-brand-surface-dark/10 py-[22px]`} open={i === 0}>
+          <summary class="flex justify-between items-center font-display font-bold text-xl text-brand-surface-dark tracking-[-0.01em] gap-5 cursor-pointer">
             <span>{entry.question}</span>
-            <span class="plus w-7 h-7 rounded-full bg-brand-cream-warm grid place-items-center text-base text-brand-primary transition-[transform,background] duration-[0.25s] shrink-0">+</span>
-          </div>
-          <div class="a text-[15px] text-ui-700 leading-[1.55]">{entry.answer}</div>
-        </div>
+            <span class="plus w-7 h-7 rounded-full bg-brand-cream-warm grid place-items-center text-base text-brand-primary transition-[transform,background] duration-[0.25s] shrink-0" aria-hidden="true">+</span>
+          </summary>
+          <div class="a mt-[14px] text-[15px] text-ui-700 leading-[1.55]">{entry.answer}</div>
+        </details>
       ))}
     </div>
   </div>
 </section>
 
 <style>
-  /* Accordion expand — can't be done cleanly with utilities because we need
-     to animate max-height on a variable-height child. */
-  .q-item .a {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.35s ease, margin 0.35s ease;
+  /* Native <details>/<summary>: keyboard, screen readers and no-JS toggling
+     come from the element, and an open answer is never height-clipped. */
+  .q-item > summary {
+    list-style: none;
   }
-  .q-item.open .a {
-    max-height: 200px;
-    margin-top: 14px;
+  .q-item > summary::-webkit-details-marker {
+    display: none;
   }
-  .q-item.open .plus {
+  .q-item[open] .plus {
     transform: rotate(45deg);
     background: var(--color-brand-primary);
     color: #fff;
@@ -67,10 +64,6 @@ const entries = getFaqEntries(locale);
   import gsap from "gsap";
   import { ScrollTrigger } from "gsap/ScrollTrigger";
   gsap.registerPlugin(ScrollTrigger);
-
-  document.querySelectorAll<HTMLElement>(".faq-list .q-item").forEach((item) => {
-    item.addEventListener("click", () => item.classList.toggle("open"));
-  });
 
   const faq = document.getElementById("faq-content");
   if (faq) {
