@@ -53,6 +53,9 @@ const lang = seoProps.locale ?? DEFAULT_LOCALE;
         display: none;
       }
     </style>
+    <!-- Only the intro script ever removes the overlay; without JavaScript it
+         would cover the whole page forever. -->
+    <noscript><style>#introOverlay { display: none; }</style></noscript>
   </head>
   <body>
     <a
