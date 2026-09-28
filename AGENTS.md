@@ -67,23 +67,28 @@ Detente si falta una decisión que cambie el producto, se requiere acceso extern
 | CMS / scheduling / uploads | No existen hoy | Extensiones opt-in explícitas, deny-by-default | Pendiente |
 | JavaScript | Motion y WebGL obligatorios en varias páginas | Opt-in y progresivo | Pendiente |
 | SEO / seo-lint / OG | Parcialmente implementado; gaps conocidos, incluyendo configuración/origen y materialización de `tools/seo.mjs` (ver `current-repository-map.md` §4) | Config-driven, verificable, sin origen hard-coded | Pendiente de cierre |
-| Distribución de skills | `skills/` contiene las 8 skills reales con contenido completo; no existe `skills/registry.yaml` ni sincronización a `.agents/`/`.claude/`. Un agente limpio abre cada skill directamente por ruta canónica: `skills/<nombre>/SKILL.md` | `skills/` canónico + distribución automática; Codex/OpenCode consumirían `.agents/skills/`; Claude consumiría `.claude/skills/`; Orca queda fuera del contrato como configuración personal | Trabajo futuro, ver `docs/product/agent-ecosystem-contract.md` |
+| Distribución de skills | `skills/` contiene las 11 skills reales con contenido completo, `skills/registry.yaml` y los scripts `scripts/agent-setup.mjs`/`scripts/agent-check.mjs` ya existen. Un agente limpio sigue pudiendo abrir cada skill directamente por ruta canónica: `skills/<nombre>/SKILL.md`; los adaptadores generados son opcionales | `skills/` canónico + distribución automática; Codex/OpenCode consumen `.agents/skills/`; Claude consume `.claude/skills/`; Orca queda fuera del contrato como configuración personal | Implementado, ver `docs/product/agent-ecosystem-contract.md` y `skills/distribution.md` |
 
 ## Router de skills
 
 Un agente limpio abre la skill **directamente por su ruta canónica**:
-`skills/<nombre>/SKILL.md`. No hay hoy un distribuidor automático ni un
-`skills/registry.yaml`; ese mecanismo es trabajo futuro (ver
-`docs/product/agent-ecosystem-contract.md`).
+`skills/<nombre>/SKILL.md` — ese mecanismo sigue siendo válido y es el que siempre funciona.
+`skills/registry.yaml` y los scripts de distribución (`scripts/agent-setup.mjs`,
+`scripts/agent-check.mjs`) ya existen y generan adaptadores opcionales por agente
+(`.agents/skills/`, `.claude/skills/`); ver `skills/distribution.md` para los comandos y qué
+cambian y qué no.
 
 | Situación | Skill |
 |---|---|
 | Construir, reconstruir, adoptar o extender de forma amplia un sitio con este template — en cualquier formulación, incluido un link de diseño sin instrucciones | site-build §0 → skills/site-build/references/adoption-wizard.md, ANTES de cualquier otra skill o escritura |
 | Inicio o extensión amplia de sitio | `site-build` |
 | Toolchain, idiomas o estructura inicial | `project-setup` |
+| Investigación de keywords, intención de búsqueda, gaps de contenido, SERP o competidores, antes de escribir o reestructurar páginas | `seo-research` |
 | Página, layout, componente o estilos Astro | `astro-craft` |
 | Rutas, head, canonical, schema, sitemap o robots | `static-site-seo` |
+| Escribir, editar, traducir, eliminar o auditar un FAQ visible y su JSON-LD `FAQPage` | `faq-content` |
 | Figma, screenshot o diseño externo | `design-ingestion` |
+| Crear, editar, importar o revisar un logo, favicon o icono SVG | `svg-assets` |
 | Formulario sin integración existente | `form-slot` |
 | Comparación visual o cierre responsive | `visual-gate` |
 | Búsqueda interna full-text sobre HTML ya construido (Pagefind) | `static-site-search` — opt-in, requiere contrato confirmado antes de instalar nada |
@@ -91,7 +96,7 @@ Un agente limpio abre la skill **directamente por su ruta canónica**:
 Ese gate tiene precedencia; las demás filas aplican después del contrato confirmado (o en modo
 solo lectura durante el intake).
 
-Estas 8 son las únicas skills que existen hoy en `skills/`.
+Estas 11 son las skills reales que existen hoy en `skills/`.
 
 > **Futuro / no instalado:** un skill de auditoría de seguridad (`security-audit`,
 > basado en el proyecto de Cloudflare) está evaluado como gate de release
@@ -127,7 +132,22 @@ bun run check
 bun run build
 ```
 
-No existe `seo:check`, `lint`, `agent:setup` ni `agent:check` como script de `package.json`. `bun run build` ya incluye la validación SEO (`seo-lint`) y puede fallar el build.
+No existe `seo:check` ni `lint` como script de `package.json`. `bun run build` ya incluye la validación SEO (`seo-lint`) y puede fallar el build.
+
+Comandos reales adicionales (verifica igual el `package.json` vigente antes de asumirlos):
+
+```text
+bun run agent:setup -- <codex|claude|opencode|all>
+bun run agent:check -- <codex|claude|opencode|all>
+bun run audit:content
+node scripts/seo-faq-audit.mjs dist
+node scripts/svg-audit.mjs [paths...]
+```
+
+`agent:setup`/`agent:check` distribuyen adaptadores opcionales por agente (ver `skills/distribution.md`).
+`bun run audit:content` corre `seo-faq-audit.mjs` sobre `dist/` y `svg-audit.mjs` sobre `public` y `src`;
+no forma parte de `bun run build` (necesita `dist/` ya generado), pero CI lo ejecuta como gate después
+del build en `.github/workflows/ci.yml`. Córrelo tras `bun run build` antes de declarar terminado.
 
 No inventes éxito. Si un comando todavía no existe, registra el gap en vez de sustituirlo silenciosamente.
 

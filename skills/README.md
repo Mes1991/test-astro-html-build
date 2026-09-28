@@ -20,7 +20,7 @@ triggering is happening — this index and its by-path route are the reliable me
 runtime, and automatic triggering, where it exists, is an addition on top of it, not a replacement for
 it.
 
-**Load 1–3 skills per phase, just before the phase they govern — never all eight up front.** A skill
+**Load 1–3 skills per phase, just before the phase they govern — never all eleven up front.** A skill
 is a workflow for the step you are about to do, not a manual to read cover to cover before starting.
 `site-build` is the exception in the sense that it is usually the first one opened, because it says
 which of the others apply and in what order; from there, open only the one or two that own the step
@@ -28,16 +28,23 @@ in front of you. The table below doubles as the hand-off map: `site-build` names
 each of its steps, so moving from one phase to the next means closing the skill you were using and
 opening the one `site-build` names for the step after it — not keeping every skill open at once.
 
-## The eight skills
+**By-path reading is the always-works mechanism, regardless of runtime.** Optional generated
+per-agent adapters now also exist — see [`distribution.md`](./distribution.md) for the commands and
+what they do and do not change.
+
+## The eleven skills
 
 | Skill | Canonical path | Use when |
 |---|---|---|
 | `site-build` | [`site-build/SKILL.md`](./site-build/SKILL.md) | The order every other workflow runs in, and which input wins when they disagree. |
 | `project-setup` | [`project-setup/SKILL.md`](./project-setup/SKILL.md) | The questions to settle before any markup: build step, styling toolkit, languages. |
+| `seo-research` | [`seo-research/SKILL.md`](./seo-research/SKILL.md) | Keyword research, search-intent mapping, content gaps, SERP or competitor research, before writing or restructuring pages. |
 | `astro-craft` | [`astro-craft/SKILL.md`](./astro-craft/SKILL.md) | Building or editing an Astro page, section, component or style. |
 | `design-ingestion` | [`design-ingestion/SKILL.md`](./design-ingestion/SKILL.md) | A design arrives — Figma, export, screenshot, mockup — before any markup. |
+| `svg-assets` | [`svg-assets/SKILL.md`](./svg-assets/SKILL.md) | Creating, editing, importing or reviewing an SVG logo, favicon, icon, decorative vector or illustration. |
 | `form-slot` | [`form-slot/SKILL.md`](./form-slot/SKILL.md) | A page has a form that does not exist in the provider's builder yet. |
 | `static-site-seo` | [`static-site-seo/SKILL.md`](./static-site-seo/SKILL.md) | Creating, renaming, translating or removing a page, or touching its head or structured data. |
+| `faq-content` | [`faq-content/SKILL.md`](./faq-content/SKILL.md) | Writing, editing, translating, removing or auditing an on-page FAQ and its `FAQPage` JSON-LD. |
 | `visual-gate` | [`visual-gate/SKILL.md`](./visual-gate/SKILL.md) | Proving a built page against a reference, or checking it at every width. |
 | `static-site-search` | [`static-site-search/SKILL.md`](./static-site-search/SKILL.md) | Adding, changing or debugging internal full-text search (Pagefind) over already-built HTML — opt-in, not core. |
 

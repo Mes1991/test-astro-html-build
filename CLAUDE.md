@@ -45,14 +45,18 @@ recipes. For rebranding, use [`docs/product/rebrand-checklist.md`](./docs/produc
 
 ## Agent skills
 
-`skills/` is the canonical source — it holds the 8 real skills that exist today.
+`skills/` is the canonical source — it holds the 11 real skills that exist today.
 **A clean agent opens a skill directly by its canonical path,
-`skills/<name>/SKILL.md`.** That is the operative mechanism today; there is no
-automatic distributor yet.
+`skills/<name>/SKILL.md`.** That by-path mechanism remains operative regardless
+of what follows below.
 
-Future work (not implemented — see `docs/product/agent-ecosystem-contract.md`
-→ "Estado de implementación"): `node scripts/agent-setup.mjs
-<codex|claude|opencode|all>` would materialize per-agent adapters, with Claude
-reading its own copy from `.claude/skills/` (generated, gitignored — never
-edit it by hand). `skills/registry.yaml` does not exist yet either; never
-describe it or the setup/check scripts as already working.
+`skills/registry.yaml` and the distribution scripts now exist:
+`node scripts/agent-setup.mjs claude` (or `bun run agent:setup -- claude`)
+materializes Claude's own copy into `.claude/skills/` — generated, gitignored,
+never edit it by hand; re-run the same command to refresh it after a canonical
+skill changes. `node scripts/agent-check.mjs claude` (or
+`bun run agent:check -- claude`) verifies that adapter is in sync without
+writing anything; with no target it checks every adapter and fails on the ones
+you never generated. See
+`skills/distribution.md` for the full command set, the other targets
+(`codex`, `opencode`, `all`), and the per-runtime discovery rules.

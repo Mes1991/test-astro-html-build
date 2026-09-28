@@ -58,11 +58,11 @@ Las skills forman una biblioteca consultable, no un prompt monolítico. El agent
 | `form-slot` | Extensión | Diseño incluye un formulario sin integración | Sitios sin formularios |
 | `static-site-search` | Extensión | Se confirma la necesidad de búsqueda full-text interna sobre HTML ya construido | Sitios sin ese requisito; el filtro local de tarjetas de `BlogArchive.astro` ya cubre otro caso de uso |
 
-Estas 8 son las skills reales que existen hoy en `skills/`, cada una con contenido completo. La separación conceptual es buena, pero no se debe cargar el bundle completo: el material ronda decenas de miles de palabras. `site-build` por sí solo ronda 3 500 palabras. También debe resolverse el contrato de `tools/seo.mjs`: la documentación lo referencia, pero el snapshot proporcionado no incluye ese archivo como herramienta autónoma.
+Estas 11 son las skills reales que existen hoy en `skills/` (la tabla arriba no lista las tres más recientes — `faq-content`, `seo-research`, `svg-assets` — ver `skills/README.md` para el catálogo completo y actualizado), cada una con contenido completo. La separación conceptual es buena, pero no se debe cargar el bundle completo: el material ronda decenas de miles de palabras. `site-build` por sí solo ronda 3 500 palabras. También debe resolverse el contrato de `tools/seo.mjs`: la documentación lo referencia, pero el snapshot proporcionado no incluye ese archivo como herramienta autónoma.
 
 ### Adopción futura opcional: `security-audit` de Cloudflare
 
-No es una skill instalada ni forma parte del catálogo de 8 anterior. Es una evaluación de trabajo futuro opcional: el skill oficial implementa seis fases (reconocimiento, hunting guiado por cobertura, validación independiente, hallazgos estructurados, verificación independiente y reportes derivados) e incluye validadores sin dependencias para el ledger y los hallazgos. Sería un buen gate de seguridad de release, nunca una instrucción permanente para todo agente.
+No es una skill instalada ni forma parte del catálogo de 11 anterior. Es una evaluación de trabajo futuro opcional: el skill oficial implementa seis fases (reconocimiento, hunting guiado por cobertura, validación independiente, hallazgos estructurados, verificación independiente y reportes derivados) e incluye validadores sin dependencias para el ledger y los hallazgos. Sería un buen gate de seguridad de release, nunca una instrucción permanente para todo agente.
 
 Si se adopta en el futuro, condiciones mínimas:
 
@@ -118,7 +118,7 @@ Un agente no debe depender de, modificar ni suprimir configuración global de la
 
 ## Decisiones humanas todavía necesarias
 
-- Directorio canónico y mecanismo de distribución de skills entre Claude, Codex y OpenCode: **ratificado** — ver `docs/product/agent-ecosystem-contract.md`. Solo queda pendiente su implementación (`scripts/agent-setup.mjs`, `scripts/agent-check.mjs`).
+- Directorio canónico y mecanismo de distribución de skills entre Claude, Codex y OpenCode: **ratificado e implementado** — ver `docs/product/agent-ecosystem-contract.md`. `scripts/agent-setup.mjs` y `scripts/agent-check.mjs` ya existen y están cubiertos por `bun run test`.
 - Revisión exacta a pinear del skill de Cloudflare.
 - Umbrales finales de Lighthouse/axe y navegadores soportados.
 - Host y CI concretos, si se quiere una receta oficial.

@@ -144,8 +144,10 @@ esos archivos deben enlazar aquí, no repetir la lista.
 
 ## 9. Validaciones finales
 
-Comandos reales de `package.json` — no existen `seo:check`, `lint`,
-`agent:setup` ni `agent:check`, no los invoques:
+Comandos reales de `package.json` para validar un rebrand — no existen
+`seo:check` ni `lint`, no los invoques. `agent:setup`/`agent:check` sí existen
+(distribuyen skills a adaptadores por agente, ver `skills/distribution.md`),
+pero no forman parte de las validaciones de un rebrand: no los ejecutes aquí.
 
 ```bash
 bun install --frozen-lockfile

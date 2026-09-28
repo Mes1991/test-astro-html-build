@@ -210,6 +210,16 @@ anything about a link on somebody else's site. Those are read-and-apply, not che
 `bun run build` means the tree is coherent on the axes in the code lists above — the floor, not the
 goal.
 
+## Skills next door
+
+Three tasks this file used to leave implicit now have their own skill — open the one that owns the
+step you are on instead of improvising it here: **`faq-content`** for writing, editing or auditing an
+on-page FAQ and its `FAQPage` JSON-LD (including `node scripts/seo-faq-audit.mjs dist`, the
+post-build editorial-coherence check `seo-lint` does not do); **`seo-research`** for keyword/SERP/
+competitor research and deciding which questions or pages are worth building, before this skill's
+work starts; **`svg-assets`** for an SVG logo, favicon or icon's embedding, accessible name and
+image-SEO decisions.
+
 ## When a contract is missing something
 
 Say so instead of inventing a rule. The contracts are versioned and published by the team that

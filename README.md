@@ -24,16 +24,17 @@ of this README describes the final target state unless
 
 `skills/` at the repository root is the **single canonical source** for the
 AI-agent skill library (build recipes, SEO/toolchain/accessibility contracts, and
-more) — it holds 8 real skills today. It is not a prompt — it is a consultable
+more) — it holds 11 real skills today. It is not a prompt — it is a consultable
 catalog: `AGENTS.md` → "Router de skills" tells an agent which one to load per
 situation. **A clean agent opens a skill directly by its canonical path,
-`skills/<name>/SKILL.md`** — this is the operative mechanism today; there is no
-`skills/registry.yaml` and no automatic distributor yet.
+`skills/<name>/SKILL.md`** — this by-path mechanism always works, and
+`skills/registry.yaml` now exists too.
 
 Per-agent adapters (`.agents/skills/` for Codex/OpenCode, `.claude/skills/` for
-Claude) are **future work**, not a current mechanism: `docs/product/agent-ecosystem-contract.md`
-documents the target (generated, gitignored copies of `skills/`, never a second
-source of truth), but the distribution scripts don't exist yet.
+Claude) are **optional and generated**, not a required mechanism:
+`docs/product/agent-ecosystem-contract.md` documents the model, and
+`scripts/agent-setup.mjs` / `scripts/agent-check.mjs` now implement it — see
+`skills/distribution.md` for the commands.
 
 ## Which agents/tools can consume this repo
 
@@ -42,8 +43,8 @@ source of truth), but the distribution scripts don't exist yet.
 - Any other agent or human contributor can start from `AGENTS.md` directly; it is
   kept short on purpose, with details deferred to `docs/product/` and to skills
   loaded on demand.
-- Per-agent adapters (`.claude/skills/`, `.agents/skills/`) are future work — see
-  "Canonical skills" above.
+- Per-agent adapters (`.claude/skills/`, `.agents/skills/`) are optional and
+  generated — see "Canonical skills" above and `skills/distribution.md`.
 
 ## Stack
 

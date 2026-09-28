@@ -17,7 +17,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "audit": "astro build && lhci autorun",
-    "audit:mobile": "astro build && lhci autorun --config=lighthouserc.mobile.json"
+    "audit:mobile": "astro build && lhci autorun --config=lighthouserc.mobile.json",
+    "audit:content": "node scripts/seo-faq-audit.mjs dist && node scripts/svg-audit.mjs public src",
+    "agent:setup":"node scripts/agent-setup.mjs",
+    "agent:check": "node scripts/agent-check.mjs"
   },
   "dependencies": {
     "@astrojs/partytown": "^2.1.7",
