@@ -1,0 +1,25 @@
+# Canonical skill registry. Parsed by scripts/lib/agent-skills.mjs (strict subset: comments, `version: 1`, and a `skills:` list of `- name:` / `installed:` pairs).
+version: 1
+skills:
+  - name: astro-craft
+    installed: true
+  - name: design-ingestion
+    installed: true
+  - name: faq-content
+    installed: true
+  - name: form-slot
+    installed: true
+  - name: project-setup
+    installed: true
+  - name: seo-research
+    installed: true
+  - name: site-build
+    installed: true
+  - name: static-site-search
+    installed: true
+  - name: static-site-seo
+    installed: true
+  - name: svg-assets
+    installed: true
+  - name: visual-gate
+    installed: true

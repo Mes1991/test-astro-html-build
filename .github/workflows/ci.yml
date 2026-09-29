@@ -72,6 +72,12 @@ jobs:
       - name: Build
         run: bun run build
 
+      # Gate on the real build output: FAQPage JSON-LD must agree with the
+      # visible FAQ in dist/, and every SVG source must pass the safety audit.
+      # Warnings are reported but only errors fail the step.
+      - name: Content audits (FAQ + SVG)
+        run: bun run audit:content
+
       # `bun install` must not have rewritten bun.lock, and no competing
       # lockfile may appear. Either would mean CI validated a different tree
       # than the one committed.

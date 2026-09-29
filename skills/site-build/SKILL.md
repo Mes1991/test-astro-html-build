@@ -130,6 +130,7 @@ it out of order means redoing work that already looked finished.
 | 6 | Build layout, then sections, then pages | the `astro-craft` skill, steps 2–4 | **the project is not being built with Astro** — see below |
 | 7 | Head, outline and Core Web Vitals, per page | `../static-site-seo/references/seo-page.md` §1–6, then §9–10 | never — see section 3 |
 | 8 | Any form on any page, **only after explicit activation** | the `form-slot` skill | no page has a form, or the form provider has not been explicitly activated |
+| 8.5 | Internal full-text search over the built HTML, **only after explicit activation** | the `static-site-search` skill | no request for search, or its contract has not been explicitly confirmed |
 | 9 | Prove the page against its reference, at every width | the `visual-gate` skill | never — with no reference it still owns the responsive and accessibility categories |
 | 10 | Structured data, then off-site signals | the `static-site-seo` skill | never — see section 3 |
 | 11 | Tag Manager container, if there is one | `references/gtm-injection.md` | the decision in section 3 was no |
@@ -149,6 +150,11 @@ to name rather than a default to arrive at.
 **Step 8 is not last.** A form card is a page section, so it is built with the other sections — the
 part that waits is the embed snippet, and that workflow is explicitly built to not wait for it.
 Discovering a form at the end is how a page ships with a stand-in still in it.
+
+**Step 8.5 runs after content exists and before it is proved.** Pagefind indexes finished HTML, so
+it has nothing to index before step 6, and step 9 needs the real search markup — or its absence —
+to prove the page against, not a promise that it will show up later. Like the form provider in step
+8, activation is explicit; a blog or a search-looking control is not a decision to install anything.
 
 **Step 9 is not a review, it is a gate, and it runs on every page.** Every other step in this list
 ends by handing work on; this one ends by looking at what was built, with evidence. It is placed

@@ -4,10 +4,11 @@ This directory is the single authored source for the project's workflow skills a
 contracts. Everything here is written to be read by an agent and by a person.
 
 **The operative mechanism today: open a skill directly by its canonical path,
-`skills/<name>/SKILL.md`.** In a clean clone of this repository there is no generator, no registry
-and no runtime-specific adapter installed — the table below is the index of paths to open by hand
-(or to have an agent open by hand), and that is not a fallback for something else, it is the current
-way this pack is consumed.
+`skills/<name>/SKILL.md`.** A clean clone of this repository ships `skills/registry.yaml` and the
+`agent:setup`/`agent:check` scripts, but no runtime-specific adapter is installed until
+`bun run agent:setup -- <target>` runs (see [`distribution.md`](./distribution.md)). The table below
+is the index of paths to open by hand (or to have an agent open by hand), and that by-path mechanism
+always works, with or without adapters.
 
 **How to use it.** When a task matches a row below, read that file before writing code, not after:
 the rules in these are not reconstructable from the code that follows them.
@@ -20,7 +21,7 @@ triggering is happening — this index and its by-path route are the reliable me
 runtime, and automatic triggering, where it exists, is an addition on top of it, not a replacement for
 it.
 
-**Load 1–3 skills per phase, just before the phase they govern — never all seven up front.** A skill
+**Load 1–3 skills per phase, just before the phase they govern — never all eleven up front.** A skill
 is a workflow for the step you are about to do, not a manual to read cover to cover before starting.
 `site-build` is the exception in the sense that it is usually the first one opened, because it says
 which of the others apply and in what order; from there, open only the one or two that own the step
@@ -28,17 +29,25 @@ in front of you. The table below doubles as the hand-off map: `site-build` names
 each of its steps, so moving from one phase to the next means closing the skill you were using and
 opening the one `site-build` names for the step after it — not keeping every skill open at once.
 
-## The seven skills
+**By-path reading is the always-works mechanism, regardless of runtime.** Optional generated
+per-agent adapters now also exist — see [`distribution.md`](./distribution.md) for the commands and
+what they do and do not change.
+
+## The eleven skills
 
 | Skill | Canonical path | Use when |
 |---|---|---|
 | `site-build` | [`site-build/SKILL.md`](./site-build/SKILL.md) | The order every other workflow runs in, and which input wins when they disagree. |
 | `project-setup` | [`project-setup/SKILL.md`](./project-setup/SKILL.md) | The questions to settle before any markup: build step, styling toolkit, languages. |
+| `seo-research` | [`seo-research/SKILL.md`](./seo-research/SKILL.md) | Keyword research, search-intent mapping, content gaps, SERP or competitor research, before writing or restructuring pages. |
 | `astro-craft` | [`astro-craft/SKILL.md`](./astro-craft/SKILL.md) | Building or editing an Astro page, section, component or style. |
 | `design-ingestion` | [`design-ingestion/SKILL.md`](./design-ingestion/SKILL.md) | A design arrives — Figma, export, screenshot, mockup — before any markup. |
+| `svg-assets` | [`svg-assets/SKILL.md`](./svg-assets/SKILL.md) | Creating, editing, importing or reviewing an SVG logo, favicon, icon, decorative vector or illustration. |
 | `form-slot` | [`form-slot/SKILL.md`](./form-slot/SKILL.md) | A page has a form that does not exist in the provider's builder yet. |
 | `static-site-seo` | [`static-site-seo/SKILL.md`](./static-site-seo/SKILL.md) | Creating, renaming, translating or removing a page, or touching its head or structured data. |
+| `faq-content` | [`faq-content/SKILL.md`](./faq-content/SKILL.md) | Writing, editing, translating, removing or auditing an on-page FAQ and its `FAQPage` JSON-LD. |
 | `visual-gate` | [`visual-gate/SKILL.md`](./visual-gate/SKILL.md) | Proving a built page against a reference, or checking it at every width. |
+| `static-site-search` | [`static-site-search/SKILL.md`](./static-site-search/SKILL.md) | Adding, changing or debugging internal full-text search (Pagefind) over already-built HTML — opt-in, not core. |
 
 ## The contracts
 

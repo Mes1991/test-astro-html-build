@@ -1,0 +1,22 @@
+{
+  "pass-basic.html": { "pass": true, "codes": [], "skippedCodes": [] },
+  "pass-graph.html": { "pass": true, "codes": [], "skippedCodes": [] },
+  "pass-nested.html": { "pass": true, "codes": [], "skippedCodes": [] },
+  "pass-es.html": { "pass": true, "codes": [], "skippedCodes": [] },
+  "pass-inline-markup.html": { "pass": true, "codes": [], "skippedCodes": [] },
+  "pass-single-mainentity.html": { "pass": true, "codes": [], "skippedCodes": [] },
+  "pass-unclosed-p.html": { "pass": true, "codes": [], "skippedCodes": [] },
+  "pass-no-faq.html": { "pass": true, "codes": [], "skippedCodes": [] },
+  "warn-invalid-json.html": { "pass": true, "codes": [], "skippedCodes": ["SYNTAX_SKIPPED"] },
+  "fail-missing-question.html": { "pass": false, "codes": ["SHAPE_QUESTION_NAME"], "skippedCodes": [] },
+  "fail-missing-answer.html": { "pass": false, "codes": ["SHAPE_ANSWER_TEXT"], "skippedCodes": [] },
+  "fail-no-answer-shape.html": { "pass": false, "codes": ["SHAPE_ANSWER_TEXT"], "skippedCodes": [] },
+  "fail-swapped.html": { "pass": false, "codes": ["CONTENT_PAIR_MISMATCH"], "skippedCodes": [] },
+  "fail-duplicate.html": { "pass": false, "codes": ["CONTENT_DUPLICATE_QUESTION"], "skippedCodes": [] },
+  "fail-hidden-attr.html": { "pass": false, "codes": ["CONTENT_ANSWER_NOT_VISIBLE"], "skippedCodes": [] },
+  "fail-aria-hidden.html": { "pass": false, "codes": ["CONTENT_ANSWER_NOT_VISIBLE"], "skippedCodes": [] },
+  "fail-display-none.html": { "pass": false, "codes": ["CONTENT_ANSWER_NOT_VISIBLE"], "skippedCodes": [] },
+  "fail-template.html": { "pass": false, "codes": ["CONTENT_ANSWER_NOT_VISIBLE"], "skippedCodes": [] },
+  "fail-head-only.html": { "pass": false, "codes": ["CONTENT_QUESTION_NOT_VISIBLE", "CONTENT_ANSWER_NOT_VISIBLE"], "skippedCodes": [] },
+  "fail-nested-hidden.html": { "pass": false, "codes": ["CONTENT_QUESTION_NOT_VISIBLE", "CONTENT_ANSWER_NOT_VISIBLE"], "skippedCodes": [] }
+}
